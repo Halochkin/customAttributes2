@@ -1,20 +1,30 @@
-<script src="https://cdn.jsdelivr.net/gh/orstavik/parse@v1.0.2/parse.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver/constructionFrame.js"></script>
 <script src="../../src/customAttributes.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.0/startObserver.js"></script>
 
 <script type="module">
 
-    class Definition {
-    }
+  class Definition extends CustomAttr {
+  }
 
-    class Definition2 {
-    }
+  class Definition2 extends CustomAttr {
+  }
 
-    // 1. cannot define custom event with the same prefix
-    try {
-        customAttributes.define("hello", Definition);
-        customAttributes.define("hello", Definition2);
-    } catch (e) {
-        console.log(e)
-    }
+  // 1. cannot define custom event with the same prefix
+  try {
+    customAttributes.define("hello", Definition);
+    customAttributes.define("hello", Definition2);
+  } catch (e) {
+    console.log(e)
+  }
+
+  //should be fine
+  document.head.setAttribute("hello", "sunshine");
+  document.head.removeAttribute("hello");
+  document.head.removeAttribute("goodbye");
+
+  try {
+    customAttributes.define("wrong", class NotExtendCustomAttr {});
+  } catch (err) {
+    console.log(err);
+  }
 </script>

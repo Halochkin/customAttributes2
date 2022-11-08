@@ -1,0 +1,22 @@
+<script src="../../src/customAttributes.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.0/startObserver.js"></script>
+
+<h1 submit:href:open_self="https://httpbin.org/anything?hello=sunshine" _unload:log>hello sunshine</h1>
+
+<script type="module">
+  import {openPost} from "../src/FormData/FormData_GET.js";
+
+  customReactions.define("open", openPost);
+  customReactions.define("href", function (e, prefix) {
+    return {
+      [prefix]: this.value,
+      withEntries: e.detail
+    };
+  });
+  customReactions.define("log", e => (console.log("triggered navigation"), e));
+
+  const formData = new FormData();
+  formData.append("a", "A");
+  formData.append("b", "B");
+  document.querySelector("h1").dispatchEvent(new CustomEvent("submit", {detail: formData}));
+</script>

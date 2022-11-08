@@ -1,13 +1,42 @@
 class ReactionRegistry {
+
+  #register = {};
+
   define(type, Function) {
-    if (type in this)
+    if (type in this.#register)
       throw `The Reaction type: "${type}" is already defined.`;
-    this[type] = Function;
+    this.#register[type] = Function;
   }
 
-  defineAll(defs){
+  defineAll(defs) {
     for (let [type, Function] of Object.entries(defs))
       this.define(type, Function);
+  }
+
+  static #doDots(dots, thiz, e) {
+    dots = dots.split(".");
+    let obj = dots[0] === "e" ? e : dots[0] === "this" ? thiz : window;
+    let parent;
+    for (let i = (obj === window ? 0 : 1); i < dots.length; i++)
+      parent = obj, obj = obj[this.toCamelCase(dots[i])];
+    return {obj, parent};
+  }
+
+  static toCamelCase(strWithDash) {
+    return strWithDash.replace(/-([a-z])/g, g => g[1].toUpperCase());
+  }
+
+  static call(e, prefix, ...args) {
+    let explicitProp = false;
+    if (prefix.endsWith("."))
+      explicitProp = true, prefix = prefix.substring(0, prefix.length - 1);
+    const {obj, parent} = ReactionRegistry.#doDots(prefix, this, e);
+    return !(obj instanceof Function) || explicitProp ? obj : obj.call(parent, ...args, e);
+  }
+
+  static apply(e, prefix, ...args) {
+    const {obj, parent} = ReactionRegistry.#doDots(prefix.substring(3), this, e);
+    return obj.call(parent, ...args, ...e);
   }
 
   #cache = {"": Object.freeze([])};
@@ -18,8 +47,12 @@ class ReactionRegistry {
     const res = [];
     for (let [prefix, ...suffix] of reaction.split(":").map(str => str.split("_"))) {
       if (!prefix) continue;        //ignore empty strings enables "one::two" to run as one sequence
-      if (!this[prefix]) return []; //one undefined reaction disables the entire chain reaction
-      res.push({Function: this[prefix], prefix, suffix});
+      if (prefix.startsWith("..."))
+        this.#register[prefix] = ReactionRegistry.apply;
+      else if (prefix.indexOf(".") >= 0)
+        this.#register[prefix] = ReactionRegistry.call;
+      else if (!this.#register[prefix]) return []; //one undefined reaction disables the entire chain reaction
+      res.push({Function: this.#register[prefix], prefix, suffix});
     }
     return this.#cache[reaction] = res;
   }
@@ -88,6 +121,8 @@ class AttributeRegistry {
   #globals = new WeakArrayDict();
 
   define(prefix, Definition) {
+    if (!(Definition.prototype instanceof CustomAttr))
+      throw `"${Definition.name}" must extend "CustomAttr".`;
     if (this.getDefinition(prefix))
       throw `The customAttribute "${prefix}" is already defined.`;
     this[prefix] = Definition;
@@ -128,73 +163,149 @@ class AttributeRegistry {
       at.upgrade?.();
     } catch (error) {
       Object.setPrototypeOf(at, CustomAttr.prototype);
-      eventLoop.dispatch(new ErrorEvent("AttributeError", {error}), at.ownerElement);
+      //todo fix the error type here.
+      eventLoop.dispatch(new ErrorEvent("error", {error}), at.ownerElement);
     }
     try {
       at.changeCallback?.();
     } catch (error) {
-      eventLoop.dispatch(new ErrorEvent("AttributeError", {error}), at.ownerElement);
+      //todo fix the error type here.
+      eventLoop.dispatch(new ErrorEvent("error", {error}), at.ownerElement);
     }
   }
 }
 
 window.customAttributes = new AttributeRegistry();
 
-class EventLoop {
-  #eventLoop = [];
+class ReactionErrorEvent extends ErrorEvent {
+  #reactions;
+  #i;
+  #at;
 
-  dispatch(event, target) {
-    if (event.type[0] === "_")
-      throw new Error(`eventLoop.dispatch(..) doesn't accept events beginning with "_": ${event.type}.`);
-    this.#eventLoop.push({target, event});
-    if (this.#eventLoop.length > 1)
-      return;
-    while (this.#eventLoop.length) {
-      const {target, event} = this.#eventLoop[0];
-      if (!target || target instanceof Element)   //a bug in the ElementObserver.js causes "instanceof HTMLElement" to fail.
-        EventLoop.bubble(target, event);
-      else if (target instanceof Attr)
-        EventLoop.#callReactions(target.allFunctions, target, event);
-      this.#eventLoop.shift();
-    }
+  constructor(error, at, reactions, i, async) {
+    super("error", {error});
+    this.#reactions = reactions;
+    this.#i = i;
+    this.#at = at;
+    this.async = async;
   }
 
-  static bubble(target, event) {
-    for (let t = target; t; t = t.assignedSlot || t.parentElement || t.parentNode?.host) {
-      for (let attr of t.attributes) {
-        if (attr.type === event.type && attr.name[0] !== "_") {
-          if (attr.defaultAction && (event.defaultAction || event.defaultPrevented))
-            continue;
-          const res = EventLoop.#callReactions(attr.reaction, attr, event);
-          if (res !== undefined && attr.defaultAction)
-            event.defaultAction = {attr, res};
-        }
-      }
-    }
-    const prevented = event.defaultPrevented;  //global listeners can't call .preventDefault()
-    for (let attr of customAttributes.globalListeners(event.type))
-      EventLoop.#callReactions(attr.allFunctions, attr, event);
-    if (event.defaultAction && !prevented) {
-      const {attr, res} = event.defaultAction;
-      EventLoop.#callReactions(attr.defaultAction, attr, res);
-    }
+  get attribute() {
+    return this.#at;
   }
 
-  static #callReactions(reactions, at, event) {
-    for (let {Function, prefix, suffix} of customReactions.getReactions(reactions)) {
-      try {
-        event = Function.call(at, event, prefix, ...suffix);
-      } catch (error) {
-        return eventLoop.dispatch(new ErrorEvent("ReactionError", {error}), at.ownerElement);
-      }
-      if (event === undefined)
-        return;
-    }
-    return event;
+  get reaction() {
+    return this.#reactions[this.#i].prefix + this.#reactions[this.#i].suffix.map(s => "_" + s);
   }
 }
 
-window.eventLoop = new EventLoop();
+(function () {
+
+//Event.uid
+  let eventUid = 1;
+  const eventToUid = new WeakMap();
+  Object.defineProperty(Event.prototype, "uid", {
+    get: function () {
+      let uid = eventToUid.get(this);
+      uid === undefined && eventToUid.set(this, eventUid++);
+      return eventUid;
+    }
+  });
+
+  const eventToTarget = new WeakMap();
+  Object.defineProperty(Event.prototype, "target", {
+    get: function () {
+      return eventToTarget.get(this);
+    }
+  });
+  const _event_to_Document_to_Target = new WeakMap();
+
+  function getTargetForEvent(event, target, root = target.getRootNode()) {
+    const map = _event_to_Document_to_Target.get(event);
+    if (!map) {
+      _event_to_Document_to_Target.set(event, new Map([[root, target]]));
+      return target;
+    }
+    let prevTarget = map.get(root);
+    !prevTarget && map.set(root, prevTarget = target);
+    return prevTarget;
+  }
+
+  //todo path is not supported
+
+  class EventLoop {
+    #eventLoop = [];
+
+    dispatch(event, target) {
+      if (event.type[0] === "_")
+        throw new Error(`eventLoop.dispatch(..) doesn't accept events beginning with "_": ${event.type}.`);
+      this.#eventLoop.push({target, event});
+      if (this.#eventLoop.length > 1)
+        return;
+      while (this.#eventLoop.length) {
+        const {target, event} = this.#eventLoop[0];
+        if (!target || target instanceof Element)   //a bug in the ElementObserver.js causes "instanceof HTMLElement" to fail.
+          EventLoop.bubble(target, event);
+        //todo if (target?.isConnected === false) then bubble without default action?? I think that we need the global listeners to run for disconnected targets, as this will make them able to trigger _error for example. I also think that attributes on disconnected ownerElements should still catch the _global events. Don't see why not.
+        else if (target instanceof Attr)
+          EventLoop.#callReactions(target.allFunctions, target, event);
+        this.#eventLoop.shift();
+      }
+    }
+
+    static bubble(rootTarget, event, target = rootTarget) {
+      for (let prev, t = rootTarget; t; prev = t, t = t.assignedSlot || t.parentElement || t.parentNode?.host) {
+        t !== prev?.parentElement && eventToTarget.set(event, target = getTargetForEvent(event, t));
+        for (let attr of t.attributes) {
+          if (attr.type === event.type && attr.name[0] !== "_") {
+            if (attr.defaultAction && (event.defaultAction || event.defaultPrevented))
+              continue;
+            const res = EventLoop.#callReactions(attr.reaction, attr, event, !!attr.defaultAction);
+            if (res !== undefined && attr.defaultAction)
+              event.defaultAction = {attr, res, target};
+          }
+        }
+      }
+      const prevented = event.defaultPrevented;     //global listeners can't call .preventDefault()
+      //eventToTarget.set(event, theTopMostTarget); //not necessary, bubble already set it
+      for (let attr of customAttributes.globalListeners(event.type))
+        EventLoop.#callReactions(attr.allFunctions, attr, event);
+      if (event.defaultAction && !prevented) {
+        const {attr, res, target} = event.defaultAction;
+        eventToTarget.set(event, target);
+        EventLoop.#callReactions(attr.defaultAction, attr, res);
+      }
+    }
+
+    static #callReactions(reactions, at, event, syncOnly = false) {
+      return this.#runReactions(customReactions.getReactions(reactions), event, at, syncOnly, 0);
+    }
+
+    static #runReactions(reactions, event, at, syncOnly, start) {
+      for (let i = start; i < reactions.length; i++) {
+        let {Function, prefix, suffix} = reactions[i];
+        try {
+          event = Function.call(at, event, prefix, ...suffix);
+          if (event === undefined)
+            return;
+          if (event instanceof Promise) {
+            if (syncOnly)
+              throw new SyntaxError("You cannot use reactions that return Promises before default actions.");
+            event
+              .then(event => this.#runReactions(reactions, event, at, syncOnly, i + 1))
+              .catch(error => eventLoop.dispatch(new ReactionErrorEvent(error, at, reactions, i, true), at.ownerElement));
+            return;
+          }
+        } catch (error) {
+          return eventLoop.dispatch(new ReactionErrorEvent(error, at, reactions, i, start === 0), at.ownerElement);
+        }
+      }
+      return event;
+    }
+  }
+
+  window.eventLoop = new EventLoop();
+})();
 
 function deprecated() {
   throw `${this}() is deprecated`;
@@ -223,36 +334,24 @@ function deprecated() {
       if (oldValue === value)
         return;
       at.value = value;
-      at.changeCallback?.(oldValue);
+      at.changeCallback?.(oldValue);      //todo try catch and tests for try catch, see the upgrade process above
     } else {
       const at = documentCreateAttributeOG.call(document, name);
       if (value !== undefined)
         at.value = value;
       setAttributeNodeOG.call(this, at);
-      customAttributes.upgrade(at);
+      customAttributes.upgrade(at);       //todo try catch and tests for try catch, see the upgrade process above
     }
   };
 
   Element_proto.removeAttribute = function (name) {
-    getAttrNodeOG.call(this, name).destructor?.();
+    getAttrNodeOG.call(this, name)?.destructor?.();
     removeAttrOG.call(this, name);
   };
 })(Element.prototype, document.createAttribute);
 
-//Event.uid
-(function () {
-  let eventUid = 1;
-  const eventToUid = new WeakMap();
-  Object.defineProperty(Event.prototype, "uid", {
-    get: function () {
-      let uid = eventToUid.get(this);
-      uid === undefined && eventToUid.set(this, eventUid++);
-      return eventUid;
-    }
-  });
-})();
-
-ElementObserver.end(el => customAttributes.upgrade(...el.attributes));
+document.addEventListener("element-created", ({detail: els}) => els.forEach(el => customAttributes.upgrade(...el.attributes)));
+// ElementObserver.end(el => customAttributes.upgrade(...el.attributes));
 
 //** CustomAttribute registry with builtin support for the native HTML events.
 class NativeBubblingEvent extends CustomAttr {

@@ -35,8 +35,13 @@
     return e;
   }
 
-  function dispatchCustom(e, _, name){
+  function dispatchDetail(e, prefix, name = prefix) {
     return dispatch.call(this, customEvent.call(this, e, name));
+  }
+
+  function dispatchClone(e, prefix, type = prefix) {
+    const c = new e.constructor(type, e);
+    return eventLoop.dispatch(c, this.ownerElement), c;
   }
 
   function hasKey(e, prefix) {
@@ -76,6 +81,18 @@
     return e;
   }
 
+  async function _fetch(body, _, type = "text", method = "GET") { //fetch_json and fetch_text_POST
+    return await (await fetch(this.value, method.toUpperCase() === "POST" ? {method, body} : undefined))[type]();
+  }
+
+  function elementProp(_, prop) {
+    return this.ownerElement[prop];
+  }
+
+  function eventProp(e, prop) {
+    return e[prop];
+  }
+
   window.lib = {
     toggleAttr,
     parentToggleAttr,
@@ -83,11 +100,15 @@
     cloneEvent,
     customEvent,
     dispatch,
-    dispatchCustom,
+    dispatchDetail,
+    dispatchClone, //todo untested
     hasKey,
     once,
     ownerCallback,
     cssClass,
-    toCamelCase
+    toCamelCase,
+    fetch: _fetch,  //todo untested
+    elementProp,    //todo untested
+    eventProp       //todo untested
   };
 })();

@@ -1,0 +1,63 @@
+<script src="../../src/customAttributes.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.0/startObserver.js"></script>
+<script src="../../src/core.js"></script>
+
+<style>
+  div {
+    width: calc(0.5 * var(--w));
+    border: calc(0.02 * var(--w)) solid orange;
+    font-size: calc(0.12 * var(--w));
+  }
+  web-comp {
+    display: block;
+    width: 200px;
+  }
+</style>
+<web-comp timeout_100:style_width_500px>
+  <div slot="one" border-box:this.owner-element:window.get-computed-style:e.width:console.log>
+    hello
+  </div>
+  <div slot="two" border-box:logwidth>
+    sunshine
+  </div>
+</web-comp>
+
+<template id="webcomp">
+  <style>slot { width: 50%; border: 2px solid grey;display: inline-block;}</style>
+  <slot w name=one style="width: 25%;"></slot>
+  <slot content-box:e.detail.content-box-size.0.inline-size:throttle:plus_px:this.owner-element.style.set-property_--w
+        name=two></slot>
+</template>
+
+<script>
+  customAttributes.define("w", class WAttr extends CustomAttr {
+    upgrade() {
+      let _width, type = this.type;
+      this._obs = new ResizeObserver(([{contentBoxSize: [{inlineSize}]}]) =>
+        _width !== inlineSize && this.ownerElement.style.setProperty("--" + type, (_width = inlineSize) + "px")
+      );
+      this._obs.observe(this.ownerElement, {box: "content-box"});
+    }
+
+    destructor() {
+      this._obs.disconnect();
+    }
+  });
+
+  customReactions.define("logwidth", function (e) {
+    console.log(getComputedStyle(this.ownerElement).width);
+    return e;
+  });
+  customReactions.define("style", function style(e, _, prop, value = e) {
+    this.ownerElement.style.setProperty(prop, value);
+    return e;
+  });
+
+  customElements.define("web-comp", class WebComp extends HTMLElement {
+    constructor() {
+      super();
+      this.attachShadow({mode: "open"});
+      this.shadowRoot.append(document.getElementById("webcomp").content);
+    }
+  });
+</script>

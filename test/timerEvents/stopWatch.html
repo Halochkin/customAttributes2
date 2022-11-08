@@ -1,0 +1,26 @@
+<script src="../../src/customAttributes.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.0/startObserver.js"></script>
+<script src="../../src/core.js"></script>
+
+<body test:e.time-stamp:stopwatch:window.-math.min_25:console.log>
+
+<script>
+  //todo a diff/aggregator of sorts. same as throttle. it joins the output of many different events across async time.
+  const stopWatches = new WeakMap();
+  customReactions.define("stopwatch", function stopwatch(timeStamp) {
+    const lastTime = stopWatches.get(this) || timeStamp;
+    stopWatches.set(this, timeStamp);
+    return timeStamp - lastTime;
+  });
+  customReactions.define("dispatch", function dispatch(e, _, type) {
+    const e2 = e instanceof Event ? new e.constructor(type, e) : new CustomEvent(type, {detail: e});
+    eventLoop.dispatch(e2, this.ownerElement);
+    return e2;
+  });
+</script>
+
+<h1
+    ready:new_-event_test:new_-array:m_1_this.owner-element:...window.event-loop.dispatch
+    timeout_50:dispatch_test
+    timeout_100:dispatch_test>hello sunshine</h1>
+</body>
