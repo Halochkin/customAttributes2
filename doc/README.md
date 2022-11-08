@@ -4,6 +4,8 @@
 
 ## Why to `customReactions` ?
 
+Using custom reactions enable you to see in the html which reactions/event listeners will happen for which event in the different branches. and it will enable you to add custom functionality and uix and reactivity to any html element.
+
 ## How to `customReactions` ?
 
 In order to call the event callback function, it is necessary to define its name (`filter name`). We call it **filter
