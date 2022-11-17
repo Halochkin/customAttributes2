@@ -1,60 +1,117 @@
-class DotReaction {
-  static PRIMITIVES = Object.freeze({
-    true: true,
-    false: false,
-    null: null,
-    undefined: undefined
-  });
-
-  static interpretDotPath(dots, e, thiz) {
-    const res = [dots[0] === "e" ? e : dots[0] === "this" ? thiz : window];
-    for (let i = 1; i < dots.length; i++)
-      res[i] = res[i - 1][dots[i]];
-    return res;
+class CustomAttr extends Attr {
+  get type() {
+    const value = this.name.match(/_?([^_:]+)/)[1];
+    Object.defineProperty(this, "type", {value, writable: false, configurable: true});
+    return value;
   }
 
-  static interpretDotArgument(dotPart, e, thiz) {
-    const objs = DotReaction.interpretDotPath(dotPart.dots, e, thiz);
-    const last = objs[objs.length - 1];
-    const lastParent = objs[objs.length - 2];
-    return dotPart.getter || !(last instanceof Function) ? last : last.call(lastParent);
+  get suffix() {
+    return this.name.match(/_?([^:]+)/)[1].split("_").slice(1);
   }
 
-  static parseDotPath(part) {
-    const dots = part.split(".").map(ReactionRegistry.toCamelCase);
-    if (dots[0] !== "e" && dots[0] !== "this" && dots[0] !== "window")
-      dots.unshift("window");
-    return dots;
+  get chain() {
+    const value = this.name.split(":").slice(1);
+    Object.defineProperty(this, "chain", {value, writable: false, configurable: true});
+    return value;
   }
 
-  static parsePartDotMode(part) {
-    if (part in DotReaction.PRIMITIVES)
-      return DotReaction.PRIMITIVES[part];
-    if (!isNaN(part))
-      return Number(part);
-    if (part === "e" || part === "this" || part === "window")
-      return {dots: [part]};
-    if (part.indexOf(".") < 0)
-      return part;
+  get defaultAction() {
+    const value = this.chain?.indexOf("") + 1 || 0;
+    Object.defineProperty(this, "defaultAction", {value, writable: false, configurable: true});
+    return value;
+  }
+
+  get reactions() {
+    const value = this.chain.map(reaction => customReactions.getReaction(reaction));
+    if (value.indexOf(undefined) >= 0)
+      return undefined;
+    Object.defineProperty(this, "reactions", {value, writable: false, configurable: true});
+    return value;
+  }
+
+  get ready() {
+    return this.reactions !== undefined;
+  }
+
+  errorString(i) {  //todo this.ownerElement can void when the error is printed..
+    const chain = this.chain.slice(0);
+    chain[i] = `==>${chain[i]}<==`;
+    return `<${this.ownerElement?.tagName.toLowerCase()} ${this.name.split(":")[0]}:${chain.join(":")}>`;
+  }
+}
+
+class Reaction {
+
+  constructor(parts, Function) {
+    this.Function = Function;
+    this.parts = parts;
+  }
+
+  run(at, e) {
+    return this.Function.call(at, e, ...this.parts);
+  }
+
+  get prefix() {
+    return this.parts[0];
+  }
+
+  get suffix() {
+    return this.parts.slice(1);
+  }
+}
+
+class DotPath {
+
+  constructor(part) {
     const getter = part.endsWith(".") ? 1 : 0;
     const spread = part.startsWith("...") ? 3 : 0;
     let path = part.substring(spread, part.length - getter);
-    if(path[0] === ".")
+    if (path[0] === ".")
       path = path.substring(1);
-    const dots = DotReaction.parseDotPath(path);
-    return {getter, spread, dots};
+    this.getter = getter;
+    this.spread = spread;
+    this.dots = path.split(".").map(ReactionRegistry.toCamelCase);
+    if (this.dots[0] !== "e" && this.dots[0] !== "this" && this.dots[0] !== "window")
+      this.dots.unshift("window");
   }
 
-  static runDotReaction(e, _, ...dotParts) {
+  interpret(e, attr) {
+    const res = [this.dots[0] === "e" ? e : this.dots[0] === "this" ? attr : window];
+    for (let i = 1; i < this.dots.length; i++)
+      res[i] = res[i - 1][this.dots[i]];
+    return res;
+  }
+
+  interpretDotArgument(e, attr) {
+    const objs = this.interpret(e, attr);
+    const last = objs[objs.length - 1];
+    const lastParent = objs[objs.length - 2];
+    return this.getter || !(last instanceof Function) ? last : last.call(lastParent);
+  }
+}
+
+class DotReaction extends Reaction {
+
+  constructor(parts) {
+    super(parts);
+    this.dotParts = parts.map(DotReaction.parsePartDotMode);
+    if (this.dotParts[0].spread)
+      throw "spread on prefix does not make sense";
+    if (this.dotParts[0].length > 1 && this.dotParts[0].getter)
+      throw "this dot expression has arguments, then the prefix cannot be a getter (end with '.').";
+  }
+
+  run(at, e) {
+    const dotParts = this.dotParts;
     const prefix = dotParts[0];
-    const objs = DotReaction.interpretDotPath(prefix.dots, e, this);
+    const objs = prefix.interpret(e, at);
     const last = objs[objs.length - 1];
     if (prefix.getter || dotParts.length === 1 && !(last instanceof Function))
       return last;
     const args = [];
     for (let i = 1; i < dotParts.length; i++) {
       const dotPart = dotParts[i];
-      const arg = dotPart?.dots ? DotReaction.interpretDotArgument(dotPart, e, this) : dotPart;
+      const arg = dotPart?.dots ? dotPart.interpretDotArgument(e, at) : dotPart;
       dotPart.spread ? args.push(...arg) : args.push(arg);
     }
     const lastParent = objs[objs.length - 2]
@@ -64,15 +121,20 @@ class DotReaction {
     return e;
   }
 
-  static parseDotReaction(parts) {
-    if (parts[0].indexOf(".") < 0)
-      return;
-    const dotParts = parts.map(DotReaction.parsePartDotMode);
-    if (dotParts[0].spread)
-      throw "spread on prefix does not make sense";
-    if (dotParts[0].length > 1 && dotParts[0].getter)
-      throw "this dot expression has arguments, then the prefix cannot be a getter (end with '.').";
-    return {Function: DotReaction.runDotReaction, prefix: parts, suffix: dotParts};
+  static parsePartDotMode(part) {
+    const PRIMITIVES = {
+      true: true,
+      false: false,
+      null: null,
+      undefined: undefined
+    };
+    if (part in PRIMITIVES)
+      return PRIMITIVES[part];
+    if (!isNaN(part))
+      return Number(part);
+    if (part === "e" || part === "this" || part === "window" || part.indexOf(".") >= 0)
+      return new DotPath(part);
+    return part;
   }
 }
 
@@ -81,6 +143,7 @@ class ReactionRegistry {
   #register = {};
 
   define(type, Function) {
+    //todo add restriction that it cannot contain `.`
     if (type in this.#register)
       throw `The Reaction type: "${type}" is already defined.`;
     this.#register[type] = Function;
@@ -95,58 +158,20 @@ class ReactionRegistry {
     return strWithDash.replace(/-([a-z])/g, g => g[1].toUpperCase());
   }
 
-  #cache = {"": Object.freeze([])};
+  #cache = {"": ""};
 
-  #getListenerReaction([prefix, ...suffix]) {
-    if (this.#register[prefix])
-      return {Function: this.#register[prefix], prefix, suffix};
+  getReaction(reaction) {
+    return this.#cache[reaction] ??= this.#create(reaction);
   }
 
-  getReactions(reactions) {
-    if (this.#cache[reactions])
-      return this.#cache[reactions];
-    const res = [];
-    for (let parts of reactions.split(":").map(r => r.split("_"))) {
-      const dotReaction = DotReaction.parseDotReaction(parts) || this.#getListenerReaction(parts);
-      if (!dotReaction)
-        return undefined;
-      res.push(dotReaction);
-    }
-    return this.#cache[reactions] = res;
+  #create(reaction) {
+    const parts = reaction.split("_");
+    return parts[0].indexOf(".") >= 0 ? new DotReaction(parts) :
+      this.#register[parts[0]] && new Reaction(parts, this.#register[parts[0]]);
   }
 }
 
 window.customReactions = new ReactionRegistry();
-
-class CustomAttr extends Attr {
-  get suffix() {
-    return this.name.match(/_?([^:]+)/)[1].split("_").slice(1);
-  }
-
-  get reaction() {
-    const value = this.name.split("::")[0].split(":").slice(1)?.join(":");
-    Object.defineProperty(this, "reaction", {value, writable: false, configurable: true});
-    return value;
-  }
-
-  get defaultAction() {
-    const value = this.name.split("::")[1];
-    Object.defineProperty(this, "defaultAction", {value, writable: false, configurable: true});
-    return value;
-  }
-
-  get allFunctions() {
-    const value = this.name.split(":").slice(1)?.filter(r => r).join(":");
-    Object.defineProperty(this, "allFunctions", {value, writable: false, configurable: true});
-    return value;
-  }
-
-  get type() {
-    const value = this.name.match(/_?([^_:]+)/)[1];
-    Object.defineProperty(this, "type", {value, writable: false, configurable: true});
-    return value;
-  }
-}
 
 class WeakArrayDict {
   push(key, value) {
@@ -236,26 +261,24 @@ class AttributeRegistry {
 window.customAttributes = new AttributeRegistry();
 
 class ReactionErrorEvent extends ErrorEvent {
-  #reactions;
-  #i;
-  #at;
 
-  constructor(error, at, reactions, i, async) {
-    super("error", {error});
-    this.#reactions = reactions;
-    this.#i = i;
-    this.#at = at;
+  constructor(error, at, i, async) {
+    super("error", {error, cancelable: true});
+    this.pos = i;
+    this.at = at;
     this.async = async;
   }
 
   get attribute() {
-    return this.#at;
+    return this.at;
   }
 
-  get reaction() {
-    return this.#reactions[this.#i].prefix + this.#reactions[this.#i].suffix.map(s => "_" + s);
+  get message() {
+    return (this.async ? "ASYNC" : "") + this.at.errorString(this.pos);
   }
 }
+
+document.documentElement.setAttributeNode(document.createAttribute("error::console.error_e.message_e.error"));
 
 (function () {
 
@@ -306,7 +329,7 @@ class ReactionErrorEvent extends ErrorEvent {
           EventLoop.bubble(target, event);
         //todo if (target?.isConnected === false) then bubble without default action?? I think that we need the global listeners to run for disconnected targets, as this will make them able to trigger _error for example. I also think that attributes on disconnected ownerElements should still catch the _global events. Don't see why not.
         else if (target instanceof Attr)
-          EventLoop.#callReactions(target.allFunctions, target, event);
+          EventLoop.#runReactions(target.reactions, event, target, undefined);
         this.#eventLoop.shift();
       }
     }
@@ -318,7 +341,7 @@ class ReactionErrorEvent extends ErrorEvent {
           if (attr.type === event.type && attr.name[0] !== "_") {
             if (attr.defaultAction && (event.defaultAction || event.defaultPrevented))
               continue;
-            const res = EventLoop.#callReactions(attr.reaction, attr, event, !!attr.defaultAction);
+            const res = EventLoop.#runReactions(attr.reactions, event, attr, !!attr.defaultAction);
             if (res !== undefined && attr.defaultAction)
               event.defaultAction = {attr, res, target};
           }
@@ -327,35 +350,37 @@ class ReactionErrorEvent extends ErrorEvent {
       const prevented = event.defaultPrevented;     //global listeners can't call .preventDefault()
       //eventToTarget.set(event, theTopMostTarget); //not necessary, bubble already set it
       for (let attr of customAttributes.globalListeners(event.type))
-        EventLoop.#callReactions(attr.allFunctions, attr, event);
+        EventLoop.#runReactions(attr.reactions, event, attr, false);
       if (event.defaultAction && !prevented) {
         const {attr, res, target} = event.defaultAction;
         eventToTarget.set(event, target);
-        EventLoop.#callReactions(attr.defaultAction, attr, res);
+        EventLoop.#runReactions(attr.reactions, res, attr, false, attr.defaultAction);
       }
     }
 
-    static #callReactions(reactions, at, event, syncOnly = false) {
-      return this.#runReactions(customReactions.getReactions(reactions) || [], event, at, syncOnly, 0);
-    }
-
-    static #runReactions(reactions, event, at, syncOnly, start) {
+    static #runReactions(reactions = [], event, at, syncOnly = false, start = 0) {
       for (let i = start; i < reactions.length; i++) {
-        let {Function, prefix, suffix} = reactions[i];
+        const reaction = reactions[i];
+        if (!reaction && syncOnly)
+          return event;
+        else if (!reaction)
+          continue;
         try {
-          event = Function.call(at, event, prefix, ...suffix);
+          event = reaction.run(at, event);
           if (event === undefined)
             return;
           if (event instanceof Promise) {
             if (syncOnly)
               throw new SyntaxError("You cannot use reactions that return Promises before default actions.");
             event
-              .then(event => this.#runReactions(reactions, event, at, syncOnly, i + 1))
-              .catch(error => eventLoop.dispatch(new ReactionErrorEvent(error, at, reactions, i, true), at.ownerElement));
+              .then(event => this.#runReactions(reactions, event, at, false, i + 1))
+              //todo we can pass in the input to the reaction to the error event here too
+              .catch(error => eventLoop.dispatch(new ReactionErrorEvent(error, at, i, true), at.ownerElement));
             return;
           }
-        } catch (error) {
-          return eventLoop.dispatch(new ReactionErrorEvent(error, at, reactions, i, start === 0), at.ownerElement);
+        } catch (error) {    //todo we can pass in the input to the error event here.
+          if (start !== 0) console.info("omg wtf")
+          return eventLoop.dispatch(new ReactionErrorEvent(error, at, i, start !== 0), at.ownerElement);
         }
       }
       return event;
