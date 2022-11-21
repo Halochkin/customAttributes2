@@ -6,15 +6,35 @@
   #bob:not([open]) > :not(h1) { display: none; }
 </style>
 
-<div id="bob">
-  <h1 click:log::open:log>hello</h1>
-  <p>sunshine</p>
-</div>
+<!--<div id="bob">-->
+<!--  <h1 click:log::open:log>hello</h1>-->
+<!--  <p>sunshine</p>-->
+<!--</div>-->
 
+<!--<script>-->
+<!--  customReactions.defineAll({-->
+<!--    "log": e => (console.log(getComputedStyle(document.querySelector("p")).display), e),-->
+<!--    "open": function (e, prefix, suffix){-->
+<!--      let el = this.ownerElement.parentElement;-->
+<!--      el.hasAttribute(prefix) ? el.removeAttribute(prefix) : el.setAttribute(prefix);-->
+<!--    }-->
+<!--  });-->
+<!--  document.querySelector("h1").click();-->
+<!--</script>-->
+
+<div click:filter:e.prevent-default>Hello
+    <h1 click::dispatch_toggle>sunshine</h1>
+</div>
 <script>
   customReactions.defineAll({
-    "log": e => (console.log(getComputedStyle(document.querySelector("p")).display), e),
-    "open": lib.parentToggleAttr
+    "filter": function(e, prefix, suffix){
+      if(e.target.tagName === "H1")
+        return e.preventDefault();
+    },
+    "dispatch": function (e, prefix, suffix){
+      let event = new Event(suffix);
+      document.dispatchEvent(event);
+    }
   });
   document.querySelector("h1").click();
 </script>

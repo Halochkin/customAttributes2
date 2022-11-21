@@ -1,0 +1,38 @@
+<script src="https://cdn.jsdelivr.net/gh/orstavik/parse@v1.0.2/parse.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver/constructionFrame.js"></script>
+<script src="../../src/EventRegistry.js"></script>
+<script src="../../src/EventFilterRegistry.js"></script>
+<script src="../../src/virtualEventLoop.js"></script>
+
+<img auxclick:edit src="https://i.imgur.com/oUxX9ci.jpeg" width="300px">
+
+<script type="module">
+
+
+  async function readImage(file) {
+    if (!file) return "";
+    return new Promise(resolve => {
+      const reader = new FileReader();
+      reader.addEventListener("load", () => resolve(reader.result), false);
+      reader.readAsDataURL(file);
+    });
+  }
+
+
+  async function ImageEditAttr(e) {
+    // if (e.defaultPrevented || e.defaultAction)
+    //   return;
+    // this.ownerElement.blur(); //todo do we need this one?
+    const input = document.createElement("input");
+    input.type = "file";
+    input.click();
+    return new CustomEvent("edit", {
+      composed: true,
+      bubbles: true,
+      detail: await readImage(input.files[0])
+    });
+  }
+
+  customEventFilters.define("edit", ImageEditAttr);
+
+</script>

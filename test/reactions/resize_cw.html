@@ -1,0 +1,74 @@
+<script src="https://cdn.jsdelivr.net/gh/orstavik/parse@v1.0.2/parse.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver/constructionFrame.js"></script>
+<script src="../../src/customAttributes.js"></script>
+
+
+<style>
+    h1 {
+        --cqw: 10px;
+        width: calc(12 * var(--cqw, 1cqw));
+        border: 2px solid red;
+    }
+
+    h2 {
+        --cqw: 20px;
+        width: calc(12 * var(--cqw, 1cqw));
+        border: 2px solid green;
+    }
+
+    h3 {
+        --cqw: 40px;
+        width: calc(12 * var(--cqw, 1cqw));
+        border: 2px solid blue;
+    }
+</style>
+
+<div cqw style="width: 1000px; container-type: inline-size;">
+    <article>
+        <slot name="text1"></slot>
+        <h1 resize2:cqw> 1. hello sunshine </h1>
+    </article>
+</div>
+
+
+<h2 slot="text1" resize2:cqw> 2. hello sunshine </h2>
+
+
+<div cqw style="width: 4000px; container-type: inline-size;">
+    <h3 resize2:cqw> 3. hello sunshine </h3>
+</div>
+
+<script>
+  customAttributes.define("resize2", class ResizeAttr extends CustomAttr {
+    upgrade() {
+      eventLoop.dispatch(new Event(this.type), this);
+      const obs = new ResizeObserver(() => {
+        eventLoop.dispatch(new Event(this.type), this);
+      });
+      obs.observe(this.ownerElement, {box: "border-box"});
+    }
+  });
+
+  const containers = [...document.querySelectorAll("[cqw]")];
+
+  function calculateTheCQW(el) {
+    let container = containers.filter(item => item.contains(el)).shift() || document.body;
+    return parseInt(getComputedStyle(container).width) / 100 + "px";
+  }
+
+  // customReactions.define("cqw", function styler(e, prop, value) {
+  //   if (!CSS.supports("container-type", "size")) {
+  //     const cqw = calculateTheCQW(this.ownerElement);
+  //     //set the --cqw variable
+  //     this.ownerElement.style.setProperty("--cqw", cqw);
+  //   }
+  //   // this.ownerElement.innerText+= " " + getComputedStyle(this.ownerElement).getPropertyValue("--cqw");
+  //
+  //   return e;
+  // });
+
+  customReactions.define("log", function (e) {
+    console.log(4, this.ownerElement.offsetWidth);
+    return e;
+  });
+</script>
