@@ -102,7 +102,7 @@ Output:
 > Note: Be careful with arrow functions, when using arrow functions, the context `this === window`. When you plan to
 > use `this` keyword, declare function as normal `function`.
 
-### Syntax
+### Operators
 
 There are several operators that allow you to control the behavior of an event:
 
@@ -231,14 +231,15 @@ There are several operators that allow you to control the behavior of an event:
        ```      
 
        >  The `.` at the end is only there to override function call for arguments
-
-* #### `:` - operator between actions. Actually call it a pipe operator. similar to  `|` . But `|` is not a valid attribute
+    
+   
+* #### `:` - operator between actions. 
+  Actually call it a pipe operator. similar to  `|` . But `|` is not a valid attribute
   character.
   <br>
   <br>
   It is basic operator, you saw it in the examples above, it separates the event name from the filter name.
-
-  ##### `:` example
+   ##### `:` example
 
   You can use it to chain filters
 
@@ -276,11 +277,14 @@ There are several operators that allow you to control the behavior of an event:
   <div click:filter:e.prevent-default>Hello
    <h1 click::dispatch_toggle>sunshine</h1>
   </div>
+  
   <script>
+    document.addEventListener("toggle", e=> console.log(e.type))
+    
      customReactions.defineAll({
     "filter": function(e, prefix, suffix){
       if(e.target.tagName === "H1")
-        return e.preventDefault();
+        return e;
      },
     "dispatch": function (e, prefix, suffix){
       let event = new Event(suffix);
@@ -288,10 +292,10 @@ There are several operators that allow you to control the behavior of an event:
      }
     });
    document.querySelector("h1").click();
+   document.querySelector("div").click();
   </script>
   ```
- 
- 
+
 
 
 * #### `_` - function name and argument separators
@@ -304,7 +308,7 @@ There are several operators that allow you to control the behavior of an event:
   ```[click<:>function1<_>ArgumentA<_>ArgumentB]```
 
    ```html
-   <h1 click:filterA_one_two>
+   <h1 click:filterA_one_two></h1>
    ```
 
    ```javascript
@@ -323,3 +327,7 @@ There are several operators that allow you to control the behavior of an event:
     ```  
 
   As you can see from the demonstration, we can pass several default values by listing them with `_`.
+
+### Summary
+
+

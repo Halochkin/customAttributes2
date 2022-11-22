@@ -25,11 +25,17 @@
 <div click:filter:e.prevent-default>Hello
     <h1 click::dispatch_toggle>sunshine</h1>
 </div>
+
 <script>
+  document.addEventListener("toggle", e=>{
+    console.log(e.type)
+  })
+
   customReactions.defineAll({
     "filter": function(e, prefix, suffix){
-      if(e.target.tagName === "H1")
-        return e.preventDefault();
+      if(e.target.tagName === "DIV")
+        return e;
+      debugger
     },
     "dispatch": function (e, prefix, suffix){
       let event = new Event(suffix);
@@ -37,4 +43,11 @@
     }
   });
   document.querySelector("h1").click();
+
+  window.preventDefault = function(e){
+    console.log(123)
+    debugger
+  }
+
+  // document.querySelector("div").click();
 </script>
