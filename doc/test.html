@@ -1,0 +1,24 @@
+<script src="https://cdn.jsdelivr.net/gh/orstavik/parse/parse.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.0/startObserver.js"></script>
+<script src="../src/customAttributes.js"></script>
+<script src="../src/lib.js"></script>
+
+<h1 click:on_ass_hole>hello on-click_shift</h1>
+
+<script>
+  function test(arg){
+    console.log(arg, this, this.value)
+  }
+
+  customReactions.define("on", test);
+  customReactions.define("do", (e, a)=>{
+    console.log(this);
+    debugger
+  });
+
+  const h1 = document.querySelector("h1");
+  h1.on = function (e) {
+    console.log("Hello sunshine "+ e.type);
+  }.bind(h1);
+  h1.click();
+</script>
