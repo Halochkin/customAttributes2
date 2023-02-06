@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Swipe</title>
+
+    <style>
+        #elem {
+            position: absolute;
+            width: 450px;
+            height: 450px;
+            background-color: red;
+        }
+
+        #viewport {
+            display: inline-block;
+            width: 450px;
+            height: 450px;
+            position: relative;
+            overflow: hidden;
+            background-color: yellow;
+            margin: 10px;
+            /*margin-top: 20px;*/
+            border-radius: 10px;
+        }
+    </style>
+
+    <script src="../../src/customAttributes.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.0/startObserver.js"></script>
+
+</head>
+<body>
+
+<div swipe id="viewport" touch-action="pan-left" pointer-distance="30">
+    <div id="elem"></div>
+</div>
+
+</body>
+<script>
+  // -------------------------------------------------------------------
+  function filterOnAttribute(e, attributeName) {                                                 //4. FilterByAttribute
+    for (let el = e.target; el; el = el.parentNode) {
+      if (!el.hasAttribute)
+        return null;
+      if (el.hasAttribute(attributeName))
+        return el;
+    }
+    return null;
+  }
+
+  function makeSwipeEvent(name, {x, y, target}) {
+    const composedEvent = new CustomEvent("swipe-" + name, {bubbles: true, composed: true});
+    composedEvent.x = x;
+    composedEvent.y = y;
+    composedEvent.detail = target.offsetLeft;
+    return composedEvent;
+  }
+
+  function captureEvent(e, stopProp) {
+    e.preventDefault();
+    stopProp && e.stopImmediatePropagation ? e.stopImmediatePropagation() : e.stopPropagation();
+  }
+
+  function replaceDefaultAction(target, composedEvent, trigger) {      //[3] ReplaceDefaultAction
+    composedEvent.trigger = trigger;
+    trigger.stopTrailingEvent = function () {
+      composedEvent.stopImmediatePropagation ? composedEvent.stopImmediatePropagation() : composedEvent.stopPropagation();
+    };
+    trigger.preventDefault();
+    return setTimeout(function () {
+      target.dispatchEvent(composedEvent)
+    }, 0);
+  }
+
+  function mouseOutOfBounds(trigger) {
+    return trigger.clientY < 0 || trigger.clientX < 0 || trigger.clientX > window.innerWidth || trigger.clientY > window.innerHeight;
+  }
+
+  function updateSequence(sequence, e) {                                                         //7. TakeNote
+    sequence.recorded.push(e);
+    return sequence;
+  }
+
+  function startSequence(target, e) {                                                            //5. Event Sequence
+    const body = document.querySelector("body");
+    const sequence = {
+      target,
+      cancelMouseout: target.hasAttribute("swipe-cancel-pointerout"),
+      swipeDuration: parseInt(target.getAttribute("pointer-duration")) || 50,                    //6. EventAttribute
+      swipeDistance: parseInt(target.getAttribute("pointer-distance")) || 100,
+      recorded: [e],
+      userSelectStart: body.style.userSelect,                                                    //10. Grabtouch
+    };
+    document.children[0].style.userSelect = "none";
+    target.removeAttribute("mousedown:mousedowninitial");
+    target.setAttribute("mousedown:mousedownsecondary");
+    target.setAttribute("mousemove:onmousemove");
+    target.setAttribute("mouseup:onmouseup");
+    target.setAttribute("blur:onblur");
+    target.setAttribute("selectstart:onselectstart");
+    return sequence;
+  }
+
+  function stopSequence({target, userSelectStart}) {
+    document.children[0].style.userSelect = userSelectStart;
+    target.removeAttribute("mousemove:onmousemove");
+    target.removeAttribute("mouseup:onmouseup");
+    target.removeAttribute("blur:onblur");
+    target.removeAttribute("selectstart:onselectstart");
+    target.removeAttribute("mousedown:mousedownsecondary");
+    target.setAttribute("mousedown:mousedowninitial");
+    return undefined;
+  }
+
+  let globalSequence;
+
+  customAttributes.define("swipe", class Swipe extends CustomAttr {
+
+    upgrade() {
+      customReactions.define("mousedowninitial", function (e) {
+        if (e.button !== 0)
+          return;
+        const target = filterOnAttribute(e, "swipe");
+        if (!target)
+          return;
+        const composedEvent = makeSwipeEvent("start", e);
+        captureEvent(e, false);
+        globalSequence = startSequence(target, composedEvent);
+        replaceDefaultAction(target, composedEvent, e);
+      });
+
+      customReactions.define("mousedownsecondary", function (e) {
+        const cancelEvent = makeSwipeEvent("cancel", e);
+        const target = globalSequence.target;
+        globalSequence = stopSequence(globalSequence);
+        replaceDefaultAction(target, cancelEvent, e);
+      });
+
+      customReactions.define("onmousemove", function (e) {
+         if (!globalSequence.cancelMouseout && mouseOutOfBounds(e)) {
+          const cancelEvent = makeSwipeEvent("cancel", e);
+          const target = globalSequence.target;
+          globalSequence = stopSequence(globalSequence);
+          replaceDefaultAction(target, cancelEvent, e);
+          return;
+        }
+        const composedEvent = makeSwipeEvent("move", e);
+        captureEvent(e, false);
+        globalSequence = updateSequence(globalSequence, composedEvent);
+        replaceDefaultAction(globalSequence.target, composedEvent, e);
+      });
+
+      customReactions.define("onmouseup", function (e) {
+        const stopEvent = makeSwipeEvent("stop", e);
+        if (!stopEvent) return;
+        captureEvent(e, false);
+        const target = globalSequence.target;
+        globalSequence = stopSequence(globalSequence);
+        replaceDefaultAction(target, stopEvent, e);
+      });
+
+      customReactions.define("onblur", function (e) {
+        const blurInEvent = makeSwipeEvent("cancel", e);
+        const target = globalSequence.target;
+        globalSequence = stopSequence(globalSequence);
+        replaceDefaultAction(target, blurInEvent, e);
+      });
+
+      customReactions.define("onselectstart", function (e) {
+        e.preventDefault();
+        e.stopImmediatePropagation ? e.stopImmediatePropagation() : e.stopPropagation();
+      });
+
+      this.ownerElement.setAttribute("mousedown:mousedowninitial");
+    }
+  });
+
+
+</script>
+
+<script>
+
+  function colorPicker() {
+    return 'rgb(' + (Math.floor(Math.random() * 256)) + ',' + (Math.floor(Math.random() * 256)) + ',' + (Math.floor(Math.random() * 256)) + ')';
+  }
+
+  let viewport = document.getElementById("viewport");
+  let swipeStart = 0;
+
+  window.addEventListener("swipe-start", e => {
+    swipeStart = e.x - e.trigger.target.offsetLeft;
+  });
+
+  window.addEventListener("swipe-stop", e => {
+    let swipeDist = swipeStart - e.x;
+    viewport.children[0].style.transitionDuration = "0.8s";
+    if (Math.abs(swipeDist) < 100) return;
+    viewport.children[0].style.transform = swipeDist > 0 ? "rotate(15deg)" : "rotate(-15deg)";
+    viewport.children[0].style.marginLeft = swipeDist > 0 ? "-650px" : "650px";
+    setTimeout(() => {
+      if (!viewport.children[0].parentNode)
+        return;
+      viewport.children[0].parentNode.removeChild(viewport.children[0]);
+      let el = document.createElement("div");
+      el.id = "elem";
+      el.transitionDuration = "1s";
+      el.style.backgroundColor = colorPicker();
+      viewport.appendChild(el);
+    }, 500);
+  });
+</script>
+
+</html>
