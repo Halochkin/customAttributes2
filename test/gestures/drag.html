@@ -88,27 +88,29 @@
       userSelectStart: document.children[0].style.userSelect
     };
     document.children[0].style.userSelect = "none";
-    target.removeAttribute("mousedown:mousedowninitial");
-    target.setAttribute("mousedown:mousedownsecondary");
-    target.setAttribute("mousemove:onmousemove");
-    target.setAttribute("mouseup:onmouseup");
-    target.setAttribute("blur:onblur");
+    target.removeAttribute("mousedown:mousedowninitial_draggable_start");
+    target.setAttribute("mousedown:mousedownsecondary_cancel");
+    target.setAttribute("mousemove:onmousemove_move");
+    target.setAttribute("mouseup:onmouseup_stop_fling");
+    target.setAttribute("mouseout:onmouseup_stop_fling");
+    target.setAttribute("blur:onblur_cancel");
     target.setAttribute("selectstart:onselectstart");
     return sequence;
   }
 
   function stopSequence({target, userSelectStart}) {
     document.children[0].style.userSelect = userSelectStart;
-    target.removeAttribute("mousemove:onmousemove");
-    target.removeAttribute("mouseup:onmouseup");
-    target.removeAttribute("blur:onblur");
-    target.removeAttribute("selectstart:onselectstart");
-    target.removeAttribute("mousedown:mousedownsecondary");
-    target.setAttribute("mousedown:mousedowninitial");
+    target.removeAttribute("mousedown:mousedownsecondary_cancel");
+    target.removeAttribute("mousemove:onmousemove_move");
+    target.removeAttribute("mouseup:onmouseup_stop_fling");
+    target.removeAttribute("mouseout:onmouseup_stop_fling");
+    target.removeAttribute("blur:onblur_cancel");
+    target.removeAttribute("selectstart:onselectstart"); //todo: make both .preventDefault and .stopPropagation via attributes
+    target.setAttribute("mousedown:mousedowninitial_draggable_start");
     return undefined;
   }
 
-  function makeFlingEvent(trigger, sequence) {
+  function makeFlingEvent(trigger, sequence, name) {
     const flingTime = trigger.timeStamp - sequence.flingDuration;
     const flingStart = findLastEventOlderThan(sequence.recorded, flingTime);
     if (!flingStart)
@@ -117,7 +119,7 @@
     if (detail.distDiag < sequence.flingDistance)
       return null;
     detail.angle = flingAngle(detail.distX, detail.distY);
-    return new CustomEvent("fling", {bubbles: true, composed: true, detail});
+    return new CustomEvent(name, {bubbles: true, composed: true, detail});
   }
 
   function findLastEventOlderThan(events, timeTest) {
@@ -146,27 +148,26 @@
 
     upgrade() {
 
-      customReactions.define("mousedowninitial", function (e) {
-
+      customReactions.define("mousedowninitial", function (e, prefix, attribute, name) {
         if (e.button !== 0)
           return;
-        const target = filterOnAttribute(e, "draggable");
+        const target = filterOnAttribute(e, attribute);
         if (!target)
           return;
-        const composedEvent = makeDraggingEvent("start", e);
+        const composedEvent = makeDraggingEvent(name, e);
         captureEvent(e, false);
         globalSequence = startSequence(target, composedEvent);
         replaceDefaultAction(target, composedEvent, e);
       });
 
-      customReactions.define("mousedownsecondary", function (e) {
-        const cancelEvent = makeDraggingEvent("cancel", e);
+      customReactions.define("mousedownsecondary", function (e, prefix, name) {
+        const cancelEvent = makeDraggingEvent(name, e);
         const target = globalSequence.target;
         globalSequence = stopSequence(globalSequence);
         replaceDefaultAction(target, cancelEvent, e);
       });
 
-      customReactions.define("onmousemove", function (e) {
+      customReactions.define("onmousemove", function (e, prefix, name) {
         if (!globalSequence.cancelMouseout && mouseOutOfBounds(e)) {
           const cancelEvent = makeDraggingEvent("cancel", e);
           const target = globalSequence.target;
@@ -174,15 +175,15 @@
           replaceDefaultAction(target, cancelEvent, e);
           return;
         }
-        const composedEvent = makeDraggingEvent("move", e);
+        const composedEvent = makeDraggingEvent(name, e);
         captureEvent(e, false);
         globalSequence = updateSequence(globalSequence, composedEvent);
         replaceDefaultAction(globalSequence.target, composedEvent, e);
       });
 
-      customReactions.define("onmouseup", function (e) {
-        const stopEvent = makeDraggingEvent("stop", e);
-        const flingEvent = makeFlingEvent(e, globalSequence);
+      customReactions.define("onmouseup", function (e, prefix, stop, fling) {
+        const stopEvent = makeDraggingEvent(stop, e);
+        const flingEvent = makeFlingEvent(e, globalSequence, fling);
         captureEvent(e, false);
         const target = globalSequence.target;
         globalSequence = stopSequence(globalSequence);
@@ -191,8 +192,8 @@
           replaceDefaultAction(target, flingEvent, e);
       });
 
-      customReactions.define("onblur", function (e) {
-        const blurInEvent = makeDraggingEvent("cancel", e);
+      customReactions.define("onblur", function (e, prefix, name) {
+        const blurInEvent = makeDraggingEvent(name, e);
         const target = globalSequence.target;
         globalSequence = stopSequence(globalSequence);
         replaceDefaultAction(target, blurInEvent, e);
@@ -203,7 +204,7 @@
         e.stopImmediatePropagation ? e.stopImmediatePropagation() : e.stopPropagation();
       });
 
-      this.ownerElement.setAttribute("mousedown:mousedowninitial");
+      this.ownerElement.setAttribute("mousedown:mousedowninitial_draggable_start");
     }
 
   });
