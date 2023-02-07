@@ -92,23 +92,23 @@
       userSelectStart: body.style.userSelect,                                                    //10. Grabtouch
     };
     document.children[0].style.userSelect = "none";
-    target.removeAttribute("mousedown:mousedowninitial");
-    target.setAttribute("mousedown:mousedownsecondary");
-    target.setAttribute("mousemove:onmousemove");
-    target.setAttribute("mouseup:onmouseup");
-    target.setAttribute("blur:onblur");
+    target.removeAttribute("mousedown:mousedowninitial_swipe_start");
+    target.setAttribute("mousedown:mousedownsecondary_cancel");
+    target.setAttribute("mousemove:onmousemove_move");
+    target.setAttribute("mouseup:onmouseup_stop");
+    target.setAttribute("blur:onblur_cancel");
     target.setAttribute("selectstart:onselectstart");
     return sequence;
   }
 
   function stopSequence({target, userSelectStart}) {
     document.children[0].style.userSelect = userSelectStart;
-    target.removeAttribute("mousemove:onmousemove");
-    target.removeAttribute("mouseup:onmouseup");
-    target.removeAttribute("blur:onblur");
+    target.removeAttribute("mousedown:mousedownsecondary_cancel");
+    target.removeAttribute("mousemove:onmousemove_move");
+    target.removeAttribute("mouseup:onmouseup_stop");
+    target.removeAttribute("blur:onblur_cancel");
     target.removeAttribute("selectstart:onselectstart");
-    target.removeAttribute("mousedown:mousedownsecondary");
-    target.setAttribute("mousedown:mousedowninitial");
+    target.setAttribute("mousedown:mousedowninitial_swipe_start");
     return undefined;
   }
 
@@ -117,26 +117,26 @@
   customAttributes.define("swipe", class Swipe extends CustomAttr {
 
     upgrade() {
-      customReactions.define("mousedowninitial", function (e) {
+      customReactions.define("mousedowninitial", function (e, prefix, attr, name) {
         if (e.button !== 0)
           return;
-        const target = filterOnAttribute(e, "swipe");
+        const target = filterOnAttribute(e, attr);
         if (!target)
           return;
-        const composedEvent = makeSwipeEvent("start", e);
+        const composedEvent = makeSwipeEvent(name, e);
         captureEvent(e, false);
         globalSequence = startSequence(target, composedEvent);
         replaceDefaultAction(target, composedEvent, e);
       });
 
-      customReactions.define("mousedownsecondary", function (e) {
-        const cancelEvent = makeSwipeEvent("cancel", e);
+      customReactions.define("mousedownsecondary", function (e, prefix, name) {
+        const cancelEvent = makeSwipeEvent(name, e);
         const target = globalSequence.target;
         globalSequence = stopSequence(globalSequence);
         replaceDefaultAction(target, cancelEvent, e);
       });
 
-      customReactions.define("onmousemove", function (e) {
+      customReactions.define("onmousemove", function (e, prefix, name) {
          if (!globalSequence.cancelMouseout && mouseOutOfBounds(e)) {
           const cancelEvent = makeSwipeEvent("cancel", e);
           const target = globalSequence.target;
@@ -144,14 +144,14 @@
           replaceDefaultAction(target, cancelEvent, e);
           return;
         }
-        const composedEvent = makeSwipeEvent("move", e);
+        const composedEvent = makeSwipeEvent(name, e);
         captureEvent(e, false);
         globalSequence = updateSequence(globalSequence, composedEvent);
         replaceDefaultAction(globalSequence.target, composedEvent, e);
       });
 
-      customReactions.define("onmouseup", function (e) {
-        const stopEvent = makeSwipeEvent("stop", e);
+      customReactions.define("onmouseup", function (e, prefix, name) {
+        const stopEvent = makeSwipeEvent(name, e);
         if (!stopEvent) return;
         captureEvent(e, false);
         const target = globalSequence.target;
@@ -159,8 +159,8 @@
         replaceDefaultAction(target, stopEvent, e);
       });
 
-      customReactions.define("onblur", function (e) {
-        const blurInEvent = makeSwipeEvent("cancel", e);
+      customReactions.define("onblur", function (e, prefix, name) {
+        const blurInEvent = makeSwipeEvent(name, e);
         const target = globalSequence.target;
         globalSequence = stopSequence(globalSequence);
         replaceDefaultAction(target, blurInEvent, e);
@@ -171,7 +171,7 @@
         e.stopImmediatePropagation ? e.stopImmediatePropagation() : e.stopPropagation();
       });
 
-      this.ownerElement.setAttribute("mousedown:mousedowninitial");
+      this.ownerElement.setAttribute("mousedown:mousedowninitial_swipe_start");
     }
   });
 
