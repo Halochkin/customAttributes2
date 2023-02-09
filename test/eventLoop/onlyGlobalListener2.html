@@ -1,0 +1,15 @@
+<script src="../../src/customAttributes.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.0/startObserver.js"></script>
+
+<body>
+<h1 _click:log>hello sunshine</h1>
+<span>
+  We have a native event on one branch, and a global listener for that native event on the other branch. Will the global listener capture the native event on the other branch?
+</span>
+
+<script type="module">
+  customReactions.define("log", _ => console.log("hello sunshine"));
+  document.querySelector("h1").click();
+  document.querySelector("span").click();
+</script>
+</body>
