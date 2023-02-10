@@ -36,6 +36,6 @@ The reactions and defaultAction are the same type of functions. If a set of defa
 
 Clone the github project, and then run the following command from the root folder of the project. 
 
-`npx serve --cors`
+`npx http-server -p 3000 --cors`
 
 Then open `http://localhost:3000/test/`.
