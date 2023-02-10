@@ -318,8 +318,12 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
     #eventLoop = [];
 
     dispatch(event, target) {
+      if (!(event instanceof Event))
+        throw new SyntaxError("First argument of eventLoop.dispatch(event, target?) is not an Event.");
+      if (!(target === undefined || target instanceof Node))
+        throw new SyntaxError("Second argument of eventLoop.dispatch(event, target?) is neither undefined nor a Node.");
       if (event.type[0] === "_")
-        throw new Error(`eventLoop.dispatch(..) doesn't accept events beginning with "_": ${event.type}.`);
+        throw new SyntaxError(`eventLoop.dispatch(..) doesn't accept events beginning with "_": ${event.type}.`);
       this.#eventLoop.push({target, event});
       if (this.#eventLoop.length > 1)
         return;
