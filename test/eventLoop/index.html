@@ -1,9 +1,6 @@
 <test-html test="syncTest.html">
   <script expected>["click", "sunshine"]</script>
 </test-html>
-<test-html test="onlyGlobalListener.html">
-  <script expected>["click", "auxclick"]</script>
-</test-html>
 <test-html test="upgradeTest.html">
   <script expected>["click", "sunshine"]</script>
 </test-html>
@@ -70,6 +67,12 @@
     ["SPAN", "#document", "SPAN"],
     ["SPAN", "#document", "SPAN"]
   ]</script>
+</test-html>
+<test-html test="onlyGlobalListener.html">
+  <script expected>["click", "auxclick"]</script>
+</test-html>
+<test-html test="onlyGlobalListener2.html">
+  <script expected>["hello sunshine", "hello sunshine"]</script>
 </test-html>
 
 

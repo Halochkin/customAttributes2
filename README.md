@@ -31,3 +31,11 @@ The reactions and defaultAction are the same type of functions. If a set of defa
     });
  </script>
 ```
+
+## Run the tests
+
+Clone the github project, and then run the following command from the root folder of the project. 
+
+`npx http-server -p 3000 --cors`
+
+Then open `http://localhost:3000/test/`.
