@@ -179,22 +179,14 @@ class WeakArrayDict {
   }
 
   * values(key) {
-    let filtered = [];
-    for (let ref of this[key] || []) {
-      const v = ref.deref();
-      if (v?.ownerElement) {//if no .ownerElement, the attribute has been removed from DOM but not yet GC.
-        filtered.push(ref);
-        yield v;
-      }
-    }
-    this[key] = filtered;
+    if (this.gc(key))
+      yield* this[key].map(ref => ref.deref());
   }
 
-  //todo if elements with global a customAttr is removed in JS but not yet GCed, this will still run
-  empty(key) {
-    for (let _ of this.values(key))
-      return false;
-    return true;
+  //sync with native gc and remove all attributes without .ownerElement.
+  gc(key) {
+    this[key] = this[key]?.filter(ref => ref.deref()?.ownerElement);
+    return this[key]?.length || 0;
   }
 }
 
@@ -236,8 +228,9 @@ class AttributeRegistry {
     return this.#globals.values(type);
   }
 
+  //todo if elements with global a customAttr is removed in JS but not yet GCed, this will still run
   globalEmpty(type) {
-    return this.#globals.empty(type);
+    return !this.#globals.gc(type);
   }
 
   #upgradeAttribute(at, Definition) {
