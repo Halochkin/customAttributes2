@@ -281,8 +281,8 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
   Object.defineProperty(Event.prototype, "uid", {
     get: function () {
       let uid = eventToUid.get(this);
-      uid === undefined && eventToUid.set(this, eventUid++);
-      return eventUid;
+      uid === undefined && eventToUid.set(this, uid = eventUid++);
+      return uid;
     }
   });
 
@@ -430,14 +430,13 @@ function deprecated() {
   };
 })(Element.prototype, document.createAttribute);
 
-observeElementCreation(els=>els.forEach(el => customAttributes.upgrade(...el.attributes)));
-// document.addEventListener("element-created", ({detail: els}) =>els.forEach(el => customAttributes.upgrade(...el.attributes)));
-// ElementObserver.end(el => customAttributes.upgrade(...el.attributes));
+observeElementCreation(els => els.forEach(el => customAttributes.upgrade(...el.attributes)));
 
 //** CustomAttribute registry with builtin support for the native HTML events.
 (function (addEventListener, removeEventListener) {
-  // EventTarget.prototype.addEventListener = deprecated.bind("EventTarget.addEventListener");
-  // EventTarget.prototype.removeEventListener = deprecated.bind("EventTarget.removeEventListener");
+  EventTarget.prototype.addEventListener = deprecated.bind("EventTarget.addEventListener");
+  EventTarget.prototype.removeEventListener = deprecated.bind("EventTarget.removeEventListener");
+
   class NativeBubblingEvent extends CustomAttr {
     upgrade() {
       addEventListener.call(this.ownerElement, this.type, this._listener = this.listener.bind(this));
@@ -518,6 +517,7 @@ observeElementCreation(els=>els.forEach(el => customAttributes.upgrade(...el.att
             `on${type}` in window ? NativeEventWindow :
               `on${type}` in Document.prototype && NativeEventDocument);
     }
+    //todo we should have a ho function for the native global listeners that work.
   }
 
   window.customAttributes = new NativeEventsAttributeRegistry();
