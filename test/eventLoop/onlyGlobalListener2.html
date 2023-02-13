@@ -1,10 +1,24 @@
+<script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.2/observeElementCreation.js"></script>
 <script src="../../src/customAttributes.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.0/startObserver.js"></script>
 
 <body>
 <h1 _click:log>hello sunshine</h1>
 <span>
   We have a native event on one branch, and a global listener for that native event on the other branch. Will the global listener capture the native event on the other branch?
+
+  problems:
+  1. if it is window only, then it is enough with an event listener on the window, and it has to be an event listener on the window. We have a distinction of window events. They are global. They are only global.. We should mark this as global from the get go? So there is no disconnect on the global events. This would mean that
+
+  2. if it bubbles and composed, then we need the event listener on the document.
+  3. if it bubbles and not composed, then we need the event listener on the shadowRoot.
+  4. if it not bubble and composed, then we need the event listener as an early bird on the document, but then we don't know if there will be another event listener further down that will give us a better composedPath[0]. This will not be a problem if the shadowRoot is mode:open.
+  5. if the not bubble and not composed, then we need the event listener as an early bird on the shadowRoot.
+
+  For global listeners, we can add multiple event listeners, and then remove them as their owner is no longer active.
+
+  So. The solution could be to add event listeners for all, and then check to see what type of events they are, and then remove the event listeners that are not necessary. This is not such a big statemachine for each event type. And then afterwards, we could mark the event as of a certain type, and then use that to only add one event listener afterwards.
+
+  Or. Alternatively. We could
 </span>
 
 <script type="module">
