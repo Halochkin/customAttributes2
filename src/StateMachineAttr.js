@@ -35,34 +35,6 @@ class StateMachineAttr extends CustomAttr {
     return this._seenEvents.has(e) ? undefined : (this._seenEvents.add(e), e);
   }
 
-  detail(e, _, uid) {
-    if (e.detail === uid)
-      return e;
-  }
-
-  observe(e) {
-    this.ownerElement.setAttribute("_eventgrab:detail_" + e.uid + ":reset");
-    return e;
-  }
-
-  reset(e) {
-    for (let attr of this.ownerElement.attributes)
-      if (attr.name.startsWith("_eventgrab:detail_"))
-        this.ownerElement.removeAttribute(attr.name);
-    return e;
-  }
-
-  grab(e) {
-    for (let attr of this.ownerElement.attributes) {
-      const uid = attr.name.match(/^_eventgrab:detail_(\d+)/)?.[1];
-      if (uid !== undefined) {
-        this.ownerElement.removeAttribute(attr.name);
-        eventLoop.dispatch(new CustomEvent("eventgrab", {detail: uid}));
-      }
-    }
-    return e;
-  }
-
   transition(e, _, newState) {
     const el = this.ownerElement;
     const oldState = this._state;

@@ -24,8 +24,8 @@ In this demo we will change the appearance of an element every time the user cli
 
 ```html
 
+<script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.2/observeElementCreation.js"></script>
 <script src="../../src/customAttributes.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.0/startObserver.js"></script>
 
 <style>
   h1[blue] {background: blue}
@@ -48,8 +48,8 @@ In the above example, we only change the appearance of the element based on the 
 
 ```html
 
+<script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.2/observeElementCreation.js"></script>
 <script src="../../src/customAttributes.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.0/startObserver.js"></script>
 
 <style>
   .blue {background: blue}
@@ -70,8 +70,8 @@ In the above example, we only change the appearance of the element based on the 
 The reaction `class_blue` is not a bad read. But, it can be even simpler. Most often in an app, there will only be one meaning of "blue" when talking about reactions. So, we can make a custom reaction that uses the `prefix`, ie. the name of the reaction itself as an attribute. This means that `class_` can be made implicit, and that we can change `click:class_blue` to `click:blue`.
 
 ```html
+<script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.2/observeElementCreation.js"></script>
 <script src="../../src/customAttributes.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.0/startObserver.js"></script>
 
 <style>
   .blue {background: blue}
