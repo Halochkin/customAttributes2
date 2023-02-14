@@ -43,28 +43,28 @@
   ]</script>
 </test-html>
 <test-html test="global-click.html">
-  <script expected>["local", "global", "..", "global"]</script>
+  <script expected>["global", "local", "..", "global"]</script>
 </test-html>
 <test-html test="passive_fast.html">
   <script expected>[
     ["wheel", "one"],
-    ["wheel", "one"],
-    ["wheel", "two"],
     ["wheel", "two"],
     ["wheel", "one"],
+    ["wheel", "one"],
+    ["wheel", "two"],
     ["wheel", "two"]
   ]</script>
 </test-html>
 <test-html test="target.html">
   <script expected>[
+    ["DIV", "#document-fragment", null],
+    ["SPAN", "#document", null],
     ["SPAN", "#document", "SPAN"],
     ["H1", "#document", "SPAN"],
     ["SLOT", "#document-fragment", "SLOT"],
     ["DIV", "#document-fragment", "SLOT"],
     ["WEB-COMP", "#document", "SPAN"],
     ["BODY", "#document", "SPAN"],
-    ["DIV", "#document-fragment", "SPAN"],
-    ["SPAN", "#document", "SPAN"],
     ["SPAN", "#document", "SPAN"]
   ]</script>
 </test-html>

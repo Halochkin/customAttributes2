@@ -4,6 +4,12 @@ class CustomAttr extends Attr {
     Object.defineProperty(this, "type", {value, writable: false, configurable: true});
     return value;
   }
+  //
+  // get definitionType(){
+  //   const value = this.name.match(/(_?[^_:]+)/)[1];
+  //   Object.defineProperty(this, "type", {value, writable: false, configurable: true});
+  //   return value;
+  // }
 
   get suffix() {
     return this.name.match(/_?([^:]+)/)[1].split("_").slice(1);
@@ -332,6 +338,10 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
     }
 
     static bubble(rootTarget, event, target = rootTarget) {
+
+      for (let attr of customAttributes.globalListeners(event.type))
+        EventLoop.#runReactions(attr.reactions, event, attr, false);
+
       for (let prev, t = rootTarget; t; prev = t, t = t.assignedSlot || t.parentElement || t.parentNode?.host) {
         t !== prev?.parentElement && eventToTarget.set(event, target = getTargetForEvent(event, t));
         for (let attr of t.attributes) {
@@ -344,11 +354,8 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
           }
         }
       }
-      const prevented = event.defaultPrevented;     //global listeners can't call .preventDefault()
-      //eventToTarget.set(event, theTopMostTarget); //not necessary, bubble already set it
-      for (let attr of customAttributes.globalListeners(event.type))
-        EventLoop.#runReactions(attr.reactions, event, attr, false);
-      if (event.defaultAction && !prevented) {
+
+      if (event.defaultAction && !event.defaultPrevented) {
         const {attr, res, target} = event.defaultAction;
         eventToTarget.set(event, target);
         EventLoop.#runReactions(attr.reactions, res, attr, false, attr.defaultAction);
@@ -460,45 +467,36 @@ observeElementCreation(els => els.forEach(el => customAttributes.upgrade(...el.a
     }
   }
 
-  class NativeEventDocument extends CustomAttr {
-    reroute(e) {
-      //todo cleanup for troublesome GC of eventlisteners associated with removed elements.
-      if (customAttributes.globalEmpty(this.type))
-        removeEventListener.call(this._listenerTarget, this.type, this._reroute);
-      else
+  function GlobalListener(target, nativeType) {
+    //the attribute is this. if ! this.ownerElement, then the attribute is gc. if so, then the remove eventListener.
+    return class GlobalNativeEvent extends CustomAttr {
+      reroute(e) {
+        if (!this.ownerElement)   //the attribute is removed.
+          return this.destructor();
+        e.stopImmediatePropagation();
+        //todo here we are setting the correct path and target manually
+        Object.defineProperty(e, "target", {value: target});
+        e.path = [target];
+        e.composedPath = () => e.path;
+        Object.defineProperty(e, "type", {value: this.type});
         eventLoop.dispatch(e);
-    }
+      }
 
-    upgrade() {
-      if (this.name[0] !== "_")
-        throw new SyntaxError(`AttributeError: missing "_" for global-only event: "_${this.name}".`);
-      addEventListener.call(this._listenerTarget, this.type, this._reroute = this.reroute.bind(this));
-    }
+      upgrade() {
+        if (this.name[0] !== "_")
+          throw new SyntaxError(`AttributeError: missing "_" for global-only event: "_${this.name}".`);
+        addEventListener.call(target, nativeType, this._reroute = this.reroute.bind(this));
+      }
 
-    destructor() {
-      removeEventListener.call(this._listenerTarget, this.type, this._reroute);
-    }
-
-    get _listenerTarget() {
-      return document;
-    }
-  }
-
-  class NativeEventWindow extends NativeEventDocument {
-    get _listenerTarget() {
-      return window;
-    }
-  }
-
-  class NativeEventDCL extends NativeEventDocument {
-    get type() {
-      return "DOMContentLoaded";
-    }
+      destructor() {
+        removeEventListener.call(target, nativeType, this._reroute);
+      }
+    };
   }
 
   class NativeEventsAttributeRegistry extends AttributeRegistry {
     #nativeCustomAttrs = {
-      "domcontentloaded": NativeEventDCL,
+      "domcontentloaded": GlobalListener(document, "DOMContentLoaded"), //todo should be _domcontentloaded
       "fastwheel": NativePassiveEvent,
       "fastmousewheel": NativePassiveEvent,
       "fasttouchstart": NativePassiveEvent,
@@ -514,8 +512,8 @@ observeElementCreation(els => els.forEach(el => customAttributes.upgrade(...el.a
       return super.getDefinition(type) ||
         (this.#nativeCustomAttrs[type] ??=
           `on${type}` in HTMLElement.prototype ? NativeBubblingEvent :
-            `on${type}` in window ? NativeEventWindow :
-              `on${type}` in Document.prototype && NativeEventDocument);
+            `on${type}` in window ? GlobalListener(window, type) : //NativeEventWindow
+              `on${type}` in Document.prototype && GlobalListener(document, type));//NativeEventDocument);
     }
     //todo we should have a ho function for the native global listeners that work.
   }

@@ -23,7 +23,7 @@
 
 <script type="module">
   customReactions.define("log", function (e) {
-    console.log(this.ownerElement.nodeName, this.ownerElement.getRootNode().nodeName, e.target.nodeName);
+    console.log(this.ownerElement.nodeName, this.ownerElement.getRootNode().nodeName, e.target?.nodeName);
   });
   document.querySelector("span").click();
 </script>
