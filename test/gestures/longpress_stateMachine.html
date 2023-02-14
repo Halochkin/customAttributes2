@@ -32,7 +32,6 @@
     }
 
     reset(e) {
-      super.reset();
       delete this._mousedown;
       return e;
     }
@@ -60,16 +59,16 @@
     static fsm() {
       return {
         start: [
-          `mousedown:mouse:seen:activate:observe:transition_observe:log`
+          `mousedown:mouse:seen:activate:transition_observe:log`
         ],
         observe: [
           "_mousedown:seen:reset:transition_start:log",
           `_mouseup:seen:reset:transition_start:log`,
-          "timeout_200:grab:transition_active:log"
+          "timeout_200:transition_active:log"
         ],
         active: [
-          "_mousedown:seen:reset:transition_start:log",
-          `_mouseup:seen:checkduration:longpress:transition_start:log`,
+          "_mousedown::seen:reset:transition_start:log",
+          `_mouseup::seen:checkduration:longpress:reset:transition_start:log`,
         ]
       }
     }
