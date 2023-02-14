@@ -1,15 +1,17 @@
 class CustomAttr extends Attr {
   get type() {
-    const value = this.name.match(/_?([^_:]+)/)[1];
+    const value = this.name.match(/(_?[^_:]+)/)[1];
     Object.defineProperty(this, "type", {value, writable: false, configurable: true});
     return value;
   }
-  //
-  // get definitionType(){
-  //   const value = this.name.match(/(_?[^_:]+)/)[1];
-  //   Object.defineProperty(this, "type", {value, writable: false, configurable: true});
-  //   return value;
-  // }
+
+  get eventType() {
+    let value = this.type;
+    if (value[0] === "_") value = value.substring(1);
+    if (value.startsWith("fast")) value = value.substring(4);
+    Object.defineProperty(this, "eventType", {value, writable: false, configurable: true});
+    return value;
+  }
 
   get suffix() {
     return this.name.match(/_?([^:]+)/)[1].split("_").slice(1);
@@ -214,7 +216,7 @@ class AttributeRegistry {
 
   upgrade(...attrs) {
     for (let at of attrs) {
-      const type = at.name.match(/_?([^_:]+)/)[1];
+      const type = at.name.match(/(_?[^_:]+)/)[1];  //0.type is the definition type
       const Definition = this.getDefinition(type);
       if (Definition)                                    //1. upgrade to a defined CustomAttribute
         this.#upgradeAttribute(at, Definition);
@@ -222,7 +224,7 @@ class AttributeRegistry {
         Object.setPrototypeOf(at, CustomAttr.prototype);
       if (!Definition)                                   //3. register unknown attrs
         this.#unknownEvents.push(type, at);
-      at.name[0] === "_" && this.#globals.push(at.type, at);//* register globals
+      at.name[0] === "_" && this.#globals.push(at.eventType, at);//* register globals
     }
   }
 
@@ -318,9 +320,9 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
 
     dispatch(event, target) {
       if (!(event instanceof Event))
-        throw new SyntaxError("First argument of eventLoop.dispatch(event, target?) is not an Event.");
-      if (!(target === undefined || target instanceof Node))
-        throw new SyntaxError("Second argument of eventLoop.dispatch(event, target?) is neither undefined nor a Node.");
+        throw new SyntaxError("First argument of eventLoop.dispatch(event, target?) must be an Event.");
+      if (!(target === undefined || target instanceof Element || target instanceof Attr))
+        throw new SyntaxError("Second argument of eventLoop.dispatch(event, target?) must be either undefined, an Element, or an Attr.");
       if (event.type[0] === "_")
         throw new SyntaxError(`eventLoop.dispatch(..) doesn't accept events beginning with "_": ${event.type}.`);
       this.#eventLoop.push({target, event});
@@ -328,11 +330,11 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
         return;
       while (this.#eventLoop.length) {
         const {target, event} = this.#eventLoop[0];
-        if (!target || target instanceof Element)   //a bug in the ElementObserver.js causes "instanceof HTMLElement" to fail.
+        if (target instanceof Attr)
+          EventLoop.#runReactions(target.reactions, event, target, undefined);
+        else /*if (!target || target instanceof Element)*/   //a bug in the ElementObserver.js causes "instanceof HTMLElement" to fail.
           EventLoop.bubble(target, event);
         //todo if (target?.isConnected === false) then bubble without default action?? I think that we need the global listeners to run for disconnected targets, as this will make them able to trigger _error for example. I also think that attributes on disconnected ownerElements should still catch the _global events. Don't see why not.
-        else if (target instanceof Attr)
-          EventLoop.#runReactions(target.reactions, event, target, undefined);
         this.#eventLoop.shift();
       }
     }
@@ -345,7 +347,7 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
       for (let prev, t = rootTarget; t; prev = t, t = t.assignedSlot || t.parentElement || t.parentNode?.host) {
         t !== prev?.parentElement && eventToTarget.set(event, target = getTargetForEvent(event, t));
         for (let attr of t.attributes) {
-          if (attr.type === event.type && attr.name[0] !== "_") {
+          if (attr.eventType === event.type && attr.name[0] !== "_") {
             if (attr.defaultAction && (event.defaultAction || event.defaultPrevented))
               continue;
             const res = EventLoop.#runReactions(attr.reactions, event, attr, !!attr.defaultAction);
@@ -444,78 +446,78 @@ observeElementCreation(els => els.forEach(el => customAttributes.upgrade(...el.a
   EventTarget.prototype.addEventListener = deprecated.bind("EventTarget.addEventListener");
   EventTarget.prototype.removeEventListener = deprecated.bind("EventTarget.removeEventListener");
 
-  class NativeBubblingEvent extends CustomAttr {
-    upgrade() {
-      addEventListener.call(this.ownerElement, this.type, this._listener = this.listener.bind(this));
-    }
-
-    listener(e) {
-      // e.preventDefault(); // if dispatchEvent propagates sync, native defaultActions can still be used.
-      e.stopImmediatePropagation();
-      eventLoop.dispatch(e, e.composedPath()[0]);
-    }
-
-    destructor() {
-      removeEventListener.call(this.ownerElement, this.type, this._listener);
-    }
-  }
-
-  class NativePassiveEvent extends NativeBubblingEvent {
-    upgrade() {
-      Object.defineProperty(this, "type", {value: this.type.substring(4), writable: false, configurable: true});
-      addEventListener.call(this.ownerElement, this.type, this._listener = this.listener.bind(this), {passive: true});
-    }
-  }
-
-  function GlobalListener(target, nativeType) {
-    //the attribute is this. if ! this.ownerElement, then the attribute is gc. if so, then the remove eventListener.
-    return class GlobalNativeEvent extends CustomAttr {
-      reroute(e) {
-        if (!this.ownerElement)   //the attribute is removed.
-          return this.destructor();
-        e.stopImmediatePropagation();
-        //todo here we are setting the correct path and target manually
-        Object.defineProperty(e, "target", {value: target});
-        e.path = [target];
-        e.composedPath = () => e.path;
-        Object.defineProperty(e, "type", {value: this.type});
-        eventLoop.dispatch(e);
+  function NativeBubblingEvent(target, type, passive) {
+    return class NativeBubblingEvent extends CustomAttr {
+      upgrade() {
+        addEventListener.call(target || this.ownerElement, type, this._listener = this.listener.bind(this), {
+          passive,
+          capture: true
+        });
       }
 
-      upgrade() {
-        if (this.name[0] !== "_")
-          throw new SyntaxError(`AttributeError: missing "_" for global-only event: "_${this.name}".`);
-        addEventListener.call(target, nativeType, this._reroute = this.reroute.bind(this));
+      listener(e) {
+        // e.preventDefault(); // if dispatchEvent propagates sync, native defaultActions can still be used.
+        e.stopImmediatePropagation();
+        eventLoop.dispatch(e, e.composedPath()[0]);
       }
 
       destructor() {
-        removeEventListener.call(target, nativeType, this._reroute);
+        removeEventListener.call(target || this.ownerElement, type, this._listener, {passive, capture: true});
+      }
+    }
+  }
+
+  function GlobalListener(target, nativeType, passive) {
+    //the attribute is this. if ! this.ownerElement, then the attribute is gc. if so, then the remove eventListener.
+    return class GlobalNativeEvent extends CustomAttr {
+      reroute(e) {
+        //the attribute is removed. //todo this is wrong, it will never be gc'ed..
+        if (!this.ownerElement)
+          return this.destructor();
+        e.stopImmediatePropagation();
+        //todo toLowerCase() is needed for DOMContentLoaded only
+        Object.defineProperty(e, "type", {value: nativeType.toLowerCase()});
+        eventLoop.dispatch(e, e.composedPath()[0] instanceof Element ? e.composedPath()[0] : undefined);
+      }
+
+      upgrade() {
+        addEventListener.call(target || this.ownerElement, nativeType, this._reroute = this.reroute.bind(this), {
+          passive,
+          capture: true
+        });
+      }
+
+      destructor() {
+        removeEventListener.call(target || this.ownerElement, nativeType, this._reroute, {passive, capture: true});
       }
     };
   }
 
   class NativeEventsAttributeRegistry extends AttributeRegistry {
-    #nativeCustomAttrs = {
-      "domcontentloaded": GlobalListener(document, "DOMContentLoaded"), //todo should be _domcontentloaded
-      "fastwheel": NativePassiveEvent,
-      "fastmousewheel": NativePassiveEvent,
-      "fasttouchstart": NativePassiveEvent,
-      "fasttouchmove": NativePassiveEvent,
-      "touchstart": NativeBubblingEvent,
-      "touchmove": NativeBubblingEvent,
-      "touchend": NativeBubblingEvent,
-      "touchcancel": NativeBubblingEvent
-    };
+    cache = {};
 
-    //todo I think that we need to add the global marker here. That way we can get a different
-    getDefinition(type) {
-      return super.getDefinition(type) ||
-        (this.#nativeCustomAttrs[type] ??=
-          `on${type}` in HTMLElement.prototype ? NativeBubblingEvent :
-            `on${type}` in window ? GlobalListener(window, type) : //NativeEventWindow
-              `on${type}` in Document.prototype && GlobalListener(document, type));//NativeEventDocument);
+    static #create(type) {
+      let global = false, passive = false;
+      if (type[0] === "_") global = true, type = type.substring(1);
+      if (type.startsWith("fast")) passive = true, type = type.substring(4);
+
+      const ele = `on${type}` in HTMLElement.prototype || "touchstart" === type || "touchmove" === type || "touchend" === type || "touchcancel" === type;
+      const win = `on${type}` in window;
+      const doc = `on${type}` in Document.prototype;
+      const dcl = type === "domcontentloaded";
+
+      return !global && ele ? NativeBubblingEvent(undefined, type, passive) :
+        global && dcl ? GlobalListener(document, "DOMContentLoaded", passive) :
+          //todo use the shadowRoot and the document here??
+          global && ele && passive ? GlobalListener(window, type, passive) :
+            global && ele ? GlobalListener(window, type, passive) :
+              global && win ? GlobalListener(window, type, passive) :
+                global && doc && GlobalListener(document, type, passive);
     }
-    //todo we should have a ho function for the native global listeners that work.
+
+    getDefinition(type) {
+      return super.getDefinition(type) || (this.cache[type] ??= NativeEventsAttributeRegistry.#create(type));
+    }
   }
 
   window.customAttributes = new NativeEventsAttributeRegistry();
