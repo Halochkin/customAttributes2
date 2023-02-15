@@ -9,7 +9,6 @@ class CustomAttr extends Attr {
     let value = this.type;
     if (value[0] === "_") value = value.substring(1);
     if (value.startsWith("fast")) value = value.substring(4);      //annoying
-    // if (value === "domcontentloaded") value = "DOMContentLoaded";  //annoying
     Object.defineProperty(this, "eventType", {value, writable: false, configurable: true});
     return value;
   }
@@ -19,7 +18,9 @@ class CustomAttr extends Attr {
   }
 
   get passive() {
-    return this.name[0].startsWith("_fast") || this.name[0].startsWith("fast");
+    const value = this.name[0].startsWith("_fast") || this.name[0].startsWith("fast");
+    Object.defineProperty(this, "passive", {value, writable: false, configurable: true});
+    return value;
   }
 
   get suffix() {
@@ -527,31 +528,22 @@ observeElementCreation(els => els.forEach(el => customAttributes.upgrade(...el.a
   class NativeEventsAttributeRegistry extends AttributeRegistry {
     #cache = {};
 
-    static #create(type) {
-      //todo here we are doing the parsing again.
-      const global = type[0] === "_";
-      (global === true) && (type = type.substring(1));
-      if (type === "domcontentloaded") {
-        if(!global)
-          throw new SyntaxError("_global must have _")
-        return NativeDCLEvent
-      }
+    findNativeDefinition(type) {
+      const  global = type[0] === "_";
+      global === true && (type = type.substring(1));
       if (type.startsWith("fast")) type = type.substring(4);
-
-      const ele = `on${type}` in HTMLElement.prototype || "touchstart" === type || "touchmove" === type || "touchend" === type || "touchcancel" === type;
-      const win = `on${type}` in window;
-      const doc = `on${type}` in Document.prototype;
-      if (!ele && !win && !doc)
-        return;
-      if (!ele && !global)
-        throw new SyntaxError("_global must have _")
-
-      return !global ? NativeBubblingEvent : ele ? ShadowRootEvent : window ? NativeWindowEvent : NativeDocumentEvent;
+      if (`on${type}` in HTMLElement.prototype || "touchstart" === type || "touchmove" === type || "touchend" === type || "touchcancel" === type)
+        return global ? ShadowRootEvent : NativeBubblingEvent;
+      const res = type === "domcontentloaded" ? NativeDCLEvent :
+        `on${type}` in window ? NativeWindowEvent :
+          `on${type}` in Document.prototype ? NativeDocumentEvent : null;
+      if (res && !global)
+        throw new SyntaxError("_global must have _");
+      return res;
     }
 
     getDefinition(type) {
-      //todo so if the attribute is coming in here, we can just check the getters on the Attr.
-      return super.getDefinition(type) || (this.#cache[type] ??= NativeEventsAttributeRegistry.#create(type));
+      return super.getDefinition(type) || (this.#cache[type] ??= this.findNativeDefinition(type));
     }
   }
 
