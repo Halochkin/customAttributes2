@@ -8,9 +8,18 @@ class CustomAttr extends Attr {
   get eventType() {
     let value = this.type;
     if (value[0] === "_") value = value.substring(1);
-    if (value.startsWith("fast")) value = value.substring(4);
+    if (value.startsWith("fast")) value = value.substring(4);      //annoying
+    // if (value === "domcontentloaded") value = "DOMContentLoaded";  //annoying
     Object.defineProperty(this, "eventType", {value, writable: false, configurable: true});
     return value;
+  }
+
+  get global() {
+    return this.name[0] === "_";
+  }
+
+  get passive() {
+    return this.name[0].startsWith("_fast") || this.name[0].startsWith("fast");
   }
 
   get suffix() {
@@ -216,14 +225,12 @@ class AttributeRegistry {
 
   upgrade(...attrs) {
     for (let at of attrs) {
-      const type = at.name.match(/(_?[^_:]+)/)[1];  //0.type is the definition type
-      const Definition = this.getDefinition(type);
+      Object.setPrototypeOf(at, CustomAttr.prototype);
+      const Definition = this.getDefinition(at.type);
       if (Definition)                                    //1. upgrade to a defined CustomAttribute
         this.#upgradeAttribute(at, Definition);
-      else if (at.name.indexOf(":") > 0)                 //2. upgrade unknown/generic customAttribute
-        Object.setPrototypeOf(at, CustomAttr.prototype);
       if (!Definition)                                   //3. register unknown attrs
-        this.#unknownEvents.push(type, at);
+        this.#unknownEvents.push(at.type, at);
       at.name[0] === "_" && this.#globals.push(at.eventType, at);//* register globals
     }
   }
@@ -446,77 +453,105 @@ observeElementCreation(els => els.forEach(el => customAttributes.upgrade(...el.a
   EventTarget.prototype.addEventListener = deprecated.bind("EventTarget.addEventListener");
   EventTarget.prototype.removeEventListener = deprecated.bind("EventTarget.removeEventListener");
 
-  function NativeBubblingEvent(target, type, passive) {
-    return class NativeBubblingEvent extends CustomAttr {
-      upgrade() {
-        addEventListener.call(target || this.ownerElement, type, this._listener = this.listener.bind(this), {
-          passive,
-          capture: true
-        });
-      }
+  class NativeBubblingEvent extends CustomAttr {
+    upgrade() {
+      this._listener = NativeBubblingEvent.listener.bind(this);
+      addEventListener.call(this.ownerElement, this.eventType, this._listener, {passive: this.passive});
+    }
 
-      listener(e) {
-        // e.preventDefault(); // if dispatchEvent propagates sync, native defaultActions can still be used.
-        e.stopImmediatePropagation();
-        eventLoop.dispatch(e, e.composedPath()[0]);
-      }
+    static listener(e) {
+      // e.preventDefault();
+      // the default actions will potentially be delayed a couple of loops in the event loop.
+      e.stopImmediatePropagation();
+      eventLoop.dispatch(e, e.composedPath()[0]);
+    }
 
-      destructor() {
-        removeEventListener.call(target || this.ownerElement, type, this._listener, {passive, capture: true});
-      }
+    destructor() {
+      removeEventListener.call(this.ownerElement, this.eventType, this._listener);
     }
   }
 
-  function GlobalListener(target, nativeType, passive) {
-    //the attribute is this. if ! this.ownerElement, then the attribute is gc. if so, then the remove eventListener.
-    return class GlobalNativeEvent extends CustomAttr {
-      reroute(e) {
-        //the attribute is removed. //todo this is wrong, it will never be gc'ed..
-        if (!this.ownerElement)
-          return this.destructor();
-        e.stopImmediatePropagation();
-        //todo toLowerCase() is needed for DOMContentLoaded only
-        Object.defineProperty(e, "type", {value: nativeType.toLowerCase()});
-        eventLoop.dispatch(e, e.composedPath()[0] instanceof Element ? e.composedPath()[0] : undefined);
-      }
+  const register = new FinalizationRegistry(held => held.destructor());
 
-      upgrade() {
-        addEventListener.call(target || this.ownerElement, nativeType, this._reroute = this.reroute.bind(this), {
-          passive,
-          capture: true
-        });
-      }
+  class NativeWindowEvent extends CustomAttr {
+    listener(e) {
+      e.stopImmediatePropagation();
+      eventLoop.dispatch(e);
+    }
 
-      destructor() {
-        removeEventListener.call(target || this.ownerElement, nativeType, this._reroute, {passive, capture: true});
-      }
-    };
+    get nativeTarget() {
+      return window;
+    }
+
+    upgrade() {
+      register.register(this, "", this);
+      this._listener = this.listener.bind(this);
+      addEventListener.call(this.nativeTarget, this.eventType, this._listener, {
+        passive: this.passive,
+        capture: true
+      });
+    }
+
+    destructor() {
+      register.unregister(this);
+      removeEventListener.call(this.nativeTarget, this.eventType, this._listener, {
+        passive: this.passive,
+        capture: true
+      });
+    }
+  }
+
+  class NativeDocumentEvent extends NativeWindowEvent {
+    get nativeTarget() {
+      return document;
+    }
+  }
+
+  class NativeDCLEvent extends NativeDocumentEvent {
+    get eventType() {
+      return "DOMContentLoaded";
+    }
+  }
+
+  class ShadowRootEvent extends NativeWindowEvent {
+    listener(e) {
+      e.stopImmediatePropagation();
+      eventLoop.dispatch(e, e.composedPath()[0]);
+    }
+
+    get nativeTarget() {
+      return this.ownerElement.getRootNode();
+    }
   }
 
   class NativeEventsAttributeRegistry extends AttributeRegistry {
-    cache = {};
+    #cache = {};
 
     static #create(type) {
-      let global = false, passive = false;
-      if (type[0] === "_") global = true, type = type.substring(1);
-      if (type.startsWith("fast")) passive = true, type = type.substring(4);
+      //todo here we are doing the parsing again.
+      const global = type[0] === "_";
+      (global === true) && (type = type.substring(1));
+      if (type === "domcontentloaded") {
+        if(!global)
+          throw new SyntaxError("_global must have _")
+        return NativeDCLEvent
+      }
+      if (type.startsWith("fast")) type = type.substring(4);
 
       const ele = `on${type}` in HTMLElement.prototype || "touchstart" === type || "touchmove" === type || "touchend" === type || "touchcancel" === type;
       const win = `on${type}` in window;
       const doc = `on${type}` in Document.prototype;
-      const dcl = type === "domcontentloaded";
+      if (!ele && !win && !doc)
+        return;
+      if (!ele && !global)
+        throw new SyntaxError("_global must have _")
 
-      return !global && ele ? NativeBubblingEvent(undefined, type, passive) :
-        global && dcl ? GlobalListener(document, "DOMContentLoaded", passive) :
-          //todo use the shadowRoot and the document here??
-          global && ele && passive ? GlobalListener(window, type, passive) :
-            global && ele ? GlobalListener(window, type, passive) :
-              global && win ? GlobalListener(window, type, passive) :
-                global && doc && GlobalListener(document, type, passive);
+      return !global ? NativeBubblingEvent : ele ? ShadowRootEvent : window ? NativeWindowEvent : NativeDocumentEvent;
     }
 
     getDefinition(type) {
-      return super.getDefinition(type) || (this.cache[type] ??= NativeEventsAttributeRegistry.#create(type));
+      //todo so if the attribute is coming in here, we can just check the getters on the Attr.
+      return super.getDefinition(type) || (this.#cache[type] ??= NativeEventsAttributeRegistry.#create(type));
     }
   }
 
