@@ -45,19 +45,15 @@
 
   //7. add problem events
   typeToEvent["problems"] = [
-    "domcontentloaded",               //weirdo. No window.onDOMContentLoaded & camelcase letters. annoying.
+    "domcontentloaded",//weirdo. No window.onDOMContentLoaded & case sensitive. annoying.
     "touchstart", "touchmove", "touchend", "touchcancel",  //no element.ontouchstart = handler. Annoying.
     "fastwheel", "fastmousewheel", "fasttouchstart", "fasttouchmove"  //special event names for passive events.
   ];
 
   for (let type in typeToEvent) {
     console.log(type, typeToEvent[type].length);
-    for (let event of typeToEvent[type]) {
-      document.head.insertAdjacentHTML("beforeend", `<meta _${event}:filter>`);
-      const attr = document.head.lastChild.attributes[0];
-      console.log(attr.constructor.name, event);
-      document.head.lastChild.remove();
-    }
+    for (let event of typeToEvent[type])
+      console.log(customAttributes.findNativeDefinition("_" + event).name, event);
   }
 
   //conclusion (oct 2022, Chrome):

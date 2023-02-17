@@ -1,15 +1,27 @@
 class CustomAttr extends Attr {
   get type() {
-    const value = this.name.match(/_?([^_:]+)/)[1];
+    const value = this.name.match(/(_?[^_:]+)/)[1];
     Object.defineProperty(this, "type", {value, writable: false, configurable: true});
     return value;
   }
-  //
-  // get definitionType(){
-  //   const value = this.name.match(/(_?[^_:]+)/)[1];
-  //   Object.defineProperty(this, "type", {value, writable: false, configurable: true});
-  //   return value;
-  // }
+
+  get eventType() {
+    let value = this.type;
+    if (value[0] === "_") value = value.substring(1);
+    if (value.startsWith("fast")) value = value.substring(4);      //annoying
+    Object.defineProperty(this, "eventType", {value, writable: false, configurable: true});
+    return value;
+  }
+
+  get global() {
+    return this.name[0] === "_";
+  }
+
+  get passive() {
+    const value = this.name[0].startsWith("_fast") || this.name[0].startsWith("fast");
+    Object.defineProperty(this, "passive", {value, writable: false, configurable: true});
+    return value;
+  }
 
   get suffix() {
     return this.name.match(/_?([^:]+)/)[1].split("_").slice(1);
@@ -44,6 +56,10 @@ class CustomAttr extends Attr {
     chain[i] = `==>${chain[i]}<==`;
     return `<${this.ownerElement?.tagName.toLowerCase()} ${this.name.split(":")[0]}:${chain.join(":")}>`;
   }
+
+  // set value(value){
+  //   todo update the callback here?
+  // }
 }
 
 class Reaction {
@@ -148,11 +164,18 @@ class ReactionRegistry {
 
   #register = {};
 
-  define(type, Function) {
+  define(type, Func) {
+    if(!(Func instanceof Function))
+      throw new SyntaxError("reactions must be Functions.");
+    const funcString = Func.toString();
+    if(funcString.indexOf("=>")>0 && funcString.indexOf("this")>0)
+      console.warn(`ALERT!! arrow function using 'this' in reaction defintion: ${type}. Should this be a named/anonymous function?
+${funcString}`);
+    //todo if it is an arrow function and it contains the word `this`, then throw an Error.
     //todo add restriction that it cannot contain `.`
     if (type in this.#register)
       throw `The Reaction type: "${type}" is already defined.`;
-    this.#register[type] = Function;
+    this.#register[type] = Func;
   }
 
   defineAll(defs) {
@@ -214,15 +237,13 @@ class AttributeRegistry {
 
   upgrade(...attrs) {
     for (let at of attrs) {
-      const type = at.name.match(/_?([^_:]+)/)[1];
-      const Definition = this.getDefinition(type);
+      Object.setPrototypeOf(at, CustomAttr.prototype);
+      const Definition = this.getDefinition(at.type);
       if (Definition)                                    //1. upgrade to a defined CustomAttribute
         this.#upgradeAttribute(at, Definition);
-      else if (at.name.indexOf(":") > 0)                 //2. upgrade unknown/generic customAttribute
-        Object.setPrototypeOf(at, CustomAttr.prototype);
       if (!Definition)                                   //3. register unknown attrs
-        this.#unknownEvents.push(type, at);
-      at.name[0] === "_" && this.#globals.push(at.type, at);//* register globals
+        this.#unknownEvents.push(at.type, at);
+      at.name[0] === "_" && this.#globals.push(at.eventType, at);//* register globals
     }
   }
 
@@ -318,9 +339,9 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
 
     dispatch(event, target) {
       if (!(event instanceof Event))
-        throw new SyntaxError("First argument of eventLoop.dispatch(event, target?) is not an Event.");
-      if (!(target === undefined || target instanceof Node))
-        throw new SyntaxError("Second argument of eventLoop.dispatch(event, target?) is neither undefined nor a Node.");
+        throw new SyntaxError("First argument of eventLoop.dispatch(event, target?) must be an Event.");
+      if (!(target === undefined || target === null || target instanceof Element || target instanceof Attr))
+        throw new SyntaxError("Second argument of eventLoop.dispatch(event, target?) must be either undefined, an Element, or an Attr.");
       if (event.type[0] === "_")
         throw new SyntaxError(`eventLoop.dispatch(..) doesn't accept events beginning with "_": ${event.type}.`);
       this.#eventLoop.push({target, event});
@@ -328,11 +349,11 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
         return;
       while (this.#eventLoop.length) {
         const {target, event} = this.#eventLoop[0];
-        if (!target || target instanceof Element)   //a bug in the ElementObserver.js causes "instanceof HTMLElement" to fail.
+        if (target instanceof Attr)
+          EventLoop.#runReactions(target.reactions, event, target, undefined);
+        else /*if (!target || target instanceof Element)*/   //a bug in the ElementObserver.js causes "instanceof HTMLElement" to fail.
           EventLoop.bubble(target, event);
         //todo if (target?.isConnected === false) then bubble without default action?? I think that we need the global listeners to run for disconnected targets, as this will make them able to trigger _error for example. I also think that attributes on disconnected ownerElements should still catch the _global events. Don't see why not.
-        else if (target instanceof Attr)
-          EventLoop.#runReactions(target.reactions, event, target, undefined);
         this.#eventLoop.shift();
       }
     }
@@ -345,7 +366,8 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
       for (let prev, t = rootTarget; t; prev = t, t = t.assignedSlot || t.parentElement || t.parentNode?.host) {
         t !== prev?.parentElement && eventToTarget.set(event, target = getTargetForEvent(event, t));
         for (let attr of t.attributes) {
-          if (attr.type === event.type && attr.name[0] !== "_") {
+          //todo check that the attr.chain is something. If it is nothing, then skip the attribute.
+          if (attr.eventType === event.type && attr.name[0] !== "_") {
             if (attr.defaultAction && (event.defaultAction || event.defaultPrevented))
               continue;
             const res = EventLoop.#runReactions(attr.reactions, event, attr, !!attr.defaultAction);
@@ -446,76 +468,95 @@ observeElementCreation(els => els.forEach(el => customAttributes.upgrade(...el.a
 
   class NativeBubblingEvent extends CustomAttr {
     upgrade() {
-      addEventListener.call(this.ownerElement, this.type, this._listener = this.listener.bind(this));
+      this._listener = NativeBubblingEvent.listener.bind(this);
+      addEventListener.call(this.ownerElement, this.eventType, this._listener, {passive: this.passive});
     }
 
-    listener(e) {
-      // e.preventDefault(); // if dispatchEvent propagates sync, native defaultActions can still be used.
+    static listener(e) {
+      // e.preventDefault();
+      // the default actions will potentially be delayed a couple of loops in the event loop.
       e.stopImmediatePropagation();
       eventLoop.dispatch(e, e.composedPath()[0]);
     }
 
     destructor() {
-      removeEventListener.call(this.ownerElement, this.type, this._listener);
+      removeEventListener.call(this.ownerElement, this.eventType, this._listener);
     }
   }
 
-  class NativePassiveEvent extends NativeBubblingEvent {
+  const register = new FinalizationRegistry(held => held.destructor());
+
+  class NativeWindowEvent extends CustomAttr {
+    listener(e) {
+      e.stopImmediatePropagation();
+      eventLoop.dispatch(e);
+    }
+
+    get nativeTarget() {
+      return window;
+    }
+
     upgrade() {
-      Object.defineProperty(this, "type", {value: this.type.substring(4), writable: false, configurable: true});
-      addEventListener.call(this.ownerElement, this.type, this._listener = this.listener.bind(this), {passive: true});
+      register.register(this, "", this);
+      this._listener = this.listener.bind(this);
+      addEventListener.call(this.nativeTarget, this.eventType, this._listener, {
+        passive: this.passive,
+        capture: true
+      });
+    }
+
+    destructor() {
+      register.unregister(this);
+      removeEventListener.call(this.nativeTarget, this.eventType, this._listener, {
+        passive: this.passive,
+        capture: true
+      });
     }
   }
 
-  function GlobalListener(target, nativeType) {
-    //the attribute is this. if ! this.ownerElement, then the attribute is gc. if so, then the remove eventListener.
-    return class GlobalNativeEvent extends CustomAttr {
-      reroute(e) {
-        if (!this.ownerElement)   //the attribute is removed.
-          return this.destructor();
-        e.stopImmediatePropagation();
-        //todo here we are setting the correct path and target manually
-        Object.defineProperty(e, "target", {value: target});
-        e.path = [target];
-        e.composedPath = () => e.path;
-        Object.defineProperty(e, "type", {value: this.type});
-        eventLoop.dispatch(e);
-      }
+  class NativeDocumentEvent extends NativeWindowEvent {
+    get nativeTarget() {
+      return document;
+    }
+  }
 
-      upgrade() {
-        if (this.name[0] !== "_")
-          throw new SyntaxError(`AttributeError: missing "_" for global-only event: "_${this.name}".`);
-        addEventListener.call(target, nativeType, this._reroute = this.reroute.bind(this));
-      }
+  class NativeDCLEvent extends NativeDocumentEvent {
+    get eventType() {
+      return "DOMContentLoaded";
+    }
+  }
 
-      destructor() {
-        removeEventListener.call(target, nativeType, this._reroute);
-      }
-    };
+  class ShadowRootEvent extends NativeWindowEvent {
+    listener(e) {
+      e.stopImmediatePropagation();
+      eventLoop.dispatch(e, e.composedPath()[0]);
+    }
+
+    get nativeTarget() {
+      return this.ownerElement.getRootNode();
+    }
   }
 
   class NativeEventsAttributeRegistry extends AttributeRegistry {
-    #nativeCustomAttrs = {
-      "domcontentloaded": GlobalListener(document, "DOMContentLoaded"), //todo should be _domcontentloaded
-      "fastwheel": NativePassiveEvent,
-      "fastmousewheel": NativePassiveEvent,
-      "fasttouchstart": NativePassiveEvent,
-      "fasttouchmove": NativePassiveEvent,
-      "touchstart": NativeBubblingEvent,
-      "touchmove": NativeBubblingEvent,
-      "touchend": NativeBubblingEvent,
-      "touchcancel": NativeBubblingEvent
-    };
+    #cache = {};
 
-    //todo I think that we need to add the global marker here. That way we can get a different
-    getDefinition(type) {
-      return super.getDefinition(type) ||
-        (this.#nativeCustomAttrs[type] ??=
-          `on${type}` in HTMLElement.prototype ? NativeBubblingEvent :
-            `on${type}` in window ? GlobalListener(window, type) : //NativeEventWindow
-              `on${type}` in Document.prototype && GlobalListener(document, type));//NativeEventDocument);
+    findNativeDefinition(type) {
+      const  global = type[0] === "_";
+      global === true && (type = type.substring(1));
+      if (type.startsWith("fast")) type = type.substring(4);
+      if (`on${type}` in HTMLElement.prototype || "touchstart" === type || "touchmove" === type || "touchend" === type || "touchcancel" === type)
+        return global ? ShadowRootEvent : NativeBubblingEvent;
+      const res = type === "domcontentloaded" ? NativeDCLEvent :
+        `on${type}` in window ? NativeWindowEvent :
+          `on${type}` in Document.prototype ? NativeDocumentEvent : null;
+      if (res && !global)
+        throw new SyntaxError("_global must have _");
+      return res;
     }
-    //todo we should have a ho function for the native global listeners that work.
+
+    getDefinition(type) {
+      return super.getDefinition(type) || (this.#cache[type] ??= this.findNativeDefinition(type));
+    }
   }
 
   window.customAttributes = new NativeEventsAttributeRegistry();
