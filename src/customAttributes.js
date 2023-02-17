@@ -56,6 +56,10 @@ class CustomAttr extends Attr {
     chain[i] = `==>${chain[i]}<==`;
     return `<${this.ownerElement?.tagName.toLowerCase()} ${this.name.split(":")[0]}:${chain.join(":")}>`;
   }
+
+  // set value(value){
+  //   todo update the callback here?
+  // }
 }
 
 class Reaction {
@@ -160,11 +164,18 @@ class ReactionRegistry {
 
   #register = {};
 
-  define(type, Function) {
+  define(type, Func) {
+    if(!(Func instanceof Function))
+      throw new SyntaxError("reactions must be Functions.");
+    const funcString = Func.toString();
+    if(funcString.indexOf("=>")>0 && funcString.indexOf("this")>0)
+      console.warn(`ALERT!! arrow function using 'this' in reaction defintion: ${type}. Should this be a named/anonymous function?
+${funcString}`);
+    //todo if it is an arrow function and it contains the word `this`, then throw an Error.
     //todo add restriction that it cannot contain `.`
     if (type in this.#register)
       throw `The Reaction type: "${type}" is already defined.`;
-    this.#register[type] = Function;
+    this.#register[type] = Func;
   }
 
   defineAll(defs) {
@@ -329,7 +340,7 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
     dispatch(event, target) {
       if (!(event instanceof Event))
         throw new SyntaxError("First argument of eventLoop.dispatch(event, target?) must be an Event.");
-      if (!(target === undefined || target instanceof Element || target instanceof Attr))
+      if (!(target === undefined || target === null || target instanceof Element || target instanceof Attr))
         throw new SyntaxError("Second argument of eventLoop.dispatch(event, target?) must be either undefined, an Element, or an Attr.");
       if (event.type[0] === "_")
         throw new SyntaxError(`eventLoop.dispatch(..) doesn't accept events beginning with "_": ${event.type}.`);
@@ -355,6 +366,7 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
       for (let prev, t = rootTarget; t; prev = t, t = t.assignedSlot || t.parentElement || t.parentNode?.host) {
         t !== prev?.parentElement && eventToTarget.set(event, target = getTargetForEvent(event, t));
         for (let attr of t.attributes) {
+          //todo check that the attr.chain is something. If it is nothing, then skip the attribute.
           if (attr.eventType === event.type && attr.name[0] !== "_") {
             if (attr.defaultAction && (event.defaultAction || event.defaultPrevented))
               continue;
