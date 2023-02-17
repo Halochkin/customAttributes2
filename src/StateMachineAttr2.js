@@ -18,13 +18,10 @@ class GestureAttr extends CustomAttr {
       if (at !== this && at.type === this.type)
         throw new SyntaxError(`Cannot add the same StateMachineAttr ${this.type} to the same element twice: ${this.name}`);
 
-    this._transitions = this.constructor.stateMachine;
+    this._transitions = this.constructor.stateMachine(this.suffix);
     for (let state in this._transitions)
-      this._transitions[state] = this._transitions[state].map(([chain, next]) => {
-        if (!next)
-          return chain;
-        return chain + `:await:typeval_${this.type}_${next}`;
-      });
+      this._transitions[state] = this._transitions[state].map(([chain, next]) =>
+        next ? chain + `:await:typeval_${this.type}_${next}` : chain);
     this.value = this.value || Object.keys(this._transitions)[0];
   }
 
