@@ -1,0 +1,44 @@
+<script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.2/observeElementCreation.js"></script>
+<script src="../../src/customAttributes.js"></script>
+<script src="../../src/GestureAttr.js"></script>
+
+<style>
+  [hoverable="off"] { color: orange; }
+  [hoverable="on"] { color: red; }
+</style>
+
+<body hover:console.log_e.type_e.target.tag-name>
+<div hoverable>
+  hello
+  <span hoverable>sunshine</span>
+</div>
+</body>
+
+<script type="module">
+  customReactions.define("hover", function(e, prefix){
+    eventLoop.dispatch(new Event(prefix, e), this.ownerElement);
+    return e;
+  });
+  customReactions.define("current-target", function(e){
+    if(e.target === this.ownerElement)
+      return e;
+  });
+  customAttributes.define("hoverable", class HoverAttr extends GestureAttr {
+    static stateMachine(){
+      return {
+        "off": [
+          ["mouseenter:hover", "on"]
+        ],
+        "on": [
+          ["mouseleave:current-target", "off"]
+        ]
+      };
+    }
+  });
+
+  const span = document.querySelector("span");
+  span.dispatchEvent(new MouseEvent("mouseenter"));
+  setTimeout(_ => {
+    span.dispatchEvent(new MouseEvent("mouseleave"));
+  }, 60);
+</script>
