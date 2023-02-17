@@ -22,8 +22,12 @@
     upgrade() {
       this.value = "off";
       this._id = HoverAttr.#id++;
-      customReactions.define("hoveron" + this._id, e => this.value = "on");
-      customReactions.define("hoveroff" + this._id, e => this.value = "off");
+      customReactions.define("hoveron" + this._id, function hoverOn(e) {
+        return this.value = "on";
+      });
+      customReactions.define("hoveroff" + this._id, function hoverOff(e) {
+        return this.value = "off";
+      });
       this.ownerElement.setAttribute("mouseenter:hoveron" + this._id);
       this.ownerElement.setAttribute("mouseleave:hoveroff" + this._id);
     }
