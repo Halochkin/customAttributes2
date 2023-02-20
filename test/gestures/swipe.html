@@ -1,42 +1,43 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Swipe</title>
+    <meta charset="UTF-8">
+    <title>Swipe</title>
 
-  <style>
-    #elem {
-      position: absolute;
-      width: 450px;
-      height: 450px;
-      background-color: red;
-    }
+    <style>
+        #elem {
+            position: absolute;
+            width: 450px;
+            height: 450px;
+            background-color: red;
+        }
 
-    #viewport {
-      display: inline-block;
-      width: 450px;
-      height: 450px;
-      position: relative;
-      overflow: hidden;
-      background-color: yellow;
-      margin: 10px;
-      /*margin-top: 20px;*/
-      border-radius: 10px;
-    }
-  </style>
+        #viewport {
+            display: inline-block;
+            width: 450px;
+            height: 450px;
+            position: relative;
+            overflow: hidden;
+            background-color: yellow;
+            margin: 10px;
+            /*margin-top: 20px;*/
+            border-radius: 10px;
+        }
+    </style>
 
-  <script src="../../src/customAttributes.js"></script>
-  <script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.0/startObserver.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.2/observeElementCreation.js"></script>
+    <script src="../../src/customAttributes.js"></script>
+    <script src="../../src/GestureAttr.js"></script>
 
 </head>
 <body>
 
 <div swipe id="viewport" touch-action="pan-left" pointer-distance="30">
-  <div id="elem"></div>
+    <div id="elem"></div>
 </div>
 
 </body>
-<script>
+<script type="module">
   // -------------------------------------------------------------------
   function filterOnAttribute(e, attributeName) {                                                 //4. FilterByAttribute
     for (let el = e.target; el; el = el.parentNode) {
@@ -48,11 +49,11 @@
     return null;
   }
 
-  function makeSwipeEvent(name, {x, y, target}) {
-    const composedEvent = new CustomEvent("swipe-" + name, {bubbles: true, composed: true});
+  function makeSwipeEvent(type, {x, y}) {
+    const composedEvent = new CustomEvent("swipe-" + type, {bubbles: true, composed: true});
     composedEvent.x = x;
     composedEvent.y = y;
-    composedEvent.detail = target.offsetLeft;
+    // composedEvent.detail = target.offsetLeft;
     return composedEvent;
   }
 
@@ -63,13 +64,9 @@
 
   function replaceDefaultAction(target, composedEvent, trigger) {      //[3] ReplaceDefaultAction
     composedEvent.trigger = trigger;
-    trigger.stopTrailingEvent = function () {
-      composedEvent.stopImmediatePropagation ? composedEvent.stopImmediatePropagation() : composedEvent.stopPropagation();
-    };
+    trigger.stopTrailingEvent = () => composedEvent.stopImmediatePropagation ? composedEvent.stopImmediatePropagation() : composedEvent.stopPropagation();
     trigger.preventDefault();
-    return setTimeout(function () {
-      target.dispatchEvent(composedEvent)
-    }, 0);
+    return setTimeout(() => target.dispatchEvent(composedEvent), 0);
   }
 
   function mouseOutOfBounds(trigger) {
@@ -90,92 +87,97 @@
       swipeDistance: parseInt(target.getAttribute("pointer-distance")) || 100,
       recorded: [e],
       userSelectStart: body.style.userSelect,                                                    //10. Grabtouch
+      touchAction: body.style.userSelect
     };
     document.children[0].style.userSelect = "none";
-    //mousedown:button_0::swipestart
-    target.removeAttribute("mousedown:button_0::mousedowninitial_swipe_start");
-    target.setAttribute("mousedown:mousedownsecondary_cancel");
-    target.setAttribute("mousemove:onmousemove_move");
-    target.setAttribute("mouseup:onmouseup_stop");
-    target.setAttribute("blur:onblur_cancel");
-    target.setAttribute("selectstart:onselectstart");
+    document.children[0].style.touchAction = "none";
+
     return sequence;
   }
 
-  function stopSequence({target, userSelectStart}) {
+  function stopSequence({userSelectStart, touchAction}) {
     document.children[0].style.userSelect = userSelectStart;
-    target.removeAttribute("mousedown:mousedownsecondary_cancel");
-    target.removeAttribute("mousemove:onmousemove_move");
-    target.removeAttribute("mouseup:onmouseup_stop");
-    target.removeAttribute("blur:onblur_cancel");
-    target.removeAttribute("selectstart:onselectstart");
-    target.setAttribute("mousedown:button_0::mousedowninitial_swipe_start");
+    document.children[0].style.touchAction = touchAction;
     return undefined;
   }
 
-  customAttributes.define("swipe", class Swipe extends CustomAttr {
 
-    upgrade() {
-      this.ownerElement.setAttribute("mousedown:button_0::mousedowninitial_swipe_start");
-    }
-
-    destructor() {
-      //todo
+  customAttributes.define("swipe", class SwipeAttr extends GestureAttr {
+    static stateMachine() {
+      return {
+        "init": [
+          ["mousedown:mousedowninitial_start", "start"]
+        ],
+        "start": [
+          ["mousemove:onmousemove_move", "move"],
+        ],
+        "move": [
+          ["mouseup:onmouseup_stop", "stop"],
+          ["blur:onblur_cancel", "stop"],
+          ["selectstart:onselectstart", "stop"],
+          ["mousedown:mousedownsecondary_cancel", "stop"]
+        ],
+        "stop": [
+          ["mousedown:mousedowninitial_start", "start"]
+        ]
+      };
     }
   });
-
-
-  function propCheck(e, prefix, val) {
-    if (e[prefix] == val)
-      return e;
-  }
-
-  customReactions.define("button", propCheck);
 
   let globalSequence;
-  customReactions.define("mousedowninitial", function (e, prefix, attr, name) {
+
+  customReactions.define("mousedowninitial", function (e, prefix, type) {
     const target = this.ownerElement;
-    const composedEvent = makeSwipeEvent(name, e);
-    globalSequence = startSequence(target, composedEvent);//todo this is the statemachine
+    const composedEvent = makeSwipeEvent(type, e);
+    globalSequence = startSequence(target, composedEvent);
     eventLoop.dispatch(composedEvent, target);
+    return e;
   });
 
-  customReactions.define("mousedownsecondary", function (e, prefix, name) {
-    const cancelEvent = makeSwipeEvent(name, e);
+  customReactions.define("mousedownsecondary", function (e, prefix, type) {
+    const cancelEvent = makeSwipeEvent(type, e);
     const target = globalSequence.target;
     globalSequence = stopSequence(globalSequence);
     replaceDefaultAction(target, cancelEvent, e);
+    eventLoop.dispatch(cancelEvent, target);
+    return e;
   });
 
-  customReactions.define("onmousemove", function (e, prefix, name) {
+  customReactions.define("onmousemove", function (e, prefix, type) {
+    const target = globalSequence.target;
     if (!globalSequence.cancelMouseout && mouseOutOfBounds(e)) {
       const cancelEvent = makeSwipeEvent("cancel", e);
-      const target = globalSequence.target;
       globalSequence = stopSequence(globalSequence);
       replaceDefaultAction(target, cancelEvent, e);
       return;
     }
-    const composedEvent = makeSwipeEvent(name, e);
+    const composedEvent = makeSwipeEvent(type, e);
     captureEvent(e, false);
     globalSequence = updateSequence(globalSequence, composedEvent);
     replaceDefaultAction(globalSequence.target, composedEvent, e);
+    eventLoop.dispatch(composedEvent, target);
+    return e;
   });
 
-  customReactions.define("onmouseup", function (e, prefix, name) {
-    const stopEvent = makeSwipeEvent(name, e);
+  customReactions.define("onmouseup", function (e, prefix, type) {
+    const stopEvent = makeSwipeEvent(type, e);
     if (!stopEvent) return;
-    // captureEvent(e, false);
+    captureEvent(e, false);
     const target = globalSequence.target;    //todo this is no longer necessary
     globalSequence = stopSequence(globalSequence);
     eventLoop.dispatch(stopEvent, target);
-    // replaceDefaultAction(target, stopEvent, e);
+    replaceDefaultAction(target, stopEvent, e);
+    eventLoop.dispatch(stopEvent, target);
+    return e;
   });
 
   customReactions.define("onblur", function (e, prefix, name) {
     const blurInEvent = makeSwipeEvent(name, e);
     const target = globalSequence.target;
-    globalSequence = stopSequence(globalSequence);
+    stopSequence(globalSequence);
     replaceDefaultAction(target, blurInEvent, e);
+    eventLoop.dispatch(blurInEvent, target);
+    return e;
   });
 
   customReactions.define("onselectstart", function (e) {
@@ -197,9 +199,10 @@
   customReactions.define("listen1", function (e) {
     swipeStart = e.x - e.target.offsetLeft;
   });
-  document.documentElement.setAttribute("swipe-start:listen1");
 
-  const listen2 = e => {
+  viewport.setAttribute("swipe-start:listen1");
+
+  const listen2 = function (e) {
     let swipeDist = swipeStart - e.x;
     viewport.children[0].style.transitionDuration = "0.8s";
     if (Math.abs(swipeDist) < 100) return;
