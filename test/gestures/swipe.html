@@ -1,182 +1,59 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Swipe</title>
+<style>
+    #viewport {
+        width: 450px;
+        height: 450px;
+        position: relative;
+        overflow: hidden;
+        background-color: yellow;
+    }
 
-    <style>
-        #elem {
-            position: absolute;
-            width: 450px;
-            height: 450px;
-            background-color: red;
-        }
+    #viewport > div {
+        width: 450px;
+        height: 450px;
+        background-color: red;
+    }
+</style>
 
-        #viewport {
-            display: inline-block;
-            width: 450px;
-            height: 450px;
-            position: relative;
-            overflow: hidden;
-            background-color: yellow;
-            margin: 10px;
-            /*margin-top: 20px;*/
-            border-radius: 10px;
-        }
-    </style>
+<script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.2/observeElementCreation.js"></script>
+<script src="../../src/customAttributes.js"></script>
+<script src="../../src/GestureAttr.js"></script>
 
-    <script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.2/observeElementCreation.js"></script>
-    <script src="../../src/customAttributes.js"></script>
-    <script src="../../src/GestureAttr.js"></script>
-
-</head>
-<body>
-
-<div swipe id="viewport" touch-action="pan-left" pointer-distance="30">
-    <div id="elem"></div>
+<div swipe id="viewport">
+    <div></div>
 </div>
 
-</body>
-<script type="module">
-  // -------------------------------------------------------------------
-  function filterOnAttribute(e, attributeName) {                                                 //4. FilterByAttribute
-    for (let el = e.target; el; el = el.parentNode) {
-      if (!el.hasAttribute)
-        return null;
-      if (el.hasAttribute(attributeName))
-        return el;
-    }
-    return null;
-  }
-
-  function makeSwipeEvent(type, {x, y}) {
-    const composedEvent = new CustomEvent("swipe-" + type, {bubbles: true, composed: true});
-    composedEvent.x = x;
-    composedEvent.y = y;
-    // composedEvent.detail = target.offsetLeft;
-    return composedEvent;
-  }
-
-  function captureEvent(e, stopProp) {
-    e.preventDefault();
-    stopProp && e.stopImmediatePropagation ? e.stopImmediatePropagation() : e.stopPropagation();
-  }
-
-  function replaceDefaultAction(target, composedEvent, trigger) {      //[3] ReplaceDefaultAction
-    composedEvent.trigger = trigger;
-    trigger.stopTrailingEvent = () => composedEvent.stopImmediatePropagation ? composedEvent.stopImmediatePropagation() : composedEvent.stopPropagation();
-    trigger.preventDefault();
-    return setTimeout(() => target.dispatchEvent(composedEvent), 0);
-  }
-
-  function mouseOutOfBounds(trigger) {
-    return trigger.clientY < 0 || trigger.clientX < 0 || trigger.clientX > window.innerWidth || trigger.clientY > window.innerHeight;
-  }
-
-  function updateSequence(sequence, e) {                                                         //7. TakeNote
-    sequence.recorded.push(e);
-    return sequence;
-  }
-
-  function startSequence(target, e) {                                                            //5. Event Sequence
-    const body = document.querySelector("body");
-    const sequence = {
-      target,
-      cancelMouseout: target.hasAttribute("swipe-cancel-pointerout"),
-      swipeDuration: parseInt(target.getAttribute("pointer-duration")) || 50,                    //6. EventAttribute
-      swipeDistance: parseInt(target.getAttribute("pointer-distance")) || 100,
-      recorded: [e],
-      userSelectStart: body.style.userSelect,                                                    //10. Grabtouch
-      touchAction: body.style.userSelect
-    };
-    document.children[0].style.userSelect = "none";
-    document.children[0].style.touchAction = "none";
-
-    return sequence;
-  }
-
-  function stopSequence({userSelectStart, touchAction}) {
-    document.children[0].style.userSelect = userSelectStart;
-    document.children[0].style.touchAction = touchAction;
-    return undefined;
-  }
-
+<script>
+  let swipeStart = 0;
+  const viewport = document.getElementById("viewport");
+  viewport.setAttribute("swipe-start:swipestart");
+  viewport.setAttribute("swipe-stop:swipestop");
 
   customAttributes.define("swipe", class SwipeAttr extends GestureAttr {
     static stateMachine() {
       return {
-        "init": [
-          ["mousedown:mousedowninitial_start", "start"]
-        ],
-        "start": [
-          ["mousemove:onmousemove_move", "move"],
-        ],
-        "move": [
+        init: [["mousedown:mousedowninitial_start", "start"]],
+        start: [
           ["mouseup:onmouseup_stop", "stop"],
           ["blur:onblur_cancel", "stop"],
-          ["selectstart:onselectstart", "stop"],
-          ["mousedown:mousedownsecondary_cancel", "stop"]
+          ["selectstart:onselectstart", "stop"]
         ],
-        "stop": [
-          ["mousedown:mousedowninitial_start", "start"]
-        ]
+        stop: [["mousedown:mousedowninitial_start", "start"]]
       };
     }
   });
 
-  let globalSequence;
-
-  customReactions.define("mousedowninitial", function (e, prefix, type) {
-    const target = this.ownerElement;
-    const composedEvent = makeSwipeEvent(type, e);
-    globalSequence = startSequence(target, composedEvent);
-    eventLoop.dispatch(composedEvent, target);
+  customReactions.define("mousedowninitial", function (e, _, type) {
+    eventLoop.dispatch(makeSwipeEvent(type, e), this.ownerElement);
     return e;
   });
 
-  customReactions.define("mousedownsecondary", function (e, prefix, type) {
-    const cancelEvent = makeSwipeEvent(type, e);
-    const target = globalSequence.target;
-    globalSequence = stopSequence(globalSequence);
-    replaceDefaultAction(target, cancelEvent, e);
-    eventLoop.dispatch(cancelEvent, target);
+  customReactions.define("onmouseup", function (e, _, type) {
+    eventLoop.dispatch(makeSwipeEvent(type, e), this.ownerElement);
     return e;
   });
 
-  customReactions.define("onmousemove", function (e, prefix, type) {
-    const target = globalSequence.target;
-    if (!globalSequence.cancelMouseout && mouseOutOfBounds(e)) {
-      const cancelEvent = makeSwipeEvent("cancel", e);
-      globalSequence = stopSequence(globalSequence);
-      replaceDefaultAction(target, cancelEvent, e);
-      return;
-    }
-    const composedEvent = makeSwipeEvent(type, e);
-    captureEvent(e, false);
-    globalSequence = updateSequence(globalSequence, composedEvent);
-    replaceDefaultAction(globalSequence.target, composedEvent, e);
-    eventLoop.dispatch(composedEvent, target);
-    return e;
-  });
-
-  customReactions.define("onmouseup", function (e, prefix, type) {
-    const stopEvent = makeSwipeEvent(type, e);
-    if (!stopEvent) return;
-    captureEvent(e, false);
-    const target = globalSequence.target;    //todo this is no longer necessary
-    globalSequence = stopSequence(globalSequence);
-    eventLoop.dispatch(stopEvent, target);
-    replaceDefaultAction(target, stopEvent, e);
-    eventLoop.dispatch(stopEvent, target);
-    return e;
-  });
-
-  customReactions.define("onblur", function (e, prefix, name) {
-    const blurInEvent = makeSwipeEvent(name, e);
-    const target = globalSequence.target;
-    stopSequence(globalSequence);
-    replaceDefaultAction(target, blurInEvent, e);
-    eventLoop.dispatch(blurInEvent, target);
+  customReactions.define("onblur", function (e, _, name) {
+    eventLoop.dispatch(makeSwipeEvent(name, e), globalSequence.target);
     return e;
   });
 
@@ -185,42 +62,30 @@
     e.stopImmediatePropagation ? e.stopImmediatePropagation() : e.stopPropagation();
   });
 
-</script>
+  customReactions.define("swipestart", e => swipeStart = e.x - e.target.offsetLeft);
 
-<script>
-
-  function colorPicker() {
-    return 'rgb(' + (Math.floor(Math.random() * 256)) + ',' + (Math.floor(Math.random() * 256)) + ',' + (Math.floor(Math.random() * 256)) + ')';
+  function makeSwipeEvent(type, {x, y}) {
+    const composedEvent = new CustomEvent("swipe-" + type, {bubbles: true, composed: true});
+    [composedEvent.x, composedEvent.y] = [x, y];
+    return composedEvent;
   }
 
-  let viewport = document.getElementById("viewport");
-  let swipeStart = 0;
+  const colorPicker = () => 'rgb(' + (Math.floor(Math.random() * 256)) + ',' + (Math.floor(Math.random() * 256)) + ',' + (Math.floor(Math.random() * 256)) + ')';
 
-  customReactions.define("listen1", function (e) {
-    swipeStart = e.x - e.target.offsetLeft;
-  });
-
-  viewport.setAttribute("swipe-start:listen1");
-
-  const listen2 = function (e) {
-    let swipeDist = swipeStart - e.x;
-    viewport.children[0].style.transitionDuration = "0.8s";
+  const swipeStop = function ({x}) {
+    const swipeDist = swipeStart - x;
     if (Math.abs(swipeDist) < 100) return;
-    viewport.children[0].style.transform = swipeDist > 0 ? "rotate(15deg)" : "rotate(-15deg)";
-    viewport.children[0].style.marginLeft = swipeDist > 0 ? "-650px" : "650px";
+    const frame = viewport.firstElementChild;
+    frame.style.transitionDuration = "0.8s";
+    frame.style.transform = `rotate(${swipeDist > 0 ? "-" : ""}15deg)`;
+    frame.style.marginLeft = (swipeDist > 0 ? "-" : "") + "650px";
     setTimeout(() => {
-      if (!viewport.children[0].parentNode)
-        return;
-      viewport.children[0].parentNode.removeChild(viewport.children[0]);
-      let el = document.createElement("div");
-      el.id = "elem";
-      el.transitionDuration = "1s";
+      frame.remove();
+      const el = document.createElement("div");
       el.style.backgroundColor = colorPicker();
-      viewport.appendChild(el);
+      viewport.append(el);
     }, 500);
   };
-  customReactions.define("listen2", listen2);
-  document.documentElement.setAttribute("swipe-stop:listen2");
-</script>
 
-</html>
+  customReactions.define("swipestop", swipeStop);
+</script>
