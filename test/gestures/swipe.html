@@ -31,32 +31,22 @@
   customAttributes.define("swipe", class SwipeAttr extends GestureAttr {
     static stateMachine() {
       return {
-        init: [["mousedown:mousedowninitial_start", "start"]],
+        init: [["mousedown:swipe_start", "start"]],
         start: [
-          ["mouseup:onmouseup_stop", "stop"],
-          ["blur:onblur_cancel", "stop"],
+          ["mouseup:swipe_stop", "stop"],
+          ["blur:swipe_cancel", "stop"],
           ["selectstart:onselectstart", "stop"]
         ],
-        stop: [["mousedown:mousedowninitial_start", "start"]]
+        stop: [["mousedown:swipe_start", "start"]]
       };
     }
   });
 
-  customReactions.define("mousedowninitial", function (e, _, type) {
+  customReactions.define("swipe", function (e, _, type) {
     eventLoop.dispatch(makeSwipeEvent(type, e), this.ownerElement);
     return e;
   });
-
-  customReactions.define("onmouseup", function (e, _, type) {
-    eventLoop.dispatch(makeSwipeEvent(type, e), this.ownerElement);
-    return e;
-  });
-
-  customReactions.define("onblur", function (e, _, name) {
-    eventLoop.dispatch(makeSwipeEvent(name, e), globalSequence.target);
-    return e;
-  });
-
+  
   customReactions.define("onselectstart", function (e) {
     e.preventDefault();
     e.stopImmediatePropagation ? e.stopImmediatePropagation() : e.stopPropagation();
