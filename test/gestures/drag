@@ -14,18 +14,20 @@
 <script src="../../src/customAttributes.js"></script>
 <script src="../../src/GestureAttr.js"></script>
 
-<div id="elem" draggable dragging-start:listen1 dragging-move:listen2 dragging-stop:listen3 fling:listen4>This text
+<div id="elem" draggable dragging-start:onstart dragging-move:onmove dragging-stop:onstop fling:onfling
+     selectstart:prevent>This text
     should be impossible to select
 </div>
 
 <script>
+
   function makeDraggingEvent(name, {x, y}) {
     const composedEvent = new CustomEvent("dragging-" + name, {bubbles: true, composed: true});
     [composedEvent.x, composedEvent.y] = [x, y];
     return composedEvent;
   }
 
-  const mouseOutOfBounds = trigger => trigger.clientY < 0 || trigger.clientX < 0 || trigger.clientX > window.innerWidth || trigger.clientY > window.innerHeight;
+  const mouseOutOfBounds = e => e.clientY < 0 || e.clientX < 0 || e.clientX > window.innerWidth || e.clientY > window.innerHeight;
 
   function updateSequence(sequence, e) {
     sequence.recorded.push(e);
@@ -49,6 +51,7 @@
   function stopSequence({userSelectStart, touchAction}) {
     document.children[0].style.userSelect = userSelectStart;
     document.children[0].style.touchAction = touchAction;
+    uglyCounter = 0;
     return undefined;
   }
 
@@ -65,7 +68,8 @@
   }
 
   function findLastEventOlderThan(events, timeTest) {
-    for (const event of events.reverse()) if (event.timeStamp < timeTest) return event;
+    for (const event of events.reverse())
+      if (event.timeStamp < timeTest) return event;
     return null;
   }
 
@@ -92,24 +96,30 @@
     }
   });
 
-  let globalSequence;
+  // let globalSequence;
+  let uglyCounter = 0;
 
   customReactions.define("onmousedown", function (e, prefix, type) {
-    globalSequence = type === "start" ? startSequence(this.ownerElement, e) : stopSequence(globalSequence);
+    let sequence = this.ownerElement.sequence;
+    this.ownerElement.sequence = type === "start" ? startSequence(this.ownerElement, e) : stopSequence(sequence);
     eventLoop.dispatch(makeDraggingEvent(type, e), this.ownerElement);
     return e;
   });
 
   customReactions.define("onmousemove", function (e, prefix, move, cancel) {
+    uglyCounter++;
     const inside = !mouseOutOfBounds(e);
-    globalSequence = inside ? updateSequence(globalSequence, e) : stopSequence(globalSequence);
+    let sequence = this.ownerElement.sequence;
+    if (uglyCounter % 10 === 0)
+      this.ownerElement.sequence = inside ? updateSequence(sequence, e) : stopSequence(sequence);
     eventLoop.dispatch(makeDraggingEvent(inside ? move : cancel, e), this.ownerElement);
     return e;
   });
 
   customReactions.define("onmouseup", function (e, prefix, stop, fling) {
-    const flingEvent = makeFlingEvent(e, globalSequence, fling);
-    globalSequence = stopSequence(globalSequence);
+    let sequence = this.ownerElement.sequence;
+    const flingEvent = makeFlingEvent(e, sequence, fling);
+    this.ownerElement.sequence = stopSequence(sequence);
     eventLoop.dispatch(makeDraggingEvent(stop, e), this.ownerElement);
     flingEvent && eventLoop.dispatch(flingEvent, this.ownerElement);
     return e;
@@ -124,10 +134,23 @@
     e.preventDefault();
     e.stopImmediatePropagation ? e.stopImmediatePropagation() : e.stopPropagation();
   });
-  
+
   let dragStart = undefined;
-  customReactions.define("listen1",  ({x, y, target}) => dragStart = {x: x - target.offsetLeft, y: y - target.offsetTop});
-  customReactions.define("listen2", ({target, x, y}) => [target.style.left, target.style.top] = [x - dragStart.x + "px", y - dragStart.y + "px"]);
-  customReactions.define("listen3", e => e.target.style.outline = "2px solid green");
-  customReactions.define("listen4", ({target, detail}) => ([target.style.left, target.style.top, target.style.transition] = [(detail.x - dragStart.x + detail.distX * 1.5) + "px", (detail.y - dragStart.y + detail.distY * 1.5) + "px", "all 0.3s cubic-bezier(0.39, 0.58, 0.57, 1)"], setTimeout(() => target.style.transition = undefined, 300)));
+
+  customReactions.define("onstart", function ({x, y, target}) {
+    dragStart = {x: x - target.offsetLeft, y: y - target.offsetTop}
+  });
+
+  customReactions.define("onmove", function ({target, x, y}) {
+    [target.style.left, target.style.top] = [x - dragStart.x + "px", y - dragStart.y + "px"]
+  });
+
+  customReactions.define("onstop", function (e) {
+    e.target.style.outline = "2px solid green";
+  });
+
+  customReactions.define("onfling", function ({target, detail}) {
+    ([target.style.left, target.style.top, target.style.transition] = [(detail.x - dragStart.x + detail.distX * 1.5) + "px", (detail.y - dragStart.y + detail.distY * 1.5) + "px", "all 0.3s cubic-bezier(0.39, 0.58, 0.57, 1)"], setTimeout(() => target.style.transition = undefined, 300))
+  });
+
 </script>
