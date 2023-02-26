@@ -12,13 +12,25 @@
     height: 450px;
     background-color: red;
   }
+
+  .right {
+    transition: all 0.8s;
+    transform: rotate(15deg);
+    margin-left: 650px;
+  }
+
+  .left {
+    transition: all 0.8s;
+    transform: rotate(-15deg);
+    margin-left: -650px;
+  }
 </style>
 
 <script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.2/observeElementCreation.js"></script>
 <script src="../../src/customAttributes.js"></script>
 <script src="../../src/GestureAttr.js"></script>
 
-<div id="viewport" swipe-start:swipestart swipe-stop:swipestop:await2_500:replace>
+<div id="viewport" swipe-start:swipestart swipe:swipestop:await2_500:replace>
   <div swipeable></div>
 </div>
 
@@ -28,40 +40,31 @@
   customAttributes.define("swipeable", class SwipeAttr extends GestureAttr {
     static stateMachine() {
       return {
-        "": [["mousedown:swipe_start", "start"]],
+        "": [["mousedown:swipe_-start", "start"]],
         start: [
-          ["_mouseup:swipe_stop", ""],
-          ["_blur:swipe_cancel", ""],
+          ["_mouseup::swipe", ""],
+          ["_blur:swipe_-cancel", ""],
           ["_selectstart:prevent", ""]
         ]
       };
     }
   });
 
-  customReactions.define("swipe", function (e, _, type) {
-    eventLoop.dispatch(makeSwipeEvent(type, e), this.ownerElement);
-    return e;
+  customReactions.define("swipe", function (e, prefix, type = "") {
+    const copy = new e.constructor(prefix + type, e);
+    eventLoop.dispatch(copy, this.ownerElement);
+    return copy;
   });
 
   customReactions.define("prevent", e => (e.preventDefault(), e));
   customReactions.define("await2", async (e, _, num) => {
-    if (num) {
-      if (isNaN(num))
-        throw new SyntaxError(`${_}_${num} is illegal, the _${num} is not a number.`);
-      await new Promise(r => setTimeout(r, num));
-    } else {
-      await Promise.resolve();
-    }
+    if (num && isNaN(num))
+      throw new SyntaxError(`${_}_${num} is illegal, the _${num} is not a number.`);
+    await (num ? new Promise(r => setTimeout(r, num)) : Promise.resolve());
     return e;
   });
 
-  customReactions.define("swipestart", e => swipeStart = e.x - e.target.offsetLeft);
-
-  function makeSwipeEvent(type, {x, y}) {
-    const composedEvent = new CustomEvent("swipe-" + type, {bubbles: true, composed: true});
-    [composedEvent.x, composedEvent.y] = [x, y];
-    return composedEvent;
-  }
+  customReactions.define("swipestart", e => ((swipeStart = e.x), e));
 
   function colorPicker() {
     return 'rgb(' + (Math.floor(Math.random() * 256)) + ',' + (Math.floor(Math.random() * 256)) + ',' + (Math.floor(Math.random() * 256)) + ')';
@@ -77,11 +80,9 @@
 
   customReactions.define("swipestop", function swipeStop({x}) {
     const swipeDist = swipeStart - x;
-    if (Math.abs(swipeDist) < 100) return;
-    const frame = this.ownerElement.firstElementChild;
-    frame.style.transitionDuration = "0.8s";
-    frame.style.transform = `rotate(${swipeDist > 0 ? "-" : ""}15deg)`;
-    frame.style.marginLeft = (swipeDist > 0 ? "-" : "") + "650px";
+    if (Math.abs(swipeDist) < 100)
+      return;
+    this.ownerElement.firstElementChild.classList.add(swipeDist > 0 ? "left" : "right");
     return x;
   });
 </script>
