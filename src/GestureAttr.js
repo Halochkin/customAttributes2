@@ -11,12 +11,12 @@ class GestureAttr extends CustomAttr {
   //3. there can only be one fsm attribute with the same type on the same element.
   upgrade() {
     if (this.chain.length)
-      throw new SyntaxError(`StateMachineAttr ${this.type} cannot contain reactions: ${this.name}`);
+      throw new SyntaxError(`GestureAttr ${this.type} cannot contain reactions: ${this.name}`);
     if (this.global)
-      throw new SyntaxError(`StateMachineAttr ${this.name} cannot be _global.`);
+      throw new SyntaxError(`GestureAttr ${this.name} cannot be _global.`);
     for (let at of this.ownerElement.attributes)
       if (at !== this && at.type === this.type)
-        throw new SyntaxError(`Cannot add the same StateMachineAttr ${this.type} to the same element twice: ${this.name}`);
+        throw new SyntaxError(`Cannot add the same GestureAttr ${this.type} to the same element twice: ${this.name}`);
 
     this._transitions = this.constructor.stateMachine(this.suffix);
     for (let state in this._transitions)
