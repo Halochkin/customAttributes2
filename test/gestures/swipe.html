@@ -18,15 +18,12 @@
 <script src="../../src/customAttributes.js"></script>
 <script src="../../src/GestureAttr.js"></script>
 
-<div id="viewport">
+<div id="viewport" swipe-start:swipestart swipe-stop:swipestop>
   <div swipeable></div>
 </div>
 
 <script>
   let swipeStart = 0;
-  const viewport = document.getElementById("viewport");
-  viewport.setAttribute("swipe-start:swipestart");
-  viewport.setAttribute("swipe-stop:swipestop");
 
   customAttributes.define("swipeable", class SwipeAttr extends GestureAttr {
     static stateMachine() {
@@ -64,11 +61,12 @@
   function swipeStop({x}) {
     const swipeDist = swipeStart - x;
     if (Math.abs(swipeDist) < 100) return;
+    const viewport = this.ownerElement;
     const frame = viewport.firstElementChild;
     frame.style.transitionDuration = "0.8s";
     frame.style.transform = `rotate(${swipeDist > 0 ? "-" : ""}15deg)`;
     frame.style.marginLeft = (swipeDist > 0 ? "-" : "") + "650px";
-    setTimeout(() => {
+    setTimeout(function () {
       frame.remove();
       const el = document.createElement("div");
       el.setAttribute("swipeable");
