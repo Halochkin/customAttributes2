@@ -34,19 +34,24 @@
 <script>
   //todo these should be moved into the core.js lib. The await2 is also used in the GestureAttr.
   customReactions.define("prevent", e => (e.preventDefault(), e));
-  customReactions.define("await2", async (e, _, num) => {
+  customReactions.define("await2", async (e, prefix, num) => {
     if (num && isNaN(num))
-      throw new SyntaxError(`${_}_${num} is illegal, the _${num} is not a number.`);
+      throw new SyntaxError(`${prefix}_${num} is illegal, the _${num} is not a number.`);
     await (num ? new Promise(r => setTimeout(r, num)) : Promise.resolve());
     return e;
   });
 
   //todo the copyEvent should also be standardized. It is something that we can
   function copyEvent(e, prefix) {
-    const copy = new e.constructor(prefix, e);
-    eventLoop.dispatch(copy, this.ownerElement);
-    return copy;
+    return new e.constructor(prefix, e);
   }
+
+  function dispatch(e){
+    eventLoop.dispatch(e, this.ownerElement);
+    return e;
+  }
+
+  customReactions.define("dispatch", dispatch);
 
   customReactions.define("swipe", copyEvent);
   customReactions.define("swipe-start", copyEvent);
@@ -57,10 +62,11 @@
   customAttributes.define("swipeable", class SwipeAttr extends GestureAttr {
     static stateMachine() {
       return {
-        "": [["mousedown:swipestart:swipe-start", "start"]],
+        "": [["mousedown:swipestart:swipe-start:dispatch", "start"]],
         start: [
-          ["_mouseup::swipe", ""],
-          ["_blur:swipe-cancel", ""],
+          //todo add the start x,y, and have the swipe be a different class of event.
+          ["_mouseup::swipe:dispatch", ""],
+          ["_blur:swipe-cancel:dispatch", ""],
           ["_selectstart:prevent", ""]
         ]
       };
@@ -68,6 +74,7 @@
   });
 
   customReactions.define("swipestart", e => ((swipeStart = e.x), e));
+
 
   customReactions.define("random-color", function randomColor() {
     return 'rgb(' + (Math.floor(Math.random() * 256)) + ',' + (Math.floor(Math.random() * 256)) + ',' + (Math.floor(Math.random() * 256)) + ')';
