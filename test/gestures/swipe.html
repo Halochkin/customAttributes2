@@ -33,11 +33,10 @@
       return {
         init: [["mousedown:swipe_start", "start"]],
         start: [
-          ["mouseup:swipe_stop", "stop"],
-          ["blur:swipe_cancel", "stop"],
-          ["selectstart:onselectstart", "stop"]
-        ],
-        stop: [["mousedown:swipe_start", "start"]]
+          ["_mouseup:swipe_stop", "init"],
+          ["_blur:swipe_cancel", "init"],
+          ["_selectstart:onselectstart", "init"]
+        ]
       };
     }
   });
