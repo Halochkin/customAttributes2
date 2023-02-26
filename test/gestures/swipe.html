@@ -18,7 +18,7 @@
 <script src="../../src/customAttributes.js"></script>
 <script src="../../src/GestureAttr.js"></script>
 
-<div id="viewport" swipe-start:swipestart swipe-stop:swipestop>
+<div id="viewport" swipe-start:swipestart swipe-stop:swipestop:await2_500:replace>
   <div swipeable></div>
 </div>
 
@@ -44,6 +44,16 @@
   });
 
   customReactions.define("prevent", e => (e.preventDefault(), e));
+  customReactions.define("await2", async (e, _, num) => {
+    if (num) {
+      if (isNaN(num))
+        throw new SyntaxError(`${_}_${num} is illegal, the _${num} is not a number.`);
+      await new Promise(r => setTimeout(r, num));
+    } else {
+      await Promise.resolve();
+    }
+    return e;
+  });
 
   customReactions.define("swipestart", e => swipeStart = e.x - e.target.offsetLeft);
 
@@ -53,24 +63,25 @@
     return composedEvent;
   }
 
-  const colorPicker = () => 'rgb(' + (Math.floor(Math.random() * 256)) + ',' + (Math.floor(Math.random() * 256)) + ',' + (Math.floor(Math.random() * 256)) + ')';
+  function colorPicker() {
+    return 'rgb(' + (Math.floor(Math.random() * 256)) + ',' + (Math.floor(Math.random() * 256)) + ',' + (Math.floor(Math.random() * 256)) + ')';
+  }
 
-  function swipeStop({x}) {
+  customReactions.define("replace", function replaceElement() {
+    this.ownerElement.firstElementChild.remove();
+    const el = document.createElement("div");
+    el.setAttribute("swipeable");
+    el.style.backgroundColor = colorPicker();
+    this.ownerElement.append(el);
+  });
+
+  customReactions.define("swipestop", function swipeStop({x}) {
     const swipeDist = swipeStart - x;
     if (Math.abs(swipeDist) < 100) return;
-    const viewport = this.ownerElement;
-    const frame = viewport.firstElementChild;
+    const frame = this.ownerElement.firstElementChild;
     frame.style.transitionDuration = "0.8s";
     frame.style.transform = `rotate(${swipeDist > 0 ? "-" : ""}15deg)`;
     frame.style.marginLeft = (swipeDist > 0 ? "-" : "") + "650px";
-    setTimeout(function () {
-      frame.remove();
-      const el = document.createElement("div");
-      el.setAttribute("swipeable");
-      el.style.backgroundColor = colorPicker();
-      viewport.append(el);
-    }, 500);
-  }
-
-  customReactions.define("swipestop", swipeStop);
+    return x;
+  });
 </script>
