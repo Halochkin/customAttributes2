@@ -1,5 +1,11 @@
+<script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.2/observeElementCreation.js"></script>
+<script src="../../src/customAttributes.js"></script>
+<script src="../../src/core.js"></script>
+<script src="../../src/GestureAttr.js"></script>
+
 <style>
   div {
+    position: absolute;
     width: 20vh;
     height: 32vh;
     margin: 10vh calc(50% - 10vh);
@@ -17,11 +23,6 @@
     margin-left: -20vh;
   }
 </style>
-
-<script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.2/observeElementCreation.js"></script>
-<script src="../../src/customAttributes.js"></script>
-<script src="../../src/core.js"></script>
-<script src="../../src/GestureAttr.js"></script>
 
 <body swipe:swipe-longer-than_100:left-right:await2_500:replace>
 <div
