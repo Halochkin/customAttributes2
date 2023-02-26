@@ -28,19 +28,19 @@
 
     static stateMachine(time = 200) {
       return {
-        start: [
+        "": [
           ["mousedown", "observe"]
         ],
         observe: [
-          ["_mousedown", "start"],
+          ["_mousedown", ""],
           ["_mousemove:on-mouse-move_mousemove_observe"],
-          ["_mouseup", "start"],
+          ["_mouseup", ""],
           [`timeout_${time}`, "active"],
         ],
         active: [
-          ["_mousedown::longpress-reset", "start"],
+          ["_mousedown::longpress-reset", ""],
           ["_mousemove:on-mouse-move_mousemove_active"],
-          ["_mouseup::longpress", "start"]//todo how to get duration here?
+          ["_mouseup::longpress", ""]//todo how to get duration here?
         ]
       };
     }

@@ -31,11 +31,11 @@
   customAttributes.define("swipe", class SwipeAttr extends GestureAttr {
     static stateMachine() {
       return {
-        init: [["mousedown:swipe_start", "start"]],
+        "": [["mousedown:swipe_start", "start"]],
         start: [
-          ["_mouseup:swipe_stop", "init"],
-          ["_blur:swipe_cancel", "init"],
-          ["_selectstart:onselectstart", "init"]
+          ["_mouseup:swipe_stop", ""],
+          ["_blur:swipe_cancel", ""],
+          ["_selectstart:onselectstart", ""]
         ]
       };
     }

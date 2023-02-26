@@ -3,7 +3,7 @@
 <script src="../../src/GestureAttr.js"></script>
 
 <style>
-  [hoverable="off"] { color: orange; }
+  [hoverable=""] { color: orange; }
   [hoverable="on"] { color: red; }
 </style>
 
@@ -26,11 +26,11 @@
   customAttributes.define("hoverable", class HoverAttr extends GestureAttr {
     static stateMachine(){
       return {
-        "off": [
+        "": [
           ["mouseenter:hover", "on"]
         ],
         "on": [
-          ["mouseleave:current-target", "off"]
+          ["mouseleave:current-target", ""]
         ]
       };
     }
