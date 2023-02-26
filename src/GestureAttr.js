@@ -8,7 +8,8 @@ customReactions.define("typeval", function (_, _, type, state) {
 class GestureAttr extends CustomAttr {
   //1. the GestureAttr produce events.
   //2. the GestureAttr cannot have any reactions, nor be _global
-  //3. there can only be one fsm attribute with the same type on the same element.
+  //3. there can only be one instance of a GestureAttr on the same element.
+  //4. The .stateMachine() must return an object with an empty string default state.
   upgrade() {
     if (this.chain.length)
       throw new SyntaxError(`GestureAttr ${this.type} cannot contain reactions: ${this.name}`);
@@ -19,10 +20,12 @@ class GestureAttr extends CustomAttr {
         throw new SyntaxError(`Cannot add the same GestureAttr ${this.type} to the same element twice: ${this.name}`);
 
     this._transitions = this.constructor.stateMachine(this.suffix);
+    if (!this._transitions[""])
+      throw new SyntaxError(`${this.constructor.name}.stateMachine(..) must return an object with a default, empty-string state.`);
     for (let state in this._transitions)
       this._transitions[state] = this._transitions[state].map(([chain, next]) =>
         next ? chain + `:await:typeval_${this.type}_${next}` : chain);
-    this.value = this.value || Object.keys(this._transitions)[0];
+//    this.value = this.value || Object.keys(this._transitions)[0];
   }
 
   changeCallback(oldState) {
