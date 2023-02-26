@@ -18,8 +18,8 @@
 <script src="../../src/customAttributes.js"></script>
 <script src="../../src/GestureAttr.js"></script>
 
-<div swipe id="viewport">
-  <div></div>
+<div id="viewport">
+  <div swipeable></div>
 </div>
 
 <script>
@@ -28,7 +28,7 @@
   viewport.setAttribute("swipe-start:swipestart");
   viewport.setAttribute("swipe-stop:swipestop");
 
-  customAttributes.define("swipe", class SwipeAttr extends GestureAttr {
+  customAttributes.define("swipeable", class SwipeAttr extends GestureAttr {
     static stateMachine() {
       return {
         "": [["mousedown:swipe_start", "start"]],
@@ -71,6 +71,7 @@
     setTimeout(() => {
       frame.remove();
       const el = document.createElement("div");
+      el.setAttribute("swipeable");
       el.style.backgroundColor = colorPicker();
       viewport.append(el);
     }, 500);
