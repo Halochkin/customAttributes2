@@ -1,28 +1,20 @@
 <style>
-  #viewport {
-    width: 450px;
-    height: 450px;
-    position: relative;
-    overflow: hidden;
-    background-color: yellow;
-  }
-
-  #viewport > div {
-    width: 450px;
-    height: 450px;
-    background-color: red;
+  div {
+    width: 20vh;
+    height: 32vh;
+    margin: 10vh calc(50% - 10vh);
   }
 
   .right {
     transition: all 0.8s;
     transform: rotate(15deg);
-    margin-left: 650px;
+    margin-left: 100vw;
   }
 
   .left {
     transition: all 0.8s;
     transform: rotate(-15deg);
-    margin-left: -650px;
+    margin-left: -20vh;
   }
 </style>
 
@@ -31,9 +23,12 @@
 <script src="../../src/core.js"></script>
 <script src="../../src/GestureAttr.js"></script>
 
-<div id="viewport" swipe-start:swipestart swipe:swipe-longer-than_100:left-right:await2_500:replace>
-  <div swipeable></div>
-</div>
+<body swipe:swipe-longer-than_100:left-right:await2_500:replace>
+<div
+    swipeable
+    ready:random-color:this.owner-element.style.background-color_e
+></div>
+</body>
 
 <script>
   //todo these should be moved into the core.js lib. The await2 is also used in the GestureAttr.
@@ -61,7 +56,7 @@
   customAttributes.define("swipeable", class SwipeAttr extends GestureAttr {
     static stateMachine() {
       return {
-        "": [["mousedown:swipe-start", "start"]],
+        "": [["mousedown:swipestart:swipe-start", "start"]],
         start: [
           ["_mouseup::swipe", ""],
           ["_blur:swipe-cancel", ""],
