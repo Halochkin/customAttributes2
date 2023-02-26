@@ -28,6 +28,7 @@
 
 <script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.2/observeElementCreation.js"></script>
 <script src="../../src/customAttributes.js"></script>
+<script src="../../src/core.js"></script>
 <script src="../../src/GestureAttr.js"></script>
 
 <div id="viewport" swipe-start:swipestart swipe:swipestop:await2_500:replace>
@@ -66,16 +67,12 @@
 
   customReactions.define("swipestart", e => ((swipeStart = e.x), e));
 
-  function colorPicker() {
+  customReactions.define("random-color", function randomColor() {
     return 'rgb(' + (Math.floor(Math.random() * 256)) + ',' + (Math.floor(Math.random() * 256)) + ',' + (Math.floor(Math.random() * 256)) + ')';
-  }
+  });
 
   customReactions.define("replace", function replaceElement() {
-    this.ownerElement.firstElementChild.remove();
-    const el = document.createElement("div");
-    el.setAttribute("swipeable");
-    el.style.backgroundColor = colorPicker();
-    this.ownerElement.append(el);
+    this.ownerElement.innerHTML = "<div swipeable ready:random-color:this.owner-element.style.background-color_e></div>";
   });
 
   customReactions.define("swipestop", function swipeStop({x}) {
