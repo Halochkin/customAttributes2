@@ -32,7 +32,7 @@
         start: [
           ["_mouseup:swipe_stop", ""],
           ["_blur:swipe_cancel", ""],
-          ["_selectstart:onselectstart", ""]
+          ["_selectstart:prevent", ""]
         ]
       };
     }
@@ -43,10 +43,7 @@
     return e;
   });
 
-  customReactions.define("onselectstart", function (e) {
-    e.preventDefault();
-    e.stopImmediatePropagation ? e.stopImmediatePropagation() : e.stopPropagation();
-  });
+  customReactions.define("prevent", e => (e.preventDefault(), e));
 
   customReactions.define("swipestart", e => swipeStart = e.x - e.target.offsetLeft);
 
