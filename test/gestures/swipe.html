@@ -31,38 +31,44 @@
 <script src="../../src/core.js"></script>
 <script src="../../src/GestureAttr.js"></script>
 
-<div id="viewport" swipe-start:swipestart swipe:swipestop:await2_500:replace>
+<div id="viewport" swipe-start:swipestart swipe:swipe-longer-than_100:left-right:await2_500:replace>
   <div swipeable></div>
 </div>
 
 <script>
-  let swipeStart = 0;
-
-  customAttributes.define("swipeable", class SwipeAttr extends GestureAttr {
-    static stateMachine() {
-      return {
-        "": [["mousedown:swipe_-start", "start"]],
-        start: [
-          ["_mouseup::swipe", ""],
-          ["_blur:swipe_-cancel", ""],
-          ["_selectstart:prevent", ""]
-        ]
-      };
-    }
-  });
-
-  customReactions.define("swipe", function (e, prefix, type = "") {
-    const copy = new e.constructor(prefix + type, e);
-    eventLoop.dispatch(copy, this.ownerElement);
-    return copy;
-  });
-
+  //todo these should be moved into the core.js lib. The await2 is also used in the GestureAttr.
   customReactions.define("prevent", e => (e.preventDefault(), e));
   customReactions.define("await2", async (e, _, num) => {
     if (num && isNaN(num))
       throw new SyntaxError(`${_}_${num} is illegal, the _${num} is not a number.`);
     await (num ? new Promise(r => setTimeout(r, num)) : Promise.resolve());
     return e;
+  });
+
+  //todo the copyEvent should also be standardized. It is something that we can
+  function copyEvent(e, prefix) {
+    const copy = new e.constructor(prefix, e);
+    eventLoop.dispatch(copy, this.ownerElement);
+    return copy;
+  }
+
+  customReactions.define("swipe", copyEvent);
+  customReactions.define("swipe-start", copyEvent);
+  customReactions.define("swipe-cancel", copyEvent);
+
+  let swipeStart = 0;
+
+  customAttributes.define("swipeable", class SwipeAttr extends GestureAttr {
+    static stateMachine() {
+      return {
+        "": [["mousedown:swipe-start", "start"]],
+        start: [
+          ["_mouseup::swipe", ""],
+          ["_blur:swipe-cancel", ""],
+          ["_selectstart:prevent", ""]
+        ]
+      };
+    }
   });
 
   customReactions.define("swipestart", e => ((swipeStart = e.x), e));
@@ -75,11 +81,13 @@
     this.ownerElement.innerHTML = "<div swipeable ready:random-color:this.owner-element.style.background-color_e></div>";
   });
 
-  customReactions.define("swipestop", function swipeStop({x}) {
+  customReactions.define("swipe-longer-than", function ({x}, _, length) {
     const swipeDist = swipeStart - x;
-    if (Math.abs(swipeDist) < 100)
-      return;
-    this.ownerElement.firstElementChild.classList.add(swipeDist > 0 ? "left" : "right");
-    return x;
+    if (Math.abs(swipeDist) >= length)
+      return swipeDist;
+  });
+  customReactions.define("left-right", function (e) {
+    this.ownerElement.firstElementChild.classList.add(e > 0 ? "left" : "right");
+    return e;
   });
 </script>
