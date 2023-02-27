@@ -159,10 +159,6 @@
     number: n => Number(n),  //this is the same as .-number_e. Do we want it?
     nan: n => isNaN(n),  //this is the same as .is-na-n_e. Do we want it?
 
-
-    //todo add this test!!
-    //click:filter-a:then_a:effect-a
-    //click:else_a:effect-b
     then: function (e, _, ...labels) {
       const key = labels.join(" ");
       const weakMap = thenElseRegister[key];
