@@ -130,6 +130,19 @@
     new: function _new(e, _, constructor, ...args) {
       return new window[ReactionRegistry.toCamelCase(constructor)](...args, e);
     },
+    await: async (e, prefix, num) => {
+      if (num && isNaN(num))    //todo detect error at upgradeTime?? if so, how best to do it..
+        throw new SyntaxError(`${prefix}_${num} is illegal, the _${num} is not a number.`);
+      await (num ? new Promise(r => setTimeout(r, num)) : Promise.resolve());
+      return e;
+    },
+    prevent: e => (e.preventDefault(), e),
+    dispatch: function dispatch(e) {
+      eventLoop.dispatch(e, this.ownerElement);
+      return e;
+    },
+
+
     m: function monadish(e, _, prop, ...nestedReaction) {
       const reaction = customReactions.getReaction(nestedReaction.join("_"));
       const value = reaction.run(this, e);
@@ -152,6 +165,9 @@
     or: (s, _, ...as) => as.reduce((s, a) => s || a, s),
     //todo double or triple equals??
     equals: (s, _, ...as) => as.reduce((s, a) => s == a, s),
+    //todo the below comparisons should more likely be run as dot-expressions..
+    //todo and should dot-expressions return the original 'e'? it feels like a more useful strategy..
+    //todo if the dot-expressions use this strategy, then they become monadish too.. not bad.
     //gt: (s, _, ...as) => as.reduce((s, a) => s > a, s),
     //gte: (s, _, ...as) => as.reduce((s, a) => s >= a, s),
     //lt: (s, _, ...as) => as.reduce((s, a) => s < a, s),
@@ -159,10 +175,6 @@
     number: n => Number(n),  //this is the same as .-number_e. Do we want it?
     nan: n => isNaN(n),  //this is the same as .is-na-n_e. Do we want it?
 
-
-    //todo add this test!!
-    //click:filter-a:then_a:effect-a
-    //click:else_a:effect-b
     then: function (e, _, ...labels) {
       const key = labels.join(" ");
       const weakMap = thenElseRegister[key];

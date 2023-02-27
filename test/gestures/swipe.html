@@ -27,29 +27,12 @@
 <body swipe:swipe-longer-than_100:replace>
 <div
     swipeable_100
-    swipe:swipe-longer-than_100:left-right:await2_800:this.owner-element.remove
+    swipe:swipe-longer-than_100:left-right:await_800:this.owner-element.remove
     ready:random-color:this.owner-element.style.background-color_e
 ></div>
 </body>
 
 <script>
-  //todo these should be moved into the core.js lib. The await2 is also used in the GestureAttr.
-  customReactions.define("prevent", e => (e.preventDefault(), e));
-  customReactions.define("await2", async (e, prefix, num) => {
-    if (num && isNaN(num))
-      throw new SyntaxError(`${prefix}_${num} is illegal, the _${num} is not a number.`);
-    await (num ? new Promise(r => setTimeout(r, num)) : Promise.resolve());
-    return e;
-  });
-  customReactions.define("dispatch", function dispatch(e) {
-    eventLoop.dispatch(e, this.ownerElement);
-    return e;
-  });
-
-  //todo 1 swipeable should have the _100 argument.
-  //todo 2 swipeable should store the position of the starting entry as value. event caching.
-  //todo 3 if/else logic. should we use a once-reaction? or should we do something prolog style?
-
   class SwipeEvent extends MouseEvent {
     constructor(type, dict, start) {
       super(type, dict);
@@ -75,10 +58,8 @@
   customReactions.define("swipe-start", copyEvent);
   customReactions.define("swipe-cancel", copyEvent);
 
-  let swipeStart = 0;
-
   customAttributes.define("swipeable", class SwipeAttr extends GestureAttr {
-    static stateMachine(length = 50, prefix) {
+    static stateMachine(prefix, length = 50) {
       return {
         "": [[`mousedown:owner-attr_${prefix}:swipestart:swipe-start:dispatch`, "start"]],
         start: [
@@ -100,7 +81,7 @@
   });
 
   customReactions.define("swipestart", function (e) {
-    swipeStart = this.owner.value = " " + e.x;
+    this.owner.value = " " + e.x;
     return e;
   });
 
@@ -112,7 +93,7 @@
     this.ownerElement.insertAdjacentHTML("afterbegin",
       `<div
     swipeable_100
-    swipe:swipe-longer-than_100:left-right:await2_800:this.owner-element.remove
+    swipe:swipe-longer-than_100:left-right:await_800:this.owner-element.remove
     ready:random-color:this.owner-element.style.background-color_e
 ></div>`);
   });
@@ -121,13 +102,13 @@
     if (Math.abs(this.owner.value.split(" ")[1] - e.x) >= length)
       return e;
   })
-  //todo :gte_e.length_100 //todo does the dot expression manage to utilize the defined reactions?
+
   customReactions.define("swipe-longer-than", function (e, _, length) {
-    if (+e.length >= +length)
+    if (e.length >= length)
       return e;
   });
   customReactions.define("left-right", function (e) {
-    this.ownerElement.classList.add(e.direction);
+    this.ownerElement.classList.add(e.direction); //
     return e;
   });
 </script>
