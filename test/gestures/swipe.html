@@ -78,7 +78,7 @@
   let swipeStart = 0;
 
   customAttributes.define("swipeable", class SwipeAttr extends GestureAttr {
-    static stateMachine(length = 50, prefix) {
+    static stateMachine(prefix, length = 50) {
       return {
         "": [[`mousedown:owner-attr_${prefix}:swipestart:swipe-start:dispatch`, "start"]],
         start: [

@@ -26,7 +26,7 @@
   customReactions.define("longpress-reset", newEvent);
   customAttributes.define("longpressable", class LongPress extends GestureAttr {
 
-    static stateMachine(time = 200) {
+    static stateMachine(prefix, time = 200) {
       return {
         "": [
           ["mousedown", "observe"]

@@ -2,16 +2,8 @@
 customReactions.define("await", async e => (await Promise.resolve(), e));
 customReactions.define("typeval", function (_, _, type, state) {
   for (let at of this.ownerElement.attributes)
-    if (at.type === type) {
-      if(type === "")
-        return this.ownerElement.setAttribute(at.name, state);//todo or use the setter .value
-
-      const oldValue = at.value.split(" ");
-      if(oldValue.length > 1)
-        oldValue.shift();
-      oldValue.unshift(state);
-      return this.ownerElement.setAttribute(at.name, oldValue.join(" "));//todo or use the setter .value
-    }
+    if (at.type === type)
+      return at.setState(state);
 });
 
 class GestureAttr extends CustomAttr {
@@ -28,7 +20,7 @@ class GestureAttr extends CustomAttr {
       if (at !== this && at.type === this.type)
         throw new SyntaxError(`Cannot add the same GestureAttr ${this.type} to the same element twice: ${this.name}`);
 
-    this._transitions = this.constructor.stateMachine(this.suffix, this.type);
+    this._transitions = this.constructor.stateMachine(this.type, this.suffix);
     if (!this._transitions[""])    //todo this error should come at define time, not upgrade time
       throw new SyntaxError(`${this.constructor.name}.stateMachine(..) must return an object with a default, empty-string state.`);
     for (let state in this._transitions)
@@ -37,8 +29,36 @@ class GestureAttr extends CustomAttr {
 //    this.value = this.value || Object.keys(this._transitions)[0];
   }
 
+  //todo this is wrong..
+  setState(state) {
+    if (state === "")
+      return this.ownerElement.setAttribute(this.name, state);//todo or use the setter .value
+    const i = this.value.indexOf(" ");
+    const oldValue = this.value.split(" ");
+    if (oldValue.length > 1)
+      oldValue.shift();
+    oldValue.unshift(state);
+    return this.ownerElement.setAttribute(this.name, oldValue.join(" "));
+  }
+
+  getState() {
+    const i = this.value.indexOf(" ");
+    return i === -1 ? this.value : this.value.substring(0, i);
+  }
+
+  setData(data) {    //todo this.ownerElement.setAttribute(..)
+    const i = this.value.indexOf(" ");
+    const state = i === -1 ? this.value : this.value.substring(0, i);
+    this.value = `${state} ${data}`;
+  }
+
+  getData() {
+    const i = this.value.indexOf(" ");
+    return i === -1 ? "" : this.value.substring(i);
+  }
+
   changeCallback(oldState) {
-    if (oldState)
+    if (oldState)                        //todo this is also wrong..
       for (let attr of this._transitions[oldState.split(" ")[0]])
         this.ownerElement.removeAttribute(attr);
     for (let attr of this._transitions[this.value.split(" ")[0]])
