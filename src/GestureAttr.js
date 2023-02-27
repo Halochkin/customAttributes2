@@ -1,5 +1,4 @@
-//todo await should be moved into the core.js? or, move entire GestureAttr into core.js?
-customReactions.define("await", async e => (await Promise.resolve(), e));
+//todo move entire GestureAttr into core.js?
 customReactions.define("typeval", function (_, _, type, state) {
   for (let at of this.ownerElement.attributes)
     if (at.type === type)
