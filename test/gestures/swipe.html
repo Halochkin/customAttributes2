@@ -41,23 +41,35 @@
     await (num ? new Promise(r => setTimeout(r, num)) : Promise.resolve());
     return e;
   });
+  customReactions.define("dispatch", function dispatch(e) {
+    eventLoop.dispatch(e, this.ownerElement);
+    return e;
+  });
 
   //todo 1 swipeable should have the _100 argument.
   //todo 2 swipeable should store the position of the starting entry as value. event caching.
   //todo 3 if/else logic. should we use a once-reaction? or should we do something prolog style?
 
-  //todo but here we need a SwipeEvent extends MouseEvent that has getters for custom direction, and an extra point for the value of the x,y.
-  //todo the copyEvent should also be standardized. It is something that we can
+  class SwipeEvent extends MouseEvent {
+    constructor(type, dict, start) {
+      super(type, dict);
+      this.start = start;
+      this.end = dict.x;
+    }
+
+    get direction() {
+      //return ((Math.atan2(y, -x) * 180 / Math.PI) + 270) % 360;
+      return this.end >= this.start ? "right" : "left";
+    }
+
+    get length() {
+      return Math.abs(this.end - this.start);
+    }
+  }
+
   function copyEvent(e, prefix) {
-    return new e.constructor(prefix, e);
+    return new SwipeEvent(prefix, e, this.owner.value.split(" ")[1]);
   }
-
-  function dispatch(e){
-    eventLoop.dispatch(e, this.ownerElement);
-    return e;
-  }
-
-  customReactions.define("dispatch", dispatch);
 
   customReactions.define("swipe", copyEvent);
   customReactions.define("swipe-start", copyEvent);
@@ -66,22 +78,31 @@
   let swipeStart = 0;
 
   customAttributes.define("swipeable", class SwipeAttr extends GestureAttr {
-    static stateMachine(length = 50) {
+    static stateMachine(length = 50, prefix) {
       return {
-        "": [["mousedown:swipestart:swipe-start:dispatch", "start"]],
+        "": [[`mousedown:owner-attr_${prefix}:swipestart:swipe-start:dispatch`, "start"]],
         start: [
           //todo add the start x,y, and have the swipe be a different class of event.
-          [`_mouseup::swipe:dispatch`, ""],
-          //todo the problem is what should we do with _mouseup when the filter fails?
-          [`_mouseup:swipe-cancel:dispatch`, ""],
-          ["_blur:swipe-cancel:dispatch", ""],
-          ["_selectstart:prevent", ""]
+          [`_mouseup:owner-attr_${prefix}:swipe-long-enough_${length}:then_${prefix}::swipe:dispatch`, ""],
+          [`_mouseup:else_${prefix}:owner-attr_${prefix}:swipe-cancel:dispatch`, ""],
+          [`_blur:owner-attr_${prefix}:swipe-cancel:dispatch`, ""],
+          [`_selectstart:owner-attr_${prefix}:prevent`, ""]
         ]
       };
     }
   });
+  customReactions.define("owner-attr", function (e, _, type) {
+    if (!this.owner)  //todo the owner attribute should only run on the first pass, not all the time.
+      for (let at of this.ownerElement.attributes)
+        if (at.type === type)
+          this.owner = at;
+    return e;
+  });
 
-  customReactions.define("swipestart", e => ((swipeStart = e.x), e));
+  customReactions.define("swipestart", function (e) {
+    swipeStart = this.owner.value = " " + e.x;
+    return e;
+  });
 
   customReactions.define("random-color", function randomColor() {
     return 'rgb(' + (Math.floor(Math.random() * 256)) + ',' + (Math.floor(Math.random() * 256)) + ',' + (Math.floor(Math.random() * 256)) + ')';
@@ -89,21 +110,24 @@
 
   customReactions.define("replace", function replaceElement() {
     this.ownerElement.insertAdjacentHTML("afterbegin",
-`<div
+      `<div
     swipeable_100
     swipe:swipe-longer-than_100:left-right:await2_800:this.owner-element.remove
     ready:random-color:this.owner-element.style.background-color_e
 ></div>`);
   });
 
+  customReactions.define("swipe-long-enough", function (e, _, length) {
+    if (Math.abs(this.owner.value.split(" ")[1] - e.x) >= length)
+      return e;
+  })
   //todo :gte_e.length_100 //todo does the dot expression manage to utilize the defined reactions?
   customReactions.define("swipe-longer-than", function (e, _, length) {
-    const swipeDist = swipeStart - e.x;
-    if (Math.abs(swipeDist) >= length)
-      return swipeDist;
+    if (+e.length >= +length)
+      return e;
   });
   customReactions.define("left-right", function (e) {
-    this.ownerElement.classList.add(e > 0 ? "left" : "right");
+    this.ownerElement.classList.add(e.direction);
     return e;
   });
 </script>

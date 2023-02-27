@@ -1,8 +1,17 @@
+//todo await should be moved into the core.js? or, move entire GestureAttr into core.js?
 customReactions.define("await", async e => (await Promise.resolve(), e));
 customReactions.define("typeval", function (_, _, type, state) {
   for (let at of this.ownerElement.attributes)
-    if (at.type === type)
-      return this.ownerElement.setAttribute(at.name, state);//todo or use the setter .value
+    if (at.type === type) {
+      if(type === "")
+        return this.ownerElement.setAttribute(at.name, state);//todo or use the setter .value
+
+      const oldValue = at.value.split(" ");
+      if(oldValue.length > 1)
+        oldValue.shift();
+      oldValue.unshift(state);
+      return this.ownerElement.setAttribute(at.name, oldValue.join(" "));//todo or use the setter .value
+    }
 });
 
 class GestureAttr extends CustomAttr {
@@ -19,8 +28,8 @@ class GestureAttr extends CustomAttr {
       if (at !== this && at.type === this.type)
         throw new SyntaxError(`Cannot add the same GestureAttr ${this.type} to the same element twice: ${this.name}`);
 
-    this._transitions = this.constructor.stateMachine(this.suffix);
-    if (!this._transitions[""])
+    this._transitions = this.constructor.stateMachine(this.suffix, this.type);
+    if (!this._transitions[""])    //todo this error should come at define time, not upgrade time
       throw new SyntaxError(`${this.constructor.name}.stateMachine(..) must return an object with a default, empty-string state.`);
     for (let state in this._transitions)
       this._transitions[state] = this._transitions[state].map(([chain, next]) =>
@@ -30,9 +39,9 @@ class GestureAttr extends CustomAttr {
 
   changeCallback(oldState) {
     if (oldState)
-      for (let attr of this._transitions[oldState])
+      for (let attr of this._transitions[oldState.split(" ")[0]])
         this.ownerElement.removeAttribute(attr);
-    for (let attr of this._transitions[this.value])
+    for (let attr of this._transitions[this.value.split(" ")[0]])
       this.ownerElement.setAttribute(attr, "");
   }
 }

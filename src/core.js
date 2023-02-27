@@ -122,7 +122,10 @@
 
 (function () {
   const throttleRegister = new WeakMap();
-
+  //labels=>this=>e
+  //{}=>WeakMap=>WeakSet
+  const thenElseRegister = {};
+  //todo add await
   customReactions.defineAll({
     new: function _new(e, _, constructor, ...args) {
       return new window[ReactionRegistry.toCamelCase(constructor)](...args, e);
@@ -149,7 +152,31 @@
     or: (s, _, ...as) => as.reduce((s, a) => s || a, s),
     //todo double or triple equals??
     equals: (s, _, ...as) => as.reduce((s, a) => s == a, s),
+    //gt: (s, _, ...as) => as.reduce((s, a) => s > a, s),
+    //gte: (s, _, ...as) => as.reduce((s, a) => s >= a, s),
+    //lt: (s, _, ...as) => as.reduce((s, a) => s < a, s),
+    //lte: (s, _, ...as) => as.reduce((s, a) => s <= a, s),
     number: n => Number(n),  //this is the same as .-number_e. Do we want it?
+    nan: n => isNaN(n),  //this is the same as .is-na-n_e. Do we want it?
+
+
+    //todo add this test!!
+    //click:filter-a:then_a:effect-a
+    //click:else_a:effect-b
+    then: function (e, _, ...labels) {
+      const key = labels.join(" ");
+      const weakMap = thenElseRegister[key];
+      weakMap ?
+        (weakMap.has(this.ownerElement) ?
+          weakMap.get(this.ownerElement).add(e) :
+          weakMap.set([[this.ownerElement, new WeakSet([e])]])) :
+        thenElseRegister[key] = new WeakMap([[this.ownerElement, new WeakSet([e])]]);
+      return e;
+    },
+    else: function (e, _, ...labels) {
+      if (!thenElseRegister[labels.join(" ")]?.get(this.ownerElement)?.has(e))
+        return e;
+    },
 
     debugger: function (e) {
       debugger;
