@@ -1,79 +1,33 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Drag Dealer</title>
-
-    <style>
-        #elem {
-            position: absolute;
-            left: 10px;
-            top: 10px;
-            height: 100px;
-            width: 100px;
-            background-color: red;
-            text-align: center;
-        }
-        #redzone {
-            position: absolute;
-            left: 300px;
-            top: 10px;
-            height: 110px;
-            width: 110px;
-            border: 2px solid red;
-        }
-    </style>
-
-    <script src="../../src/customAttributes.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.0/startObserver.js"></script>
-
-</head>
-<body>
-<h3>Fast drag to fling</h3>
-<div id="redzone">Drag here</div>
-<div id="elem" draggable >This text should be impossible to select</div>
-
-</body>
-<script>
-
-  function filterOnAttribute(e, attributeName) {                                                 //4. FilterByAttribute
-    for (let el = e.target; el; el = el.parentNode) {
-      if (!el.hasAttribute)
-        return null;
-      if (el.hasAttribute(attributeName))
-        return el;
+<style>
+    #elem {
+        position: absolute;
+        left: 10px;
+        top: 10px;
+        height: 100px;
+        width: 100px;
+        background-color: red;
+        text-align: center;
     }
-    return null;
-  }
+</style>
 
-  function makeDraggingEvent(name, trigger) {
+<script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.2/observeElementCreation.js"></script>
+<script src="../../src/customAttributes.js"></script>
+<script src="../../src/GestureAttr.js"></script>
+
+<div id="elem" draggable dragging-start:listen1 dragging-move:listen2 dragging-stop:listen3 fling:listen4>This text
+    should be impossible to select
+</div>
+
+<script>
+  function makeDraggingEvent(name, {x, y}) {
     const composedEvent = new CustomEvent("dragging-" + name, {bubbles: true, composed: true});
-    composedEvent.x = trigger.x;
-    composedEvent.y = trigger.y;
+    [composedEvent.x, composedEvent.y] = [x, y];
     return composedEvent;
   }
 
-  function captureEvent(e, stopProp) {
-    e.preventDefault();
-    stopProp && e.stopImmediatePropagation ? e.stopImmediatePropagation() : e.stopPropagation();
-  }
+  const mouseOutOfBounds = trigger => trigger.clientY < 0 || trigger.clientX < 0 || trigger.clientX > window.innerWidth || trigger.clientY > window.innerHeight;
 
-  function replaceDefaultAction(target, composedEvent, trigger) {      //[3] ReplaceDefaultAction
-    composedEvent.trigger = trigger;
-    trigger.stopTrailingEvent = function () {
-      composedEvent.stopImmediatePropagation ? composedEvent.stopImmediatePropagation() : composedEvent.stopPropagation();
-    };
-    trigger.preventDefault();
-    return setTimeout(function () {
-      target.dispatchEvent(composedEvent)
-    }, 0);
-  }
-
-  function mouseOutOfBounds(trigger) {
-    return trigger.clientY < 0 || trigger.clientX < 0 || trigger.clientX > window.innerWidth || trigger.clientY > window.innerHeight;
-  }
-
-  function updateSequence(sequence, e) {                                                         //7. TakeNote
+  function updateSequence(sequence, e) {
     sequence.recorded.push(e);
     return sequence;
   }
@@ -81,187 +35,99 @@
   function startSequence(target, e) {
     const sequence = {
       target,
-      cancelMouseout: target.hasAttribute("draggable-cancel-mouseout"),
       flingDuration: parseInt(target.getAttribute("fling-duration")) || 50,
       flingDistance: parseInt(target.getAttribute("fling-distance")) || 100,
       recorded: [e],
-      userSelectStart: document.children[0].style.userSelect
+      userSelectStart: document.children[0].style.userSelect,
+      touchAction: document.children[0].style.touchAction
     };
     document.children[0].style.userSelect = "none";
-    target.removeAttribute("mousedown:mousedowninitial_draggable_start");
-    target.setAttribute("mousedown:mousedownsecondary_cancel");
-    target.setAttribute("mousemove:onmousemove_move");
-    target.setAttribute("mouseup:onmouseup_stop_fling");
-    target.setAttribute("mouseout:onmouseup_stop_fling");
-    target.setAttribute("blur:onblur_cancel");
-    target.setAttribute("selectstart:onselectstart");
+    document.children[0].style.touchAction = "none";
     return sequence;
   }
 
-  function stopSequence({target, userSelectStart}) {
+  function stopSequence({userSelectStart, touchAction}) {
     document.children[0].style.userSelect = userSelectStart;
-    target.removeAttribute("mousedown:mousedownsecondary_cancel");
-    target.removeAttribute("mousemove:onmousemove_move");
-    target.removeAttribute("mouseup:onmouseup_stop_fling");
-    target.removeAttribute("mouseout:onmouseup_stop_fling");
-    target.removeAttribute("blur:onblur_cancel");
-    target.removeAttribute("selectstart:onselectstart"); //todo: make both .preventDefault and .stopPropagation via attributes
-    target.setAttribute("mousedown:mousedowninitial_draggable_start");
+    document.children[0].style.touchAction = touchAction;
     return undefined;
   }
 
-  function makeFlingEvent(trigger, sequence, name) {
-    const flingTime = trigger.timeStamp - sequence.flingDuration;
+  function makeFlingEvent(e, sequence, name) {
+    const flingTime = e.timeStamp - sequence.flingDuration;
     const flingStart = findLastEventOlderThan(sequence.recorded, flingTime);
-    if (!flingStart)
-      return null;
-    const detail = flingDetails(trigger, flingStart);
-    if (detail.distDiag < sequence.flingDistance)
-      return null;
-    detail.angle = flingAngle(detail.distX, detail.distY);
-    return new CustomEvent(name, {bubbles: true, composed: true, detail});
+    if (!flingStart) return null;
+    const {distX, distY, distDiag, durationMs} = flingDetails(e, flingStart);
+    return distDiag > sequence.flingDistance ? new CustomEvent(name, {
+      bubbles: true,
+      composed: true,
+      detail: {distX, distY, distDiag, durationMs, angle: flingAngle(distX, distY), x: e.x, y: e.y}
+    }) : null;
   }
 
   function findLastEventOlderThan(events, timeTest) {
-    for (let i = events.length - 1; i >= 0; i--) {
-      if (events[i].timeStamp < timeTest)
-        return events[i];
-    }
+    for (const event of events.reverse()) if (event.timeStamp < timeTest) return event;
     return null;
   }
 
-  function flingDetails(flingEnd, flingStart) {
-    const distX = flingEnd.x - flingStart.x;
-    const distY = flingEnd.y - flingStart.y;
+  function flingDetails({x: x1, y: y1, timeStamp: ts1}, {x: x2, y: y2, timeStamp: ts2}) {
+    const [distX, distY, durationMs] = [x1 - x2, y1 - y2, ts1 - ts2];
     const distDiag = Math.sqrt(distX * distX + distY * distY);
-    const durationMs = flingEnd.timeStamp - flingStart.timeStamp;
     return {distX, distY, distDiag, durationMs};
   }
 
-  function flingAngle(x = 0, y = 0) {
-    return ((Math.atan2(y, -x) * 180 / Math.PI) + 270) % 360;
-  }
+  const flingAngle = (x = 0, y = 0) => ((Math.atan2(y, -x) * 180 / Math.PI) + 270) % 360;
+
+  customAttributes.define("draggable", class DragAttribute extends GestureAttr {
+    static stateMachine() {
+      return {
+        init: [["mousedown:onmousedown_start", "start"]],
+        start: [
+          ["mousemove:onmousemove_move_cancel"],
+          ["mouseup:onmouseup_stop_fling", "stop"],
+          ["mouseout:onmouseup_stop", "stop"],
+          ["mousedown:onmousedown_stop", "stop"]
+        ],
+        stop: [["mousedown:onmousedown_start", "start"]]
+      };
+    }
+  });
 
   let globalSequence;
 
-  customAttributes.define("draggable", class Drag extends CustomAttr {
-
-    upgrade() {
-
-      customReactions.define("mousedowninitial", function (e, prefix, attribute, name) {
-        if (e.button !== 0)
-          return;
-        const target = filterOnAttribute(e, attribute);
-        if (!target)
-          return;
-        const composedEvent = makeDraggingEvent(name, e);
-        captureEvent(e, false);
-        globalSequence = startSequence(target, composedEvent);
-        replaceDefaultAction(target, composedEvent, e);
-      });
-
-      customReactions.define("mousedownsecondary", function (e, prefix, name) {
-        const cancelEvent = makeDraggingEvent(name, e);
-        const target = globalSequence.target;
-        globalSequence = stopSequence(globalSequence);
-        replaceDefaultAction(target, cancelEvent, e);
-      });
-
-      customReactions.define("onmousemove", function (e, prefix, name) {
-        if (!globalSequence.cancelMouseout && mouseOutOfBounds(e)) {
-          const cancelEvent = makeDraggingEvent("cancel", e);
-          const target = globalSequence.target;
-          globalSequence = stopSequence(globalSequence);
-          replaceDefaultAction(target, cancelEvent, e);
-          return;
-        }
-        const composedEvent = makeDraggingEvent(name, e);
-        captureEvent(e, false);
-        globalSequence = updateSequence(globalSequence, composedEvent);
-        replaceDefaultAction(globalSequence.target, composedEvent, e);
-      });
-
-      customReactions.define("onmouseup", function (e, prefix, stop, fling) {
-        const stopEvent = makeDraggingEvent(stop, e);
-        const flingEvent = makeFlingEvent(e, globalSequence, fling);
-        captureEvent(e, false);
-        const target = globalSequence.target;
-        globalSequence = stopSequence(globalSequence);
-        replaceDefaultAction(target, stopEvent, e);
-        if (flingEvent)
-          replaceDefaultAction(target, flingEvent, e);
-      });
-
-      customReactions.define("onblur", function (e, prefix, name) {
-        const blurInEvent = makeDraggingEvent(name, e);
-        const target = globalSequence.target;
-        globalSequence = stopSequence(globalSequence);
-        replaceDefaultAction(target, blurInEvent, e);
-      });
-
-      customReactions.define("onselectstart", function (e) {
-        e.preventDefault();
-        e.stopImmediatePropagation ? e.stopImmediatePropagation() : e.stopPropagation();
-      });
-
-      this.ownerElement.setAttribute("mousedown:mousedowninitial_draggable_start");
-    }
-
+  customReactions.define("onmousedown", function (e, prefix, type) {
+    globalSequence = type === "start" ? startSequence(this.ownerElement, e) : stopSequence(globalSequence);
+    eventLoop.dispatch(makeDraggingEvent(type, e), this.ownerElement);
+    return e;
   });
 
+  customReactions.define("onmousemove", function (e, prefix, move, cancel) {
+    const inside = !mouseOutOfBounds(e);
+    globalSequence = inside ? updateSequence(globalSequence, e) : stopSequence(globalSequence);
+    eventLoop.dispatch(makeDraggingEvent(inside ? move : cancel, e), this.ownerElement);
+    return e;
+  });
 
+  customReactions.define("onmouseup", function (e, prefix, stop, fling) {
+    const flingEvent = makeFlingEvent(e, globalSequence, fling);
+    globalSequence = stopSequence(globalSequence);
+    eventLoop.dispatch(makeDraggingEvent(stop, e), this.ownerElement);
+    flingEvent && eventLoop.dispatch(flingEvent, this.ownerElement);
+    return e;
+  });
+
+  customReactions.define("onblur", function (e, _, name) {
+    eventLoop.dispatch(makeDraggingEvent(name, e), this.ownerElement);
+    return e;
+  });
+
+  customReactions.define("onselectstart", function (e) {
+    e.preventDefault();
+    e.stopImmediatePropagation ? e.stopImmediatePropagation() : e.stopPropagation();
+  });
+  
+  let dragStart = undefined;
+  customReactions.define("listen1",  ({x, y, target}) => dragStart = {x: x - target.offsetLeft, y: y - target.offsetTop});
+  customReactions.define("listen2", ({target, x, y}) => [target.style.left, target.style.top] = [x - dragStart.x + "px", y - dragStart.y + "px"]);
+  customReactions.define("listen3", e => e.target.style.outline = "2px solid green");
+  customReactions.define("listen4", ({target, detail}) => ([target.style.left, target.style.top, target.style.transition] = [(detail.x - dragStart.x + detail.distX * 1.5) + "px", (detail.y - dragStart.y + detail.distY * 1.5) + "px", "all 0.3s cubic-bezier(0.39, 0.58, 0.57, 1)"], setTimeout(() => target.style.transition = undefined, 300)));
 </script>
-
-<script>
-
-  var dragStart = undefined;
-
-  window.addEventListener("dragging-start", e => {
-    dragStart = {
-      x: e.x - e.trigger.target.offsetLeft,
-      y: e.y - e.trigger.target.offsetTop
-    };
-  });
-
-  window.addEventListener("dragging-move", (e) => {
-    const target = e.trigger.target;
-    target.style.left = (e.x - dragStart.x) + "px";
-    target.style.top = (e.y - dragStart.y) + "px";
-  });
-
-  window.addEventListener("dragging-stop", (e) => {
-    var dropzone = document.querySelector("#redzone");
-    const target = e.trigger.target;
-    var dropCoord = {
-      left: dropzone.offsetLeft - 10,
-      top: dropzone.offsetTop - 10,
-      right: dropzone.offsetLeft + dropzone.offsetWidth + 10,
-      bottom: dropzone.offsetTop + dropzone.clientHeight + 10
-    };
-    if (e.x < dropCoord.left || e.y < dropCoord.top || e.y > dropCoord.bottom || e.x > dropCoord.right)
-      return;
-    target.style.left = dropCoord.left + 17 + "px";
-    target.style.top = dropCoord.top + 17 + "px";
-    dropzone.style.borderColor = "green";
-  });
-
-  window.addEventListener("fling", e => {
-    var element = e.trigger.target;
-    element.style.left = (e.trigger.x - dragStart.x + e.detail.distX * 1.5) + "px";
-    element.style.top = (e.trigger.y - dragStart.y + e.detail.distY * 1.5) + "px";
-    element.style.transition = "all 0.3s cubic-bezier(0.39, 0.58, 0.57, 1)";
-    setTimeout(function () {
-      element.style.transition = undefined;
-    }, 300);
-  });
-
-  window.addEventListener("dragging-cancel", (e) => {
-    if (e.trigger.type === "blur")
-      confirm("you just got blurred!");
-    if (e.trigger.type === "mouseout")
-      confirm("you just got mouseouted!");
-    // if (e.trigger.type === "mousedown")
-    //   confirm("you just pressed to many buttons!");
-  });
-</script>
-</html>

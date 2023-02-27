@@ -436,6 +436,7 @@ function deprecated() {
   Element.prototype.removeAttributeNodeNS = deprecated.bind("Element.removeAttributeNodeNS");
   document.createAttribute = deprecated.bind("document.createAttribute");
 
+  //todo make this method work against Attr.prototype.value setter??
   Element_proto.setAttribute = function (name, value) {
     if (this.hasAttribute(name)) {
       const at = getAttrNodeOG.call(this, name);

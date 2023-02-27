@@ -1,223 +1,133 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Swipe</title>
+<script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.2/observeElementCreation.js"></script>
+<script src="../../src/customAttributes.js"></script>
+<script src="../../src/core.js"></script>
+<script src="../../src/GestureAttr.js"></script>
 
-  <style>
-    #elem {
-      position: absolute;
-      width: 450px;
-      height: 450px;
-      background-color: red;
-    }
+<style>
+  div {
+    position: absolute;
+    width: 20vh;
+    height: 32vh;
+    margin: 10vh calc(50% - 10vh);
+  }
 
-    #viewport {
-      display: inline-block;
-      width: 450px;
-      height: 450px;
-      position: relative;
-      overflow: hidden;
-      background-color: yellow;
-      margin: 10px;
-      /*margin-top: 20px;*/
-      border-radius: 10px;
-    }
-  </style>
+  .right {
+    transition: all 0.8s;
+    transform: rotate(15deg);
+    margin-left: 100vw;
+  }
 
-  <script src="../../src/customAttributes.js"></script>
-  <script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.0/startObserver.js"></script>
+  .left {
+    transition: all 0.8s;
+    transform: rotate(-15deg);
+    margin-left: -20vh;
+  }
+</style>
 
-</head>
-<body>
-
-<div swipe id="viewport" touch-action="pan-left" pointer-distance="30">
-  <div id="elem"></div>
-</div>
-
+<body swipe:swipe-longer-than_100:replace>
+<div
+    swipeable_100
+    swipe:swipe-longer-than_100:left-right:await2_800:this.owner-element.remove
+    ready:random-color:this.owner-element.style.background-color_e
+></div>
 </body>
-<script>
-  // -------------------------------------------------------------------
-  function filterOnAttribute(e, attributeName) {                                                 //4. FilterByAttribute
-    for (let el = e.target; el; el = el.parentNode) {
-      if (!el.hasAttribute)
-        return null;
-      if (el.hasAttribute(attributeName))
-        return el;
-    }
-    return null;
-  }
-
-  function makeSwipeEvent(name, {x, y, target}) {
-    const composedEvent = new CustomEvent("swipe-" + name, {bubbles: true, composed: true});
-    composedEvent.x = x;
-    composedEvent.y = y;
-    composedEvent.detail = target.offsetLeft;
-    return composedEvent;
-  }
-
-  function captureEvent(e, stopProp) {
-    e.preventDefault();
-    stopProp && e.stopImmediatePropagation ? e.stopImmediatePropagation() : e.stopPropagation();
-  }
-
-  function replaceDefaultAction(target, composedEvent, trigger) {      //[3] ReplaceDefaultAction
-    composedEvent.trigger = trigger;
-    trigger.stopTrailingEvent = function () {
-      composedEvent.stopImmediatePropagation ? composedEvent.stopImmediatePropagation() : composedEvent.stopPropagation();
-    };
-    trigger.preventDefault();
-    return setTimeout(function () {
-      target.dispatchEvent(composedEvent)
-    }, 0);
-  }
-
-  function mouseOutOfBounds(trigger) {
-    return trigger.clientY < 0 || trigger.clientX < 0 || trigger.clientX > window.innerWidth || trigger.clientY > window.innerHeight;
-  }
-
-  function updateSequence(sequence, e) {                                                         //7. TakeNote
-    sequence.recorded.push(e);
-    return sequence;
-  }
-
-  function startSequence(target, e) {                                                            //5. Event Sequence
-    const body = document.querySelector("body");
-    const sequence = {
-      target,
-      cancelMouseout: target.hasAttribute("swipe-cancel-pointerout"),
-      swipeDuration: parseInt(target.getAttribute("pointer-duration")) || 50,                    //6. EventAttribute
-      swipeDistance: parseInt(target.getAttribute("pointer-distance")) || 100,
-      recorded: [e],
-      userSelectStart: body.style.userSelect,                                                    //10. Grabtouch
-    };
-    document.children[0].style.userSelect = "none";
-    //mousedown:button_0::swipestart
-    target.removeAttribute("mousedown:button_0::mousedowninitial_swipe_start");
-    target.setAttribute("mousedown:mousedownsecondary_cancel");
-    target.setAttribute("mousemove:onmousemove_move");
-    target.setAttribute("mouseup:onmouseup_stop");
-    target.setAttribute("blur:onblur_cancel");
-    target.setAttribute("selectstart:onselectstart");
-    return sequence;
-  }
-
-  function stopSequence({target, userSelectStart}) {
-    document.children[0].style.userSelect = userSelectStart;
-    target.removeAttribute("mousedown:mousedownsecondary_cancel");
-    target.removeAttribute("mousemove:onmousemove_move");
-    target.removeAttribute("mouseup:onmouseup_stop");
-    target.removeAttribute("blur:onblur_cancel");
-    target.removeAttribute("selectstart:onselectstart");
-    target.setAttribute("mousedown:button_0::mousedowninitial_swipe_start");
-    return undefined;
-  }
-
-  customAttributes.define("swipe", class Swipe extends CustomAttr {
-
-    upgrade() {
-      this.ownerElement.setAttribute("mousedown:button_0::mousedowninitial_swipe_start");
-    }
-
-    destructor() {
-      //todo
-    }
-  });
-
-
-  function propCheck(e, prefix, val) {
-    if (e[prefix] == val)
-      return e;
-  }
-
-  customReactions.define("button", propCheck);
-
-  let globalSequence;
-  customReactions.define("mousedowninitial", function (e, prefix, attr, name) {
-    const target = this.ownerElement;
-    const composedEvent = makeSwipeEvent(name, e);
-    globalSequence = startSequence(target, composedEvent);//todo this is the statemachine
-    eventLoop.dispatch(composedEvent, target);
-  });
-
-  customReactions.define("mousedownsecondary", function (e, prefix, name) {
-    const cancelEvent = makeSwipeEvent(name, e);
-    const target = globalSequence.target;
-    globalSequence = stopSequence(globalSequence);
-    replaceDefaultAction(target, cancelEvent, e);
-  });
-
-  customReactions.define("onmousemove", function (e, prefix, name) {
-    if (!globalSequence.cancelMouseout && mouseOutOfBounds(e)) {
-      const cancelEvent = makeSwipeEvent("cancel", e);
-      const target = globalSequence.target;
-      globalSequence = stopSequence(globalSequence);
-      replaceDefaultAction(target, cancelEvent, e);
-      return;
-    }
-    const composedEvent = makeSwipeEvent(name, e);
-    captureEvent(e, false);
-    globalSequence = updateSequence(globalSequence, composedEvent);
-    replaceDefaultAction(globalSequence.target, composedEvent, e);
-  });
-
-  customReactions.define("onmouseup", function (e, prefix, name) {
-    const stopEvent = makeSwipeEvent(name, e);
-    if (!stopEvent) return;
-    // captureEvent(e, false);
-    const target = globalSequence.target;    //todo this is no longer necessary
-    globalSequence = stopSequence(globalSequence);
-    eventLoop.dispatch(stopEvent, target);
-    // replaceDefaultAction(target, stopEvent, e);
-  });
-
-  customReactions.define("onblur", function (e, prefix, name) {
-    const blurInEvent = makeSwipeEvent(name, e);
-    const target = globalSequence.target;
-    globalSequence = stopSequence(globalSequence);
-    replaceDefaultAction(target, blurInEvent, e);
-  });
-
-  customReactions.define("onselectstart", function (e) {
-    e.preventDefault();
-    e.stopImmediatePropagation ? e.stopImmediatePropagation() : e.stopPropagation();
-  });
-
-</script>
 
 <script>
+  //todo these should be moved into the core.js lib. The await2 is also used in the GestureAttr.
+  customReactions.define("prevent", e => (e.preventDefault(), e));
+  customReactions.define("await2", async (e, prefix, num) => {
+    if (num && isNaN(num))
+      throw new SyntaxError(`${prefix}_${num} is illegal, the _${num} is not a number.`);
+    await (num ? new Promise(r => setTimeout(r, num)) : Promise.resolve());
+    return e;
+  });
+  customReactions.define("dispatch", function dispatch(e) {
+    eventLoop.dispatch(e, this.ownerElement);
+    return e;
+  });
 
-  function colorPicker() {
-    return 'rgb(' + (Math.floor(Math.random() * 256)) + ',' + (Math.floor(Math.random() * 256)) + ',' + (Math.floor(Math.random() * 256)) + ')';
+  //todo 1 swipeable should have the _100 argument.
+  //todo 2 swipeable should store the position of the starting entry as value. event caching.
+  //todo 3 if/else logic. should we use a once-reaction? or should we do something prolog style?
+
+  class SwipeEvent extends MouseEvent {
+    constructor(type, dict, start) {
+      super(type, dict);
+      this.start = start;
+      this.end = dict.x;
+    }
+
+    get direction() {
+      //return ((Math.atan2(y, -x) * 180 / Math.PI) + 270) % 360;
+      return this.end >= this.start ? "right" : "left";
+    }
+
+    get length() {
+      return Math.abs(this.end - this.start);
+    }
   }
 
-  let viewport = document.getElementById("viewport");
+  function copyEvent(e, prefix) {
+    return new SwipeEvent(prefix, e, this.owner.value.split(" ")[1]);
+  }
+
+  customReactions.define("swipe", copyEvent);
+  customReactions.define("swipe-start", copyEvent);
+  customReactions.define("swipe-cancel", copyEvent);
+
   let swipeStart = 0;
 
-  customReactions.define("listen1", function (e) {
-    swipeStart = e.x - e.target.offsetLeft;
+  customAttributes.define("swipeable", class SwipeAttr extends GestureAttr {
+    static stateMachine(length = 50, prefix) {
+      return {
+        "": [[`mousedown:owner-attr_${prefix}:swipestart:swipe-start:dispatch`, "start"]],
+        start: [
+          //todo add the start x,y, and have the swipe be a different class of event.
+          [`_mouseup:owner-attr_${prefix}:swipe-long-enough_${length}:then_${prefix}::swipe:dispatch`, ""],
+          [`_mouseup:else_${prefix}:owner-attr_${prefix}:swipe-cancel:dispatch`, ""],
+          [`_blur:owner-attr_${prefix}:swipe-cancel:dispatch`, ""],
+          [`_selectstart:owner-attr_${prefix}:prevent`, ""]
+        ]
+      };
+    }
   });
-  document.documentElement.setAttribute("swipe-start:listen1");
+  customReactions.define("owner-attr", function (e, _, type) {
+    if (!this.owner)  //todo the owner attribute should only run on the first pass, not all the time.
+      for (let at of this.ownerElement.attributes)
+        if (at.type === type)
+          this.owner = at;
+    return e;
+  });
 
-  const listen2 = e => {
-    let swipeDist = swipeStart - e.x;
-    viewport.children[0].style.transitionDuration = "0.8s";
-    if (Math.abs(swipeDist) < 100) return;
-    viewport.children[0].style.transform = swipeDist > 0 ? "rotate(15deg)" : "rotate(-15deg)";
-    viewport.children[0].style.marginLeft = swipeDist > 0 ? "-650px" : "650px";
-    setTimeout(() => {
-      if (!viewport.children[0].parentNode)
-        return;
-      viewport.children[0].parentNode.removeChild(viewport.children[0]);
-      let el = document.createElement("div");
-      el.id = "elem";
-      el.transitionDuration = "1s";
-      el.style.backgroundColor = colorPicker();
-      viewport.appendChild(el);
-    }, 500);
-  };
-  customReactions.define("listen2", listen2);
-  document.documentElement.setAttribute("swipe-stop:listen2");
+  customReactions.define("swipestart", function (e) {
+    swipeStart = this.owner.value = " " + e.x;
+    return e;
+  });
+
+  customReactions.define("random-color", function randomColor() {
+    return 'rgb(' + (Math.floor(Math.random() * 256)) + ',' + (Math.floor(Math.random() * 256)) + ',' + (Math.floor(Math.random() * 256)) + ')';
+  });
+
+  customReactions.define("replace", function replaceElement() {
+    this.ownerElement.insertAdjacentHTML("afterbegin",
+      `<div
+    swipeable_100
+    swipe:swipe-longer-than_100:left-right:await2_800:this.owner-element.remove
+    ready:random-color:this.owner-element.style.background-color_e
+></div>`);
+  });
+
+  customReactions.define("swipe-long-enough", function (e, _, length) {
+    if (Math.abs(this.owner.value.split(" ")[1] - e.x) >= length)
+      return e;
+  })
+  //todo :gte_e.length_100 //todo does the dot expression manage to utilize the defined reactions?
+  customReactions.define("swipe-longer-than", function (e, _, length) {
+    if (+e.length >= +length)
+      return e;
+  });
+  customReactions.define("left-right", function (e) {
+    this.ownerElement.classList.add(e.direction);
+    return e;
+  });
 </script>
-
-</html>
