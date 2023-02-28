@@ -27,7 +27,8 @@
 <body swipe:swipe-longer-than_100:replace>
 <div
     swipeable_100
-    swipe:swipe-longer-than_100:left-right:await_800:this.owner-element.remove
+    swipe:swipe-longer-than_200:left-right
+    swipe:swipe-longer-than_200:await_800:this.owner-element.remove
     ready:random-color:this.owner-element.style.background-color_e
 ></div>
 </body>
@@ -85,23 +86,24 @@
     return e;
   });
 
+  customReactions.define("swipe-long-enough", function (e, _, length) {
+    if (Math.abs(this.owner.value.split(" ")[1] - e.x) >= length)
+      return e;
+  })
+
   customReactions.define("random-color", function randomColor() {
-    return 'rgb(' + (Math.floor(Math.random() * 256)) + ',' + (Math.floor(Math.random() * 256)) + ',' + (Math.floor(Math.random() * 256)) + ')';
+    return `#${Math.floor(Math.random() * 16777215).toString(16)}`;
   });
 
   customReactions.define("replace", function replaceElement() {
     this.ownerElement.insertAdjacentHTML("afterbegin",
       `<div
     swipeable_100
-    swipe:swipe-longer-than_100:left-right:await_800:this.owner-element.remove
+    swipe:swipe-longer-than_200:left-right
+    swipe:swipe-longer-than_200:await_800:this.owner-element.remove
     ready:random-color:this.owner-element.style.background-color_e
 ></div>`);
   });
-
-  customReactions.define("swipe-long-enough", function (e, _, length) {
-    if (Math.abs(this.owner.value.split(" ")[1] - e.x) >= length)
-      return e;
-  })
 
   customReactions.define("swipe-longer-than", function (e, _, length) {
     if (e.length >= length)
