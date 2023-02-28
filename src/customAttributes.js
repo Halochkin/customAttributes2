@@ -112,35 +112,34 @@ class DotPath {
   }
 }
 
-class DotReaction extends Reaction {
-
-  constructor(parts) {
-    super(parts);
-    this.dotParts = parts.map(DotReaction.parsePartDotMode);
-    if (this.dotParts[0].spread)
-      throw "spread on prefix does not make sense";
-    if (this.dotParts[0].length > 1 && this.dotParts[0].getter)
-      throw "this dot expression has arguments, then the prefix cannot be a getter (end with '.').";
+function runDotParts(e, ...dotParts) {
+  const prefix = dotParts[0];
+  const objs = prefix.interpret(e, this);
+  const last = objs[objs.length - 1];
+  if (prefix.getter || dotParts.length === 1 && !(last instanceof Function))
+    return last;
+  const args = [];
+  for (let i = 1; i < dotParts.length; i++) {
+    const dotPart = dotParts[i];
+    const arg = dotPart?.dots ? dotPart.interpretDotArgument(e, this) : dotPart;
+    dotPart.spread ? args.push(...arg) : args.push(arg);
   }
+  const lastParent = objs[objs.length - 2]
+  if (last instanceof Function)
+    return last.call(lastParent, ...args);
+  lastParent[prefix.dots[prefix.dots.length - 1]] = args.length === 1 ? args[0] : args;
+  return e;
+}
 
-  run(at, e) {
-    const dotParts = this.dotParts;
-    const prefix = dotParts[0];
-    const objs = prefix.interpret(e, at);
-    const last = objs[objs.length - 1];
-    if (prefix.getter || dotParts.length === 1 && !(last instanceof Function))
-      return last;
-    const args = [];
-    for (let i = 1; i < dotParts.length; i++) {
-      const dotPart = dotParts[i];
-      const arg = dotPart?.dots ? dotPart.interpretDotArgument(e, at) : dotPart;
-      dotPart.spread ? args.push(...arg) : args.push(arg);
-    }
-    const lastParent = objs[objs.length - 2]
-    if (last instanceof Function)
-      return last.call(lastParent, ...args);
-    lastParent[prefix.dots[prefix.dots.length - 1]] = args.length === 1 ? args[0] : args;
-    return e;
+class DotReaction {
+
+  static parseDotExpression(parts) {
+    const dotParts = parts.map(DotReaction.parsePartDotMode);
+    if (dotParts[0].spread)
+      throw "spread on prefix does not make sense";
+    if (dotParts[0].length > 1 && dotParts[0].getter)
+      throw "this dot expression has arguments, then the prefix cannot be a getter (end with '.').";
+    return dotParts;
   }
 
   static parsePartDotMode(part) {
@@ -165,10 +164,10 @@ class ReactionRegistry {
   #register = {};
 
   define(type, Func) {
-    if(!(Func instanceof Function))
+    if (!(Func instanceof Function))
       throw new SyntaxError("reactions must be Functions.");
     const funcString = Func.toString();
-    if(funcString.indexOf("=>")>0 && funcString.indexOf("this")>0)
+    if (funcString.indexOf("=>") > 0 && funcString.indexOf("this") > 0)
       console.warn(`ALERT!! arrow function using 'this' in reaction defintion: ${type}. Should this be a named/anonymous function?
 ${funcString}`);
     //todo if it is an arrow function and it contains the word `this`, then throw an Error.
@@ -195,7 +194,7 @@ ${funcString}`);
 
   #create(reaction) {
     const parts = reaction.split("_");
-    return parts[0].indexOf(".") >= 0 ? new DotReaction(parts) :
+    return parts[0].indexOf(".") >= 0 ? new Reaction(DotReaction.parseDotExpression(parts), runDotParts) :
       this.#register[parts[0]] && new Reaction(parts, this.#register[parts[0]]);
   }
 }
@@ -542,7 +541,7 @@ observeElementCreation(els => els.forEach(el => customAttributes.upgrade(...el.a
     #cache = {};
 
     findNativeDefinition(type) {
-      const  global = type[0] === "_";
+      const global = type[0] === "_";
       global === true && (type = type.substring(1));
       if (type.startsWith("fast")) type = type.substring(4);
       if (`on${type}` in HTMLElement.prototype || "touchstart" === type || "touchmove" === type || "touchend" === type || "touchcancel" === type)
