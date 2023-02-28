@@ -105,6 +105,8 @@
 ></div>`);
   });
 
+  //todo bugs. The swipe doesn't change states correctly. The GestureAttr is broken.
+
   customReactions.define("swipe-longer-than", function (e, _, length) {
     if (e.length >= length)
       return e;
