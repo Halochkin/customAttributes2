@@ -1,18 +1,13 @@
 <script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.2/observeElementCreation.js"></script>
 <script src="../../src/customAttributes.js"></script>
-<script src="../../src/GestureAttr.js"></script>
+<script src="../../src/core.js"></script>
+<script src="../../src/GestureAttrSimple.js"></script>
 
 <div longpress:console.log_e.type_e.target.tag-name>
   <h1 longpressable_200>hello longpress</h1>
 </div>
 
 <script>
-  customAttributes.define("timeout", class TimeoutAttr extends CustomAttr {
-    upgrade() {
-      this._timer = setTimeout(() => eventLoop.dispatch(new Event(this.type), this), this.suffix[0]);
-    }
-  });
-
   function newEvent(e, prefix) {
     eventLoop.dispatch(new Event(prefix), this.ownerElement);
     return e;
