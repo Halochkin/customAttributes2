@@ -112,7 +112,7 @@ class DotPath {
   }
 }
 
-function runDotParts(e, ...dotParts) {
+function runDotExpression(e, ...dotParts) {
   const prefix = dotParts[0];
   const objs = prefix.interpret(e, this);
   const last = objs[objs.length - 1];
@@ -131,32 +131,29 @@ function runDotParts(e, ...dotParts) {
   return e;
 }
 
-class DotReaction {
+function parseDotExpression(parts) {
+  const dotParts = parts.map(parsePartDotMode);
+  if (dotParts[0].spread)
+    throw "spread on prefix does not make sense";
+  if (dotParts[0].length > 1 && dotParts[0].getter)
+    throw "this dot expression has arguments, then the prefix cannot be a getter (end with '.').";
+  return dotParts;
+}
 
-  static parseDotExpression(parts) {
-    const dotParts = parts.map(DotReaction.parsePartDotMode);
-    if (dotParts[0].spread)
-      throw "spread on prefix does not make sense";
-    if (dotParts[0].length > 1 && dotParts[0].getter)
-      throw "this dot expression has arguments, then the prefix cannot be a getter (end with '.').";
-    return dotParts;
-  }
-
-  static parsePartDotMode(part) {
-    const PRIMITIVES = {
-      true: true,
-      false: false,
-      null: null,
-      undefined: undefined
-    };
-    if (part in PRIMITIVES)
-      return PRIMITIVES[part];
-    if (!isNaN(part))
-      return Number(part);
-    if (part === "e" || part === "this" || part === "window" || part.indexOf(".") >= 0)
-      return new DotPath(part);
-    return part;
-  }
+function parsePartDotMode(part) {
+  const PRIMITIVES = {
+    true: true,
+    false: false,
+    null: null,
+    undefined: undefined
+  };
+  if (part in PRIMITIVES)
+    return PRIMITIVES[part];
+  if (!isNaN(part))
+    return Number(part);
+  if (part === "e" || part === "this" || part === "window" || part.indexOf(".") >= 0)
+    return new DotPath(part);
+  return part;
 }
 
 class ReactionRegistry {
@@ -194,7 +191,7 @@ ${funcString}`);
 
   #create(reaction) {
     const parts = reaction.split("_");
-    return parts[0].indexOf(".") >= 0 ? new Reaction(DotReaction.parseDotExpression(parts), runDotParts) :
+    return parts[0].indexOf(".") >= 0 ? new Reaction(parseDotExpression(parts), runDotExpression) :
       this.#register[parts[0]] && new Reaction(parts, this.#register[parts[0]]);
   }
 }
