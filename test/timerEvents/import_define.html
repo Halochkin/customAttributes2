@@ -1,14 +1,15 @@
 <script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.2/observeElementCreation.js"></script>
 <script src="../../src/customAttributes.js"></script>
+<script src="../../src/dotReaction.js"></script>
 <script src="../../src/core.js"></script>
 
 <body
-    import:e.detail.-comp-a.:define_comp-a="./comp-a_attr-b_reaction-c.js"
-    import:e.detail.-attr-b.:define_attr-b="./comp-a_attr-b_reaction-c.js"
-    import:e.detail.reaction-c.:define_reaction-c="./comp-a_attr-b_reaction-c.js"
+    import:._e.detail.-comp-a.:define_comp-a="./comp-a_attr-b_reaction-c.js"
+    import:._e.detail.-attr-b.:define_attr-b="./comp-a_attr-b_reaction-c.js"
+    import:._e.detail.reaction-c.:define_reaction-c="./comp-a_attr-b_reaction-c.js"
 >
 <comp-a
-    attr-b:e.type:log
+    attr-b:._e.type:log
     ready:reaction-c:log
     timeout_100:print-log
 >hello sunshine
