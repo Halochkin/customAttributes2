@@ -77,6 +77,16 @@
     ["SPAN","H1","WEB-COMP","BODY","HTML"]
   ]</script>
 </test-html>
+<test-html test="bubble.html">
+  <script expected>[
+    ["SPAN","SPAN"],
+    ["H1","SPAN"],
+    ["SLOT","SLOT"],
+    ["DIV","SLOT"],
+    ["WEB-COMP","SPAN"],
+    ["BODY","SPAN"]
+  ]</script>
+</test-html>
 <test-html test="onlyGlobalListener.html">
   <script expected>["click", "auxclick"]</script>
 </test-html>
