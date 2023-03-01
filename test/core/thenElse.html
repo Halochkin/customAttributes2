@@ -1,11 +1,12 @@
 <script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.2/observeElementCreation.js"
         xmlns:click="http://www.w3.org/1999/xhtml"></script>
 <script src="../../src/customAttributes.js"></script>
+<script src="../../src/dotReaction.js"></script>
 <script src="../../src/core.js"></script>
 
 <div
-    click:h1clicks:then_a:console.log_then
-    click:else_a:console.log_else
+    click:h1clicks:then_a:._console.log_then
+    click:else_a:._console.log_else
 >
   <h1>hello</h1>
   <span>sunshine</span>

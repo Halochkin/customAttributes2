@@ -1,3 +1,4 @@
+//todo replace CustomAttr with a monkeyPatch on Attr? will be more efficient.
 class CustomAttr extends Attr {
   get type() {
     const value = this.name.match(/(_?[^_:]+)/)[1];
@@ -57,106 +58,37 @@ class CustomAttr extends Attr {
     return `<${this.ownerElement?.tagName.toLowerCase()} ${this.name.split(":")[0]}:${chain.join(":")}>`;
   }
 
-  // set value(value){
-  //   todo update the callback here?
-  // }
+  set value(value) {
+    const oldValue = super.value;
+    if (value === oldValue)
+      return value;
+    super.value = value;
+    try {
+      this.changeCallback?.(oldValue);
+    } catch (error) {
+      eventLoop.dispatch(new ErrorEvent("error", {error}), this.ownerElement);
+    }
+    return value;
+  }
+
+  get value() {
+    return super.value;
+  }
 }
 
 class Reaction {
 
   constructor(parts, Function) {
     this.Function = Function;
-    this.parts = parts;
+    [this.prefix, ...this.suffix] = parts;
   }
 
+  //todo if the reaction Function returns a Reaction object, then the Reaction will replace itself with that new Reaction, and run again. All later runs of that reaction will not need to run the first function.
   run(at, e) {
-    return this.Function.call(at, e, ...this.parts);
-  }
-
-  get prefix() {
-    return this.parts[0];
-  }
-
-  get suffix() {
-    return this.parts.slice(1);
-  }
-}
-
-class DotPath {
-
-  constructor(part) {
-    const getter = part.endsWith(".") ? 1 : 0;
-    const spread = part.startsWith("...") ? 3 : 0;
-    let path = part.substring(spread, part.length - getter);
-    if (path[0] === ".")
-      path = path.substring(1);
-    this.getter = getter;
-    this.spread = spread;
-    this.dots = path.split(".").map(ReactionRegistry.toCamelCase);
-    if (this.dots[0] !== "e" && this.dots[0] !== "this" && this.dots[0] !== "window")
-      this.dots.unshift("window");
-  }
-
-  interpret(e, attr) {
-    const res = [this.dots[0] === "e" ? e : this.dots[0] === "this" ? attr : window];
-    for (let i = 1; i < this.dots.length; i++)
-      res[i] = res[i - 1][this.dots[i]];
+    let res;
+    while ((res = this.Function.call(at, e, this.prefix, ...this.suffix)) instanceof Reaction)
+      Object.assign(this, res);
     return res;
-  }
-
-  interpretDotArgument(e, attr) {
-    const objs = this.interpret(e, attr);
-    const last = objs[objs.length - 1];
-    const lastParent = objs[objs.length - 2];
-    return this.getter || !(last instanceof Function) ? last : last.call(lastParent);
-  }
-}
-
-class DotReaction extends Reaction {
-
-  constructor(parts) {
-    super(parts);
-    this.dotParts = parts.map(DotReaction.parsePartDotMode);
-    if (this.dotParts[0].spread)
-      throw "spread on prefix does not make sense";
-    if (this.dotParts[0].length > 1 && this.dotParts[0].getter)
-      throw "this dot expression has arguments, then the prefix cannot be a getter (end with '.').";
-  }
-
-  run(at, e) {
-    const dotParts = this.dotParts;
-    const prefix = dotParts[0];
-    const objs = prefix.interpret(e, at);
-    const last = objs[objs.length - 1];
-    if (prefix.getter || dotParts.length === 1 && !(last instanceof Function))
-      return last;
-    const args = [];
-    for (let i = 1; i < dotParts.length; i++) {
-      const dotPart = dotParts[i];
-      const arg = dotPart?.dots ? dotPart.interpretDotArgument(e, at) : dotPart;
-      dotPart.spread ? args.push(...arg) : args.push(arg);
-    }
-    const lastParent = objs[objs.length - 2]
-    if (last instanceof Function)
-      return last.call(lastParent, ...args);
-    lastParent[prefix.dots[prefix.dots.length - 1]] = args.length === 1 ? args[0] : args;
-    return e;
-  }
-
-  static parsePartDotMode(part) {
-    const PRIMITIVES = {
-      true: true,
-      false: false,
-      null: null,
-      undefined: undefined
-    };
-    if (part in PRIMITIVES)
-      return PRIMITIVES[part];
-    if (!isNaN(part))
-      return Number(part);
-    if (part === "e" || part === "this" || part === "window" || part.indexOf(".") >= 0)
-      return new DotPath(part);
-    return part;
   }
 }
 
@@ -165,14 +97,12 @@ class ReactionRegistry {
   #register = {};
 
   define(type, Func) {
-    if(!(Func instanceof Function))
+    if (!(Func instanceof Function))
       throw new SyntaxError("reactions must be Functions.");
     const funcString = Func.toString();
-    if(funcString.indexOf("=>")>0 && funcString.indexOf("this")>0)
+    if (funcString.indexOf("=>") > 0 && funcString.indexOf("this") > 0)
       console.warn(`ALERT!! arrow function using 'this' in reaction defintion: ${type}. Should this be a named/anonymous function?
 ${funcString}`);
-    //todo if it is an arrow function and it contains the word `this`, then throw an Error.
-    //todo add restriction that it cannot contain `.`
     if (type in this.#register)
       throw `The Reaction type: "${type}" is already defined.`;
     this.#register[type] = Func;
@@ -183,11 +113,11 @@ ${funcString}`);
       this.define(type, Function);
   }
 
-  static toCamelCase(strWithDash) {
+  static toCamelCase(strWithDash) { //todo move this somewhere else..
     return strWithDash.replace(/-([a-z])/g, g => g[1].toUpperCase());
   }
 
-  #cache = {"": ""};
+  #cache = {"": ""}; //todo maybe we want to use the empty string attribute for the dotExpressions?
 
   getReaction(reaction) {
     return this.#cache[reaction] ??= this.#create(reaction);
@@ -195,8 +125,10 @@ ${funcString}`);
 
   #create(reaction) {
     const parts = reaction.split("_");
-    return parts[0].indexOf(".") >= 0 ? new DotReaction(parts) :
-      this.#register[parts[0]] && new Reaction(parts, this.#register[parts[0]]);
+    //todo should we add a dotReaction regex matcher here, so that we could .define(/\./, dotReaction)?
+    //todo would match parts[0]?
+    if (this.#register[parts[0]])
+      return new Reaction(parts, this.#register[parts[0]]);
   }
 }
 
@@ -239,11 +171,10 @@ class AttributeRegistry {
     for (let at of attrs) {
       Object.setPrototypeOf(at, CustomAttr.prototype);
       const Definition = this.getDefinition(at.type);
-      if (Definition)                                    //1. upgrade to a defined CustomAttribute
-        this.#upgradeAttribute(at, Definition);
-      if (!Definition)                                   //3. register unknown attrs
-        this.#unknownEvents.push(at.type, at);
-      at.name[0] === "_" && this.#globals.push(at.eventType, at);//* register globals
+      Definition ?
+        this.#upgradeAttribute(at, Definition) :        //upgrade to a defined CustomAttribute
+        this.#unknownEvents.push(at.type, at);          //or register as unknown
+      at.global && this.#globals.push(at.eventType, at);//and then register globals
     }
   }
 
@@ -265,14 +196,13 @@ class AttributeRegistry {
     try {
       at.upgrade?.();
     } catch (error) {
-      Object.setPrototypeOf(at, CustomAttr.prototype);
-      //todo fix the error type here.
+      //todo Rename to AttributeError?
       eventLoop.dispatch(new ErrorEvent("error", {error}), at.ownerElement);
     }
     try {
       at.changeCallback?.();
     } catch (error) {
-      //todo fix the error type here.
+      //todo Rename to AttributeError?
       eventLoop.dispatch(new ErrorEvent("error", {error}), at.ownerElement);
     }
   }
@@ -298,7 +228,9 @@ class ReactionErrorEvent extends ErrorEvent {
   }
 }
 
-document.documentElement.setAttributeNode(document.createAttribute("error::console.error_e.message_e.error"));
+//todo move this to core.js? //todo
+customReactions.define("console-error", e => (console.error(e.message, e.error), e));
+document.documentElement.setAttributeNode(document.createAttribute("error::console-error"));
 
 (function () {
 
@@ -405,7 +337,6 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
             return;
           }
         } catch (error) {    //todo we can pass in the input to the error event here.
-          if (start !== 0) console.info("omg wtf")
           return eventLoop.dispatch(new ReactionErrorEvent(error, at, i, start !== 0), at.ownerElement);
         }
       }
@@ -424,6 +355,7 @@ function deprecated() {
   const removeAttrOG = Element_proto.removeAttribute;
   const getAttrNodeOG = Element_proto.getAttributeNode;
   const setAttributeNodeOG = Element_proto.setAttributeNode;
+  const setAttributeOG = Element_proto.setAttribute;
   Element.prototype.hasAttributeNS = deprecated.bind("Element.hasAttributeNS");
   Element.prototype.getAttributeNS = deprecated.bind("Element.getAttributeNS");
   Element.prototype.setAttributeNS = deprecated.bind("Element.setAttributeNS");
@@ -436,21 +368,14 @@ function deprecated() {
   Element.prototype.removeAttributeNodeNS = deprecated.bind("Element.removeAttributeNodeNS");
   document.createAttribute = deprecated.bind("document.createAttribute");
 
-  //todo make this method work against Attr.prototype.value setter??
   Element_proto.setAttribute = function (name, value) {
-    if (this.hasAttribute(name)) {
-      const at = getAttrNodeOG.call(this, name);
-      const oldValue = at.value;
-      if (oldValue === value)
-        return;
-      at.value = value;
-      at.changeCallback?.(oldValue);      //todo try catch and tests for try catch, see the upgrade process above
-    } else {
-      const at = documentCreateAttributeOG.call(document, name);
-      if (value !== undefined)
-        at.value = value;
-      setAttributeNodeOG.call(this, at);
-      customAttributes.upgrade(at);       //todo try catch and tests for try catch, see the upgrade process above
+    if (this.hasAttribute(name))
+      getAttrNodeOG.call(this, name).value = value;
+    else {
+      value === undefined ?
+        setAttributeNodeOG.call(this, documentCreateAttributeOG.call(document, name)) :
+        setAttributeOG.call(this, name, value);
+      customAttributes.upgrade(getAttrNodeOG.call(this, name));
     }
   };
 
@@ -459,8 +384,6 @@ function deprecated() {
     removeAttrOG.call(this, name);
   };
 })(Element.prototype, document.createAttribute);
-
-observeElementCreation(els => els.forEach(el => customAttributes.upgrade(...el.attributes)));
 
 //** CustomAttribute registry with builtin support for the native HTML events.
 (function (addEventListener, removeEventListener) {
@@ -542,7 +465,7 @@ observeElementCreation(els => els.forEach(el => customAttributes.upgrade(...el.a
     #cache = {};
 
     findNativeDefinition(type) {
-      const  global = type[0] === "_";
+      const global = type[0] === "_";
       global === true && (type = type.substring(1));
       if (type.startsWith("fast")) type = type.substring(4);
       if (`on${type}` in HTMLElement.prototype || "touchstart" === type || "touchmove" === type || "touchend" === type || "touchcancel" === type)
@@ -562,3 +485,5 @@ observeElementCreation(els => els.forEach(el => customAttributes.upgrade(...el.a
 
   window.customAttributes = new NativeEventsAttributeRegistry();
 })(addEventListener, removeEventListener);
+
+observeElementCreation(els => els.forEach(el => window.customAttributes.upgrade(...el.attributes)));
