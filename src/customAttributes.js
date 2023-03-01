@@ -27,7 +27,7 @@ class CustomAttr extends Attr {
   get suffix() {
     return this.name.match(/_?([^:]+)/)[1].split("_").slice(1);
   }
-
+//todo this is a ReactionChain object.
   get chain() {
     const value = this.name.split(":").slice(1);
     Object.defineProperty(this, "chain", {value, writable: false, configurable: true});
@@ -291,7 +291,7 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
       while (this.#eventLoop.length) {
         const {target, event} = this.#eventLoop[0];
         if (target instanceof Attr)
-          EventLoop.#runReactions(target.reactions, event, target, undefined);
+          EventLoop.#runReactions(event, target, undefined);
         else /*if (!target || target instanceof Element)*/
           EventLoop.bubble(target, event);
         //todo if (target?.isConnected === false) then bubble without default action?? I think that we need the global listeners to run for disconnected targets, as this will make them able to trigger _error for example. I also think that attributes on disconnected ownerElements should still catch the _global events. Don't see why not.
@@ -303,11 +303,9 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
 
       //todo we use event.type, not event.eventType here..
       for (let attr of customAttributes.globalListeners(event.type)) {
-        if (!attr.reactions?.length > 0) //todo should be checked before we add it to globalListeners
-          continue;
         if (attr.defaultAction && (event.defaultAction || event.defaultPrevented))
           continue;
-        EventLoop.#runReactions(attr.reactions, event, attr, attr.defaultAction);
+        EventLoop.#runReactions(event, attr, attr.defaultAction);
         //todo buggy bug
         //3. we need to check if the attr should be garbage collected.
         //   as we don't have any "justBeforeGC" callback, that will be very difficult.
@@ -319,24 +317,25 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
         for (let attr of t.attributes) {
           if (attr.global)
             continue;
-          if (!attr.reactions?.length > 0)
-            continue;
           if (attr.eventType !== event.type)
             continue;
           if (attr.defaultAction && (event.defaultAction || event.defaultPrevented))
             continue;
-          EventLoop.#runReactions(attr.reactions, event, attr, attr.defaultAction);
+          EventLoop.#runReactions(event, attr, attr.defaultAction);
         }
       }
 
       if (event.defaultAction && !event.defaultPrevented) {
         const {at, res, target} = event.defaultAction;
         eventToTarget.set(event, target);
-        EventLoop.#runReactions(at.reactions, res, at, 0, at.defaultAction);
+        EventLoop.#runReactions(res, at, 0, at.defaultAction);
       }
     }
 
-    static #runReactions(reactions = [], startEvent, at, defaultAction = 0, start = 0) {
+    static #runReactions(startEvent, at, defaultAction = 0, start = 0) {
+      const reactions = at.reactions || [];
+      if (!reactions?.length > 0)
+        return;
       let res = startEvent;
       for (let i = start; i < (defaultAction || reactions.length); i++) {
         const reaction = reactions[i];
@@ -350,7 +349,7 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
             if (defaultAction)
               throw new SyntaxError("You cannot use reactions that return Promises before default actions.");
             res
-              .then(event => this.#runReactions(reactions, event, at, false, i + 1))
+              .then(event => this.#runReactions(event, at, false, i + 1))
               //todo we can pass in the input to the reaction to the error event here too
               .catch(error => eventLoop.dispatch(new ReactionErrorEvent(error, at, i, true), at.ownerElement));
             return;
