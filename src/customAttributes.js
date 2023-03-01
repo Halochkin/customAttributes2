@@ -251,6 +251,17 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
       return eventToTarget.get(this);
     }
   });
+  //todo path is untested
+  Object.defineProperty(Event.prototype, "path", {
+    get: function () {
+      //The path doesn't include window or document.
+      //If a native target is the window or document, path = []
+      const path = [];
+      for (let el = this.target; el instanceof Element; el = el.parentElement)
+        path.push(el)
+      return path;
+    }
+  });
   const _event_to_Document_to_Target = new WeakMap();
 
   function getTargetForEvent(event, target, root = target.getRootNode()) {
@@ -263,8 +274,6 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
     !prevTarget && map.set(root, prevTarget = target);
     return prevTarget;
   }
-
-  //todo path is not supported
 
   class EventLoop {
     #eventLoop = [];
@@ -292,8 +301,15 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
 
     static bubble(rootTarget, event, target = rootTarget) {
 
-      for (let attr of customAttributes.globalListeners(event.type))
+      for (let attr of customAttributes.globalListeners(event.type)) {
+        //todo here are several bugs..
+        //1. we need to have the global listeners also be able to set default actions.
+        //2. we need to filter out the global listeners that has a default action, when a default action has already been set om the event by a previous reaction.
+        //3. we need to check if the attr should be garbage collected.
+        //   as we don't have any "justBeforeGC" callback, that will be very difficult.
+        //   todo so, here we might want to add a check that if the !attr.ownerElement.isConnected, the _global: listener attr will be removed?? That will break all gestures.. They will be stuck in the wrong state when elements are removed and then added again during execution.
         EventLoop.#runReactions(attr.reactions, event, attr, false);
+      }
 
       for (let prev, t = rootTarget; t; prev = t, t = t.assignedSlot || t.parentElement || t.parentNode?.host) {
         t !== prev?.parentElement && eventToTarget.set(event, target = getTargetForEvent(event, t));
@@ -457,6 +473,7 @@ function deprecated() {
     }
   }
 
+  //todo replace this with a matching function instead.. One for each type.
   class NativeEventsAttributeRegistry extends AttributeRegistry {
     #cache = {};
 

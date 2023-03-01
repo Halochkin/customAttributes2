@@ -55,17 +55,26 @@
     ["wheel", "two"]
   ]</script>
 </test-html>
-<test-html test="target.html">
+<test-html test="targetPath.html">
   <script expected>[
-    ["DIV", "#document-fragment", null],
-    ["SPAN", "#document", null],
-    ["SPAN", "#document", "SPAN"],
-    ["H1", "#document", "SPAN"],
-    ["SLOT", "#document-fragment", "SLOT"],
-    ["DIV", "#document-fragment", "SLOT"],
-    ["WEB-COMP", "#document", "SPAN"],
-    ["BODY", "#document", "SPAN"],
-    ["SPAN", "#document", "SPAN"]
+    ["DIV","#document-fragment",null],
+    [],
+    ["SPAN","#document",null],
+    [],
+    ["SPAN","#document","SPAN"],
+    ["SPAN","H1","WEB-COMP","BODY","HTML"],
+    ["H1","#document","SPAN"],
+    ["SPAN","H1","WEB-COMP","BODY","HTML"],
+    ["SLOT","#document-fragment","SLOT"],
+    ["SLOT","DIV"],
+    ["DIV","#document-fragment","SLOT"],
+    ["SLOT","DIV"],
+    ["WEB-COMP","#document","SPAN"],
+    ["SPAN","H1","WEB-COMP","BODY","HTML"],
+    ["BODY","#document","SPAN"],
+    ["SPAN","H1","WEB-COMP","BODY","HTML"],
+    ["SPAN","#document","SPAN"],
+    ["SPAN","H1","WEB-COMP","BODY","HTML"]
   ]</script>
 </test-html>
 <test-html test="onlyGlobalListener.html">
