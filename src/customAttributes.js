@@ -83,7 +83,7 @@ class Reaction {
     [this.prefix, ...this.suffix] = parts;
   }
 
-  //todo if the reaction Function returns a Reaction object, then the Reaction will replace itself with that new Reaction, and run again. All later runs of that reaction will not need to run the first function.
+  //When a Reaction.Function returns a Reaction object, then the Reaction will replace its content with the content from the new Reaction. This enables Reaction functions to upgrade themselves run-time.
   run(at, e) {
     let res;
     while ((res = this.Function.call(at, e, this.prefix, ...this.suffix)) instanceof Reaction)
@@ -272,7 +272,7 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
     dispatch(event, target) {
       if (!(event instanceof Event))
         throw new SyntaxError("First argument of eventLoop.dispatch(event, target?) must be an Event.");
-      if (!(target === undefined || target === null || target instanceof Element || target instanceof Attr))
+      if (!(target === undefined || target === null || target instanceof Element || target instanceof Attr))  //a bug in the ElementObserver.js causes "instanceof HTMLElement" to fail.
         throw new SyntaxError("Second argument of eventLoop.dispatch(event, target?) must be either undefined, an Element, or an Attr.");
       if (event.type[0] === "_")
         throw new SyntaxError(`eventLoop.dispatch(..) doesn't accept events beginning with "_": ${event.type}.`);
@@ -283,7 +283,7 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
         const {target, event} = this.#eventLoop[0];
         if (target instanceof Attr)
           EventLoop.#runReactions(target.reactions, event, target, undefined);
-        else /*if (!target || target instanceof Element)*/   //a bug in the ElementObserver.js causes "instanceof HTMLElement" to fail.
+        else /*if (!target || target instanceof Element)*/
           EventLoop.bubble(target, event);
         //todo if (target?.isConnected === false) then bubble without default action?? I think that we need the global listeners to run for disconnected targets, as this will make them able to trigger _error for example. I also think that attributes on disconnected ownerElements should still catch the _global events. Don't see why not.
         this.#eventLoop.shift();
@@ -421,6 +421,7 @@ function deprecated() {
     }
 
     upgrade() {
+      //todo move this to the CustomAttr class make a method called alwaysRemove()?
       register.register(this, "", this);
       this._listener = this.listener.bind(this);
       addEventListener.call(this.nativeTarget, this.eventType, this._listener, {
