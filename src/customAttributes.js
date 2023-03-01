@@ -408,8 +408,6 @@ function deprecated() {
     }
   }
 
-  const register = new FinalizationRegistry(held => held.destructor());
-
   class NativeWindowEvent extends CustomAttr {
     listener(e) {
       e.stopImmediatePropagation();
@@ -421,8 +419,6 @@ function deprecated() {
     }
 
     upgrade() {
-      //todo move this to the CustomAttr class make a method called alwaysRemove()?
-      register.register(this, "", this);
       this._listener = this.listener.bind(this);
       addEventListener.call(this.nativeTarget, this.eventType, this._listener, {
         passive: this.passive,
@@ -431,7 +427,6 @@ function deprecated() {
     }
 
     destructor() {
-      register.unregister(this);
       removeEventListener.call(this.nativeTarget, this.eventType, this._listener, {
         passive: this.passive,
         capture: true
