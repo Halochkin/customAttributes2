@@ -18,7 +18,7 @@ class GestureAttr extends CustomAttr {
       if (at !== this && at.type === this.type)
         throw new SyntaxError(`Cannot add the same GestureAttr ${this.type} to the same element twice: ${this.name}`);
 
-    this._transitions = this.constructor.stateMachine(this.type, this.suffix);
+    this._transitions = this.constructor.stateMachine(this.type, ...this.suffix);
     if (!this._transitions[""])    //todo this error should come at define time, not upgrade time
       throw new SyntaxError(`${this.constructor.name}.stateMachine(..) must return an object with a default, empty-string state.`);
     for (let state in this._transitions)
