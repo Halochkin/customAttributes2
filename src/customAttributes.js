@@ -307,9 +307,7 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
           continue;
         if (attr.defaultAction && (event.defaultAction || event.defaultPrevented))
           continue;
-        const res = EventLoop.#runReactions(attr.reactions, event, attr, !!attr.defaultAction);
-        if (res !== undefined && attr.defaultAction)
-          event.defaultAction = {attr, res, target};
+        EventLoop.#runReactions(attr.reactions, event, attr, attr.defaultAction);
         //todo buggy bug
         //3. we need to check if the attr should be garbage collected.
         //   as we don't have any "justBeforeGC" callback, that will be very difficult.
@@ -327,25 +325,22 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
             continue;
           if (attr.defaultAction && (event.defaultAction || event.defaultPrevented))
             continue;
-          const res = EventLoop.#runReactions(attr.reactions, event, attr, !!attr.defaultAction);
-          if (res !== undefined && attr.defaultAction)
-            event.defaultAction = {attr, res, target};
+          EventLoop.#runReactions(attr.reactions, event, attr, attr.defaultAction);
         }
       }
 
       if (event.defaultAction && !event.defaultPrevented) {
         const {attr, res, target} = event.defaultAction;
         eventToTarget.set(event, target);
-        EventLoop.#runReactions(attr.reactions, res, attr, false, attr.defaultAction);
+        EventLoop.#runReactions(attr.reactions, res, attr, 0, attr.defaultAction);
       }
     }
 
-    static #runReactions(reactions = [], event, at, defaultAction = false, start = 0) {
-      for (let i = start; i < reactions.length; i++) {
+    static #runReactions(reactions = [], event, at, defaultAction = 0, start = 0) {
+      const startEvent = event;
+      for (let i = start; i < (defaultAction || reactions.length); i++) {
         const reaction = reactions[i];
-        if (!reaction && defaultAction)
-          return event;
-        else if (!reaction)
+        if (!reaction)
           continue;
         try {
           event = reaction.run(at, event);
@@ -364,6 +359,8 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
           return eventLoop.dispatch(new ReactionErrorEvent(error, at, i, start !== 0), at.ownerElement);
         }
       }
+      if (event !== undefined && defaultAction)
+        startEvent.defaultAction = {attr: at, res: event, target: event.target};
       return event;
     }
   }
