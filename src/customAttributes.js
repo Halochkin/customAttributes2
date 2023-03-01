@@ -330,26 +330,26 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
       }
 
       if (event.defaultAction && !event.defaultPrevented) {
-        const {attr, res, target} = event.defaultAction;
+        const {at, res, target} = event.defaultAction;
         eventToTarget.set(event, target);
-        EventLoop.#runReactions(attr.reactions, res, attr, 0, attr.defaultAction);
+        EventLoop.#runReactions(at.reactions, res, at, 0, at.defaultAction);
       }
     }
 
-    static #runReactions(reactions = [], event, at, defaultAction = 0, start = 0) {
-      const startEvent = event;
+    static #runReactions(reactions = [], startEvent, at, defaultAction = 0, start = 0) {
+      let res = startEvent;
       for (let i = start; i < (defaultAction || reactions.length); i++) {
         const reaction = reactions[i];
         if (!reaction)
           continue;
         try {
-          event = reaction.run(at, event);
-          if (event === undefined)
+          res = reaction.run(at, res);
+          if (res === undefined)
             return;
-          if (event instanceof Promise) {
+          if (res instanceof Promise) {
             if (defaultAction)
               throw new SyntaxError("You cannot use reactions that return Promises before default actions.");
-            event
+            res
               .then(event => this.#runReactions(reactions, event, at, false, i + 1))
               //todo we can pass in the input to the reaction to the error event here too
               .catch(error => eventLoop.dispatch(new ReactionErrorEvent(error, at, i, true), at.ownerElement));
@@ -359,9 +359,8 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
           return eventLoop.dispatch(new ReactionErrorEvent(error, at, i, start !== 0), at.ownerElement);
         }
       }
-      if (event !== undefined && defaultAction)
-        startEvent.defaultAction = {attr: at, res: event, target: event.target};
-      return event;
+      if (res !== undefined && defaultAction)
+        startEvent.defaultAction = {at, res, target: startEvent.target};
     }
   }
 
