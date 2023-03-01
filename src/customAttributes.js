@@ -27,6 +27,7 @@ class CustomAttr extends Attr {
   get suffix() {
     return this.name.match(/_?([^:]+)/)[1].split("_").slice(1);
   }
+
 //todo this is a ReactionChain object.
   get chain() {
     const value = this.name.split(":").slice(1);
@@ -251,28 +252,25 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
       return eventToTarget.get(this);
     }
   });
-  //todo path is untested
+  //todo not sure that we should use path at all actually. If we have dynamic path, then path cannot be safely queried in advance or in the past.
   Object.defineProperty(Event.prototype, "path", {
     get: function () {
-      //The path doesn't include window or document.
-      //If a native target is the window or document, path = []
       const path = [];
       for (let el = this.target; el instanceof Element; el = el.parentElement)
         path.push(el)
       return path;
     }
   });
-  const _event_to_Document_to_Target = new WeakMap();
 
-  function getTargetForEvent(event, target, root = target.getRootNode()) {
-    const map = _event_to_Document_to_Target.get(event);
-    if (!map) {
-      _event_to_Document_to_Target.set(event, new Map([[root, target]]));
-      return target;
+  function* bubbleAttr(target, type, slotMode) {
+    //todo I think that we should build the path here too.. Now, we are asking for the path from the
+    for (let el = target; el; el = el.parentElement || !slotMode && el.parentNode?.host) {
+      for (let at of el.attributes)
+        if (!at.global && at.eventType === type)
+          yield {at, target};
+      if (el.assignedSlot)
+        yield* bubbleAttr(el.assignedSlot, type, true);
     }
-    let prevTarget = map.get(root);
-    !prevTarget && map.set(root, prevTarget = target);
-    return prevTarget;
   }
 
   class EventLoop {
@@ -299,30 +297,18 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
       }
     }
 
-    static bubble(rootTarget, event, target = rootTarget) {
+    static bubble(rootTarget, event) {
 
-      //todo we use event.type, not event.eventType here..
-      for (let attr of customAttributes.globalListeners(event.type)) {
-        if (attr.defaultAction && (event.defaultAction || event.defaultPrevented))
-          continue;
+      //todo bug
+      //3. we need to check if the attr should be garbage collected.
+      //   as we don't have any "justBeforeGC" callback, that will be very difficult.
+      //   todo so, here we might want to add a check that if the !attr.ownerElement.isConnected, the _global: listener attr will be removed?? That will break all gestures.. They will be stuck in the wrong state when elements are removed and then added again during execution.
+      for (let attr of customAttributes.globalListeners(event.type))
         EventLoop.#runReactions(event, attr, attr.defaultAction);
-        //todo buggy bug
-        //3. we need to check if the attr should be garbage collected.
-        //   as we don't have any "justBeforeGC" callback, that will be very difficult.
-        //   todo so, here we might want to add a check that if the !attr.ownerElement.isConnected, the _global: listener attr will be removed?? That will break all gestures.. They will be stuck in the wrong state when elements are removed and then added again during execution.
-      }
 
-      for (let prev, t = rootTarget; t; prev = t, t = t.assignedSlot || t.parentElement || t.parentNode?.host) {
-        t !== prev?.parentElement && eventToTarget.set(event, target = getTargetForEvent(event, t));
-        for (let attr of t.attributes) {
-          if (attr.global)
-            continue;
-          if (attr.eventType !== event.type)
-            continue;
-          if (attr.defaultAction && (event.defaultAction || event.defaultPrevented))
-            continue;
-          EventLoop.#runReactions(event, attr, attr.defaultAction);
-        }
+      for (let {at, target} of bubbleAttr(rootTarget, event.type)) {
+        eventToTarget.set(event, target);
+        EventLoop.#runReactions(event, at, at.defaultAction);
       }
 
       if (event.defaultAction && !event.defaultPrevented) {
@@ -332,11 +318,13 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
       }
     }
 
-    static #runReactions(startEvent, at, defaultAction = 0, start = 0) {
+    static #runReactions(event, at, defaultAction = 0, start = 0) {
+      if (defaultAction && (event.defaultAction || event.defaultPrevented))
+        return;
       const reactions = at.reactions || [];
       if (!reactions?.length > 0)
         return;
-      let res = startEvent;
+      let res = event;
       for (let i = start; i < (defaultAction || reactions.length); i++) {
         const reaction = reactions[i];
         if (!reaction)
@@ -359,7 +347,7 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
         }
       }
       if (res !== undefined && defaultAction)
-        startEvent.defaultAction = {at, res, target: startEvent.target};
+        event.defaultAction = {at, res, target: event.target};
     }
   }
 
