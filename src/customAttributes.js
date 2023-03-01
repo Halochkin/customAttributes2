@@ -305,6 +305,7 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
         //todo here are several bugs..
         //1. we need to have the global listeners also be able to set default actions.
         //2. we need to filter out the global listeners that has a default action, when a default action has already been set om the event by a previous reaction.
+        //2b. we are not using eventType here.. we are using type.
         //3. we need to check if the attr should be garbage collected.
         //   as we don't have any "justBeforeGC" callback, that will be very difficult.
         //   todo so, here we might want to add a check that if the !attr.ownerElement.isConnected, the _global: listener attr will be removed?? That will break all gestures.. They will be stuck in the wrong state when elements are removed and then added again during execution.
@@ -314,14 +315,17 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
       for (let prev, t = rootTarget; t; prev = t, t = t.assignedSlot || t.parentElement || t.parentNode?.host) {
         t !== prev?.parentElement && eventToTarget.set(event, target = getTargetForEvent(event, t));
         for (let attr of t.attributes) {
-          //todo check that the attr.chain is something. If it is nothing, then skip the attribute.
-          if (attr.eventType === event.type && attr.name[0] !== "_") {
-            if (attr.defaultAction && (event.defaultAction || event.defaultPrevented))
-              continue;
-            const res = EventLoop.#runReactions(attr.reactions, event, attr, !!attr.defaultAction);
-            if (res !== undefined && attr.defaultAction)
-              event.defaultAction = {attr, res, target};
-          }
+          if (attr.global)
+            continue;
+          if (!attr.reactions?.length > 0)
+            continue;
+          if (attr.eventType !== event.type)
+            continue;
+          if (attr.defaultAction && (event.defaultAction || event.defaultPrevented))
+            continue;
+          const res = EventLoop.#runReactions(attr.reactions, event, attr, !!attr.defaultAction);
+          if (res !== undefined && attr.defaultAction)
+            event.defaultAction = {attr, res, target};
         }
       }
 
