@@ -1,3 +1,4 @@
+//todo replace CustomAttr with a monkeyPatch on Attr? will be more efficient.
 class CustomAttr extends Attr {
   get type() {
     const value = this.name.match(/(_?[^_:]+)/)[1];
@@ -183,7 +184,6 @@ class AttributeRegistry {
     try {
       at.upgrade?.();
     } catch (error) {
-      Object.setPrototypeOf(at, CustomAttr.prototype);
       //todo fix the error type here.
       eventLoop.dispatch(new ErrorEvent("error", {error}), at.ownerElement);
     }
