@@ -58,9 +58,22 @@ class CustomAttr extends Attr {
     return `<${this.ownerElement?.tagName.toLowerCase()} ${this.name.split(":")[0]}:${chain.join(":")}>`;
   }
 
-  // set value(value){
-  //   todo update the callback here?
-  // }
+  set value(value) {
+    const oldValue = super.value;
+    if (value === oldValue)
+      return value;
+    super.value = value;
+    try {
+      this.changeCallback?.(oldValue);
+    } catch (error) {
+      eventLoop.dispatch(new ErrorEvent("error", {error}), this.ownerElement);
+    }
+    return value;
+  }
+
+  get value() {
+    return super.value;
+  }
 }
 
 class Reaction {
@@ -158,11 +171,10 @@ class AttributeRegistry {
     for (let at of attrs) {
       Object.setPrototypeOf(at, CustomAttr.prototype);
       const Definition = this.getDefinition(at.type);
-      if (Definition)                                    //1. upgrade to a defined CustomAttribute
-        this.#upgradeAttribute(at, Definition);
-      if (!Definition)                                   //3. register unknown attrs
-        this.#unknownEvents.push(at.type, at);
-      at.name[0] === "_" && this.#globals.push(at.eventType, at);//* register globals
+      Definition ?
+        this.#upgradeAttribute(at, Definition) :        //upgrade to a defined CustomAttribute
+        this.#unknownEvents.push(at.type, at);          //or register as unknown
+      at.global && this.#globals.push(at.eventType, at);//and then register globals
     }
   }
 
@@ -184,13 +196,13 @@ class AttributeRegistry {
     try {
       at.upgrade?.();
     } catch (error) {
-      //todo fix the error type here.
+      //todo Rename to AttributeError?
       eventLoop.dispatch(new ErrorEvent("error", {error}), at.ownerElement);
     }
     try {
       at.changeCallback?.();
     } catch (error) {
-      //todo fix the error type here.
+      //todo Rename to AttributeError?
       eventLoop.dispatch(new ErrorEvent("error", {error}), at.ownerElement);
     }
   }
@@ -343,6 +355,7 @@ function deprecated() {
   const removeAttrOG = Element_proto.removeAttribute;
   const getAttrNodeOG = Element_proto.getAttributeNode;
   const setAttributeNodeOG = Element_proto.setAttributeNode;
+  const setAttributeOG = Element_proto.setAttribute;
   Element.prototype.hasAttributeNS = deprecated.bind("Element.hasAttributeNS");
   Element.prototype.getAttributeNS = deprecated.bind("Element.getAttributeNS");
   Element.prototype.setAttributeNS = deprecated.bind("Element.setAttributeNS");
@@ -355,21 +368,14 @@ function deprecated() {
   Element.prototype.removeAttributeNodeNS = deprecated.bind("Element.removeAttributeNodeNS");
   document.createAttribute = deprecated.bind("document.createAttribute");
 
-  //todo make this method work against Attr.prototype.value setter??
   Element_proto.setAttribute = function (name, value) {
-    if (this.hasAttribute(name)) {
-      const at = getAttrNodeOG.call(this, name);
-      const oldValue = at.value;
-      if (oldValue === value)
-        return;
-      at.value = value;
-      at.changeCallback?.(oldValue);      //todo try catch and tests for try catch, see the upgrade process above
-    } else {
-      const at = documentCreateAttributeOG.call(document, name);
-      if (value !== undefined)
-        at.value = value;
-      setAttributeNodeOG.call(this, at);
-      customAttributes.upgrade(at);       //todo try catch and tests for try catch, see the upgrade process above
+    if (this.hasAttribute(name))
+      getAttrNodeOG.call(this, name).value = value;
+    else {
+      value === undefined ?
+        setAttributeNodeOG.call(this, documentCreateAttributeOG.call(document, name)) :
+        setAttributeOG.call(this, name, value);
+      customAttributes.upgrade(getAttrNodeOG.call(this, name));
     }
   };
 
