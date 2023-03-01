@@ -1,6 +1,7 @@
 <script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.2/observeElementCreation.js"></script>
 <script src="../../src/customAttributes.js"></script>
 <script src="../../src/core.js"></script>
+<script src="../../src/dotReaction.js"></script>
 <script src="../../src/GestureAttr.js"></script>
 
 <style>
@@ -28,8 +29,8 @@
 <div
     swipeable_100
     swipe:swipe-longer-than_200:left-right
-    swipe:swipe-longer-than_200:await_800:this.owner-element.remove
-    ready:random-color:this.owner-element.style.background-color_e
+    swipe:swipe-longer-than_200:await_800:._this.owner-element.remove
+    ready:random-color:._this.owner-element.style.background-color_e
 ></div>
 </body>
 
@@ -100,8 +101,8 @@
       `<div
     swipeable_100
     swipe:swipe-longer-than_200:left-right
-    swipe:swipe-longer-than_200:await_800:this.owner-element.remove
-    ready:random-color:this.owner-element.style.background-color_e
+    swipe:swipe-longer-than_200:await_800:._this.owner-element.remove
+    ready:random-color:._this.owner-element.style.background-color_e
 ></div>`);
   });
 
