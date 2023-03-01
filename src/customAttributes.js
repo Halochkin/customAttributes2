@@ -154,6 +154,7 @@ class WeakArrayDict {
 
 class AttributeRegistry {
 
+  #rules = [];
   #unknownEvents = new WeakArrayDict();
   #globals = new WeakArrayDict();
 
@@ -179,8 +180,18 @@ class AttributeRegistry {
     }
   }
 
+  defineRule(Function) {
+    this.#rules.push(Function);
+  }
+
+  #tryRules(type) {
+    for (let Function of this.#rules)
+      if (Function = Function(type))
+        return Function;
+  }
+
   getDefinition(type) {
-    return this[type];
+    return this[type] ??= this.#tryRules(type);
   }
 
   globalListeners(type) {
@@ -464,30 +475,20 @@ function deprecated() {
     }
   }
 
-  //todo replace this with a matching function instead.. One for each type.
-  class NativeEventsAttributeRegistry extends AttributeRegistry {
-    #cache = {};
-
-    findNativeDefinition(type) {
-      const global = type[0] === "_";
-      global === true && (type = type.substring(1));
-      if (type.startsWith("fast")) type = type.substring(4);
-      if (`on${type}` in HTMLElement.prototype || "touchstart" === type || "touchmove" === type || "touchend" === type || "touchcancel" === type)
-        return global ? ShadowRootEvent : NativeBubblingEvent;
-      const res = type === "domcontentloaded" ? NativeDCLEvent :
-        `on${type}` in window ? NativeWindowEvent :
-          `on${type}` in Document.prototype ? NativeDocumentEvent : null;
-      if (res && !global)
-        throw new SyntaxError("_global must have _");
-      return res;
-    }
-
-    getDefinition(type) {
-      return super.getDefinition(type) || (this.#cache[type] ??= this.findNativeDefinition(type));
-    }
+  function isDomEvent(type) {
+    type.startsWith("fast") && (type = type.substring(4));
+    return `on${type}` in HTMLElement.prototype || /^touch(start|move|end|cancel)$/.exec(type);
   }
 
-  window.customAttributes = new NativeEventsAttributeRegistry();
+  customAttributes.defineRule(t => isDomEvent(t) && NativeBubblingEvent);
+  customAttributes.defineRule(t => t[0] === "_" && isDomEvent(t.substring(1)) && ShadowRootEvent);
+  customAttributes.defineRule(t => t === "_domcontentloaded" && NativeDCLEvent);
+  customAttributes.defineRule(t => t[0] === "_" && `on${t.substring(1)}` in window && NativeWindowEvent);
+  customAttributes.defineRule(t => t[0] === "_" && `on${t.substring(1)}` in Document.prototype && NativeDocumentEvent);
+  customAttributes.defineRule(t => {
+    if (`on${t}` in window || `on${t}` in Document.prototype || t === "domcontentloaded")
+      throw new SyntaxError("_global must have _");
+  });
 })(addEventListener, removeEventListener);
 
 observeElementCreation(els => els.forEach(el => window.customAttributes.upgrade(...el.attributes)));
