@@ -73,7 +73,5 @@ function parsePartDotMode(part) {
 }
 
 customReactions.define(".", function (e, _, ...parts) {
-  //todo here we can return the reaction, and let the system update itself.
-  const reaction = new Reaction(parseDotExpression(parts), runDotExpression);
-  return reaction.run(this, e);
+  return new Reaction(parseDotExpression(parts), runDotExpression);
 });

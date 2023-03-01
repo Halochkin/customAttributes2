@@ -69,8 +69,12 @@ class Reaction {
     [this.prefix, ...this.suffix] = parts;
   }
 
+  //todo if the reaction Function returns a Reaction object, then the Reaction will replace itself with that new Reaction, and run again. All later runs of that reaction will not need to run the first function.
   run(at, e) {
-    return this.Function.call(at, e, this.prefix, ...this.suffix);
+    let res;
+    while ((res = this.Function.call(at, e, this.prefix, ...this.suffix)) instanceof Reaction)
+      Object.assign(this, res);
+    return res;
   }
 }
 
@@ -109,7 +113,8 @@ ${funcString}`);
     const parts = reaction.split("_");
     //todo should we add a dotReaction regex matcher here, so that we could .define(/\./, dotReaction)?
     //todo would match parts[0]?
-    return this.#register[parts[0]] && new Reaction(parts, this.#register[parts[0]]);
+    if (this.#register[parts[0]])
+      return new Reaction(parts, this.#register[parts[0]]);
   }
 }
 
@@ -210,6 +215,7 @@ class ReactionErrorEvent extends ErrorEvent {
     return (this.async ? "ASYNC" : "") + this.at.errorString(this.pos);
   }
 }
+
 //todo move this to core.js? //todo
 customReactions.define("console-error", e => (console.error(e.message, e.error), e));
 document.documentElement.setAttributeNode(document.createAttribute("error::console-error"));
@@ -319,7 +325,6 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
             return;
           }
         } catch (error) {    //todo we can pass in the input to the error event here.
-          if (start !== 0) console.info("omg wtf")
           return eventLoop.dispatch(new ReactionErrorEvent(error, at, i, start !== 0), at.ownerElement);
         }
       }
