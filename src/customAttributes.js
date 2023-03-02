@@ -4,10 +4,6 @@ class CustomAttr extends Attr {
     return this.chainChain[0][0] || "_" + this.chainChain[0][1];
   }
 
-  get eventType() {
-    return this.chainChain[0][0] || this.chainChain[0][1];
-  }
-
   get global() {
     return this.chainChain[0][0] === "";
   }
@@ -183,7 +179,7 @@ class AttributeRegistry extends DefinitionRegistry {
       Definition ?
         this.#upgradeAttribute(at, Definition) :        //upgrade to a defined CustomAttribute
         this.#unknownEvents.push(at.type, at);          //or register as unknown
-      at.global && this.#globals.push(at.eventType, at);//and then register globals
+      at.global && this.#globals.push(at.type, at);     //and then register globals
     }
   }
 
@@ -304,7 +300,7 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
       //   as we don't have any "justBeforeGC" callback, that will be very difficult.
       //   todo so, here we might want to add a check that if the !attr.ownerElement.isConnected, the _global: listener attr will be removed?? That will break all gestures.. They will be stuck in the wrong state when elements are removed and then added again during execution.
       globalTarget = null;
-      for (let attr of customAttributes.globalListeners(event.type))
+      for (let attr of customAttributes.globalListeners("_" + event.type))
         EventLoop.#runReactions(event, attr, attr.defaultAction);
 
       for (let at of bubbleAttr(rootTarget, event.type))
@@ -406,7 +402,7 @@ function deprecated() {
   class NativeBubblingEvent extends NativeAttr {
     upgrade() {
       this._listener = NativeBubblingEvent.listener.bind(this);
-      addEventListener.call(this.ownerElement, this.eventType, this._listener, {passive: this.passive});
+      addEventListener.call(this.ownerElement, this.type, this._listener, {passive: this.passive});
     }
 
     static listener(e) {
@@ -417,7 +413,7 @@ function deprecated() {
     }
 
     destructor() {
-      removeEventListener.call(this.ownerElement, this.eventType, this._listener);
+      removeEventListener.call(this.ownerElement, this.type, this._listener);
     }
   }
 
@@ -429,6 +425,10 @@ function deprecated() {
 
     get nativeTarget() {
       return window;
+    }
+
+    get eventType(){
+      return this.type.substring(1);
     }
 
     upgrade() {
@@ -454,6 +454,10 @@ function deprecated() {
   }
 
   class NativeDCLEvent extends NativeDocumentEvent {
+    get type() {
+      return "_DOMContentLoaded";
+    }
+
     get eventType() {
       return "DOMContentLoaded";
     }
