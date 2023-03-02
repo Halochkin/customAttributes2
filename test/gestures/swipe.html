@@ -74,12 +74,13 @@
       };
     }
   });
-  customReactions.define("owner-attr", function (e, _, type) {
-    if (!this.owner)  //todo the owner attribute should only run on the first pass, not all the time.
-      for (let at of this.ownerElement.attributes)
-        if (at.type === type)
-          this.owner = at;
-    return e;
+  customReactions.define("owner-attr", function (e, prefix, type) {
+    if (this.owner)  //todo the owner attribute should only run on the first pass, not all the time.
+      return e;
+    for (let at of this.ownerElement.attributes)
+      if (at.type === type)
+        return this.owner = at, e;
+    throw new Error(`${prefix}_${type} can't find owner attribute.`);
   });
 
   customReactions.define("swipestart", function (e) {
