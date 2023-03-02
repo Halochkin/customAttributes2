@@ -166,13 +166,14 @@ class AttributeRegistry extends DefinitionRegistry{
 
   #unknownEvents = new WeakArrayDict();
   #globals = new WeakArrayDict();
+  #register = {};
 
   define(prefix, Definition) {
     if (!(Definition.prototype instanceof CustomAttr))
       throw `"${Definition.name}" must extend "CustomAttr".`;
     if (this.getDefinition(prefix))
       throw `The customAttribute "${prefix}" is already defined.`;
-    this[prefix] = Definition;
+    this.#register[prefix] = Definition;
     for (let at of this.#unknownEvents.values(prefix))
       this.#upgradeAttribute(at, Definition);
     delete this.#unknownEvents[prefix];
@@ -190,7 +191,7 @@ class AttributeRegistry extends DefinitionRegistry{
   }
 
   getDefinition(type) {
-    return this[type] ??= this.tryRules(type);
+    return this.#register[type] ??= this.tryRules(type);
   }
 
   globalListeners(type) {
