@@ -34,12 +34,6 @@ class CustomAttr extends Attr {
     return this.reactions !== undefined;
   }
 
-  errorString(i) {  //todo this.ownerElement can void when the error is printed..
-    const chain = this.chain.slice(0);
-    chain[i + 1] = `==>${chain[i + 1]}<==`;
-    return `<${this.ownerElement?.tagName.toLowerCase()} ${chain.join(":")}>`;
-  }
-
   set value(value) {
     const oldValue = super.value;
     if (value === oldValue)
@@ -191,7 +185,13 @@ class ReactionErrorEvent extends ErrorEvent {
   }
 
   get message() {
-    return (this.async ? "ASYNC" : "") + this.at.errorString(this.pos);
+    return (this.async ? "ASYNC" : "") + ReactionErrorEvent.errorString(this.at, this.pos);
+  }
+
+  static errorString(at, i) {  //todo this.ownerElement can void when the error is printed..
+    const chain = at.chain.slice(0);
+    chain[i + 1] = `==>${chain[i + 1]}<==`;
+    return `<${at.ownerElement?.tagName.toLowerCase()} ${chain.join(":")}>`;
   }
 }
 
@@ -296,7 +296,7 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
         if (reaction === ReactionRegistry.DefaultAction)
           continue;
         try {
-          res = reaction.call(at, res, ...at.chain[i+1].split(/(?<=.)_/));
+          res = reaction.call(at, res, ...at.chain[i + 1].split(/(?<=.)_/));
           if (res === undefined)
             return;
           if (res instanceof Promise) {
