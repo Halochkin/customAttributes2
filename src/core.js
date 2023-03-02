@@ -145,7 +145,7 @@
 
     m: function monadish(e, _, prop, ...nestedReaction) {
       const reaction = customReactions.getDefinition(nestedReaction.join("_"));
-      const value = reaction.run(this, e);
+      const value = reaction.call(this, e, ...nestedReaction);
       if (e instanceof Array && !prop)
         e.push(value);
       else if (e instanceof Array && Number.isInteger(+prop))

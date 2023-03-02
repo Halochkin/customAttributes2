@@ -75,22 +75,10 @@ class WeakArrayDict {
   }
 }
 
-class Reaction {
-
-  constructor(parts, Function) {
-    this.Function = Function;
-    [this.prefix, ...this.suffix] = parts;
-  }
-
-  run(at, e) {
-    return this.Function.call(at, e, this.prefix, ...this.suffix);
-  }
-}
-
 class DefinitionRegistry {
   #register = {};
   #rules = [];
-  #cache = {"": ""};
+  #cache = {"": ReactionRegistry.DefaultAction};
 
   define(prefix, Definition) {
     if (this.#register[prefix])
@@ -140,12 +128,11 @@ ${funcString}`);
   }
 
   create(reaction) {
-    const parts = reaction.split("_");
-    const Func = super.create(parts[0]);
-    if (Func)
-      return new Reaction(parts, Func);
-    return this.tryRules(reaction);
+    const parts = reaction.split(/(?<=.)_/);
+    return super.create(parts[0]) ?? this.tryRules(reaction);
   }
+
+  static DefaultAction = function () {};
 }
 
 window.customReactions = new ReactionRegistry();
@@ -166,6 +153,7 @@ class AttributeRegistry extends DefinitionRegistry {
 
   upgrade(...attrs) {
     for (let at of attrs) {
+      //todo getDefinitions for both attribute and reactions
       Object.setPrototypeOf(at, CustomAttr.prototype);
       const Definition = this.getDefinition(at.type);
       Definition ?
@@ -314,10 +302,10 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
       let res = event;
       for (let i = start; i < (defaultAction || reactions.length); i++) {
         const reaction = reactions[i];
-        if (!reaction)
+        if (reaction === ReactionRegistry.DefaultAction)
           continue;
         try {
-          res = reaction.run(at, res);
+          res = reaction.call(at, res, ...at.chain[i+1].split(/(?<=.)_/));
           if (res === undefined)
             return;
           if (res instanceof Promise) {
