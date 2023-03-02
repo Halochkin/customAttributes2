@@ -35,10 +35,6 @@ class CustomAttr extends Attr {
     return value;
   }
 
-  get ready() {
-    return this.reactions !== undefined;
-  }
-
   set value(value) {
     const oldValue = super.value;
     if (value === oldValue)
@@ -261,7 +257,7 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
       while (this.#eventLoop.length) {
         const {target, event} = this.#eventLoop[0];
         if (target instanceof Attr)
-          EventLoop.#runReactions(event, target, undefined);
+          EventLoop.#runReactions(event, target);
         else /*if (!target || target instanceof Element)*/
           EventLoop.bubble(target, event);
         //todo if (target?.isConnected === false) then bubble without default action?? I think that we need the global listeners to run for disconnected targets, as this will make them able to trigger _error for example. I also think that attributes on disconnected ownerElements should still catch the _global events. Don't see why not.
@@ -276,8 +272,8 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
       //   as we don't have any "justBeforeGC" callback, that will be very difficult.
       //   todo so, here we might want to add a check that if the !attr.ownerElement.isConnected, the _global: listener attr will be removed?? That will break all gestures.. They will be stuck in the wrong state when elements are removed and then added again during execution.
       globalTarget = null;
-      for (let attr of customAttributes.globalListeners("_" + event.type))
-        EventLoop.#runReactions(event, attr, attr.defaultAction);
+      for (let at of customAttributes.globalListeners("_" + event.type))
+        EventLoop.#runReactions(event, at, at.defaultAction);
 
       for (let at of bubbleAttr(rootTarget, event.type))
         EventLoop.#runReactions(event, at, at.defaultAction);
@@ -290,11 +286,10 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
     }
 
     static #runReactions(event, at, defaultAction = 0, start = 0) {
-      if (defaultAction && (event.defaultAction || event.defaultPrevented))
+      if (defaultAction && (event.defaultAction || event.defaultPrevented) || !at.reactions?.length)
         return;
-      const reactions = at.reactions || [];
-      if (!reactions?.length > 0)
-        return;
+
+      const reactions = at.reactions;
       let res = event;
       for (let i = start; i < (defaultAction || reactions.length); i++) {
         const reaction = reactions[i];
