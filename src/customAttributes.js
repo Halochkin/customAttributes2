@@ -84,7 +84,8 @@ class Reaction {
     [this.prefix, ...this.suffix] = parts;
   }
 
-  //When a Reaction.Function returns a Reaction object, then the Reaction will replace its content with the content from the new Reaction. This enables Reaction functions to upgrade themselves run-time.
+  // todo replace this with .defineRule()
+  // When a Reaction.Function returns a Reaction object, then the Reaction will replace its content with the content from the new Reaction. This enables Reaction functions to upgrade themselves run-time.
   run(at, e) {
     let res;
     while ((res = this.Function.call(at, e, this.prefix, ...this.suffix)) instanceof Reaction)
@@ -257,10 +258,9 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
     }
   });
 
-  const eventToTarget = new WeakMap();
   Object.defineProperty(Event.prototype, "target", {
     get: function () {
-      return eventToTarget.get(this);
+      return globalTarget;
     }
   });
   //todo not sure that we should use path at all actually. If we have dynamic path, then path cannot be safely queried in advance or in the past.
@@ -273,12 +273,14 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
     }
   });
 
+  let globalTarget;
+
   function* bubbleAttr(target, type, slotMode) {
     //todo I think that we should build the path here too.. Now, we are asking for the path from the
     for (let el = target; el; el = el.parentElement || !slotMode && el.parentNode?.host) {
       for (let at of el.attributes)
         if (!at.global && at.eventType === type)
-          yield {at, target};
+          globalTarget = target, yield at;
       if (el.assignedSlot)
         yield* bubbleAttr(el.assignedSlot, type, true);
     }
@@ -314,17 +316,16 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
       //3. we need to check if the attr should be garbage collected.
       //   as we don't have any "justBeforeGC" callback, that will be very difficult.
       //   todo so, here we might want to add a check that if the !attr.ownerElement.isConnected, the _global: listener attr will be removed?? That will break all gestures.. They will be stuck in the wrong state when elements are removed and then added again during execution.
+      globalTarget = null;
       for (let attr of customAttributes.globalListeners(event.type))
         EventLoop.#runReactions(event, attr, attr.defaultAction);
 
-      for (let {at, target} of bubbleAttr(rootTarget, event.type)) {
-        eventToTarget.set(event, target);
+      for (let at of bubbleAttr(rootTarget, event.type))
         EventLoop.#runReactions(event, at, at.defaultAction);
-      }
 
       if (event.defaultAction && !event.defaultPrevented) {
         const {at, res, target} = event.defaultAction;
-        eventToTarget.set(event, target);
+        globalTarget = target;
         EventLoop.#runReactions(res, at, 0, at.defaultAction);
       }
     }
