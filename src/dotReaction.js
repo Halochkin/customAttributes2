@@ -72,4 +72,4 @@ function parsePartDotMode(part) {
   return part;
 }
 
-customReactions.defineRule((dot, ...parts) => dot === "." && new Reaction(parseDotExpression(parts), runDotExpression));
+customReactions.defineRule((fullReaction) => fullReaction.startsWith("._") && new Reaction(parseDotExpression(fullReaction.substring(2).split("_")), runDotExpression));

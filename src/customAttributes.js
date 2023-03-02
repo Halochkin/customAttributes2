@@ -89,10 +89,24 @@ class Reaction {
   }
 }
 
-class ReactionRegistry {
+class DefinitionRegistry {
+  #rules = [];
+
+  defineRule(Function) {
+    this.#rules.push(Function);
+    //todo here we need to try all the existing unknown attributes/reactions against this new rule.
+  }
+
+  tryRules(reaction) {
+    for (let Function of this.#rules)                       //try to create a Reaction using Rule
+      if (Function = Function(reaction)) //todo here we could do an instanceof Reaction/Function.
+        return Function;
+  }
+}
+
+class ReactionRegistry extends DefinitionRegistry {
 
   #register = {};
-  #rules = [];
 
   define(type, Func) {
     if (!(Func instanceof Function))
@@ -104,10 +118,6 @@ ${funcString}`);
     if (this.#register[type])
       throw `The Reaction type: "${type}" is already defined.`;
     this.#register[type] = Func;
-  }
-
-  defineRule(Function) {
-    this.#rules.push(Function);
   }
 
   defineAll(defs) {
@@ -129,9 +139,7 @@ ${funcString}`);
     const parts = reaction.split("_");
     if (this.#register[parts[0]])
       return new Reaction(parts, this.#register[parts[0]]);
-    for (let Function of this.#rules)                       //try to create a Reaction using Rule
-      if ((Function = Function(...parts)) instanceof Reaction)
-        return Function;
+    return this.tryRules(reaction);
   }
 }
 
@@ -154,9 +162,8 @@ class WeakArrayDict {
   }
 }
 
-class AttributeRegistry {
+class AttributeRegistry extends DefinitionRegistry{
 
-  #rules = [];
   #unknownEvents = new WeakArrayDict();
   #globals = new WeakArrayDict();
 
@@ -182,18 +189,8 @@ class AttributeRegistry {
     }
   }
 
-  defineRule(Function) {
-    this.#rules.push(Function);
-  }
-
-  #tryRules(type) {
-    for (let Function of this.#rules)
-      if (Function = Function(type))
-        return Function;
-  }
-
   getDefinition(type) {
-    return this[type] ??= this.#tryRules(type);
+    return this[type] ??= this.tryRules(type);
   }
 
   globalListeners(type) {
