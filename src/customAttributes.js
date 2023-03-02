@@ -96,18 +96,14 @@ class DefinitionRegistry {
     //todo here we need to try all the existing unknown attributes/reactions against this new rule.
   }
 
-  tryRules(reaction) {
-    for (let Function of this.#rules)                       //try to create a Reaction using Rule
-      if (Function = Function(reaction)) //todo here we could do an instanceof Reaction/Function.
+  tryRules(type) {
+    for (let Function of this.#rules)                       //try to create a CustomAttr/Reaction using Rule
+      if (Function = Function(type)) //todo here we could do an instanceof CustomAttr/Function.
         return Function;
   }
 
   getDefinition(type) {
-    return this.#cache[type] ??= this.create(type);
-  }
-
-  create(type) {
-    return this.#register[type] ??= this.tryRules(type);
+    return this.#cache[type] ??= this.#register[type.split(/(?<=.)_/)[0]] ?? this.tryRules(type);
   }
 }
 
@@ -125,11 +121,6 @@ ${funcString}`);
 
   static toCamelCase(strWithDash) { //todo move this somewhere else..
     return strWithDash.replace(/-([a-z])/g, g => g[1].toUpperCase());
-  }
-
-  create(reaction) {
-    const parts = reaction.split(/(?<=.)_/);
-    return super.create(parts[0]) ?? this.tryRules(reaction);
   }
 
   static DefaultAction = function () {};
