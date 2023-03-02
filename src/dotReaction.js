@@ -72,6 +72,4 @@ function parsePartDotMode(part) {
   return part;
 }
 
-customReactions.define(".", function (e, _, ...parts) {
-  return new Reaction(parseDotExpression(parts), runDotExpression);
-});
+customReactions.defineRule((dot, ...parts) => dot === "." && new Reaction(parseDotExpression(parts), runDotExpression));

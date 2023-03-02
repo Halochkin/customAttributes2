@@ -84,19 +84,15 @@ class Reaction {
     [this.prefix, ...this.suffix] = parts;
   }
 
-  // todo replace this with .defineRule()
-  // When a Reaction.Function returns a Reaction object, then the Reaction will replace its content with the content from the new Reaction. This enables Reaction functions to upgrade themselves run-time.
   run(at, e) {
-    let res;
-    while ((res = this.Function.call(at, e, this.prefix, ...this.suffix)) instanceof Reaction)
-      Object.assign(this, res);
-    return res;
+    return this.Function.call(at, e, this.prefix, ...this.suffix);
   }
 }
 
 class ReactionRegistry {
 
   #register = {};
+  #rules = [];
 
   define(type, Func) {
     if (!(Func instanceof Function))
@@ -105,9 +101,13 @@ class ReactionRegistry {
     if (funcString.indexOf("=>") > 0 && funcString.indexOf("this") > 0)
       console.warn(`ALERT!! arrow function using 'this' in reaction defintion: ${type}. Should this be a named/anonymous function?
 ${funcString}`);
-    if (type in this.#register)
+    if (this.#register[type])
       throw `The Reaction type: "${type}" is already defined.`;
     this.#register[type] = Func;
+  }
+
+  defineRule(Function) {
+    this.#rules.push(Function);
   }
 
   defineAll(defs) {
@@ -127,10 +127,11 @@ ${funcString}`);
 
   #create(reaction) {
     const parts = reaction.split("_");
-    //todo should we add a dotReaction regex matcher here, so that we could .define(/\./, dotReaction)?
-    //todo would match parts[0]?
     if (this.#register[parts[0]])
       return new Reaction(parts, this.#register[parts[0]]);
+    for (let Function of this.#rules)                       //try to create a Reaction using Rule
+      if ((Function = Function(...parts)) instanceof Reaction)
+        return Function;
   }
 }
 
