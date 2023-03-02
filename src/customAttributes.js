@@ -118,7 +118,8 @@ ${funcString}`);
     return strWithDash.replace(/-([a-z])/g, g => g[1].toUpperCase());
   }
 
-  static DefaultAction = function () {};
+  static DefaultAction = function () {
+  };
 }
 
 window.customReactions = new ReactionRegistry();
@@ -273,10 +274,12 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
       //   todo so, here we might want to add a check that if the !attr.ownerElement.isConnected, the _global: listener attr will be removed?? That will break all gestures.. They will be stuck in the wrong state when elements are removed and then added again during execution.
       globalTarget = null;
       for (let at of customAttributes.globalListeners("_" + event.type))
-        EventLoop.#runReactions(event, at, at.defaultAction);
+        if (!(at.defaultAction && (event.defaultAction || event.defaultPrevented) || !at.reactions?.length))
+          EventLoop.#runReactions(event, at, at.defaultAction);
 
       for (let at of bubbleAttr(rootTarget, event.type))
-        EventLoop.#runReactions(event, at, at.defaultAction);
+        if (!(at.defaultAction && (event.defaultAction || event.defaultPrevented) || !at.reactions?.length))
+          EventLoop.#runReactions(event, at, at.defaultAction);
 
       if (event.defaultAction && !event.defaultPrevented) {
         const {at, res, target} = event.defaultAction;
@@ -286,15 +289,17 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
     }
 
     static #runReactions(event, at, defaultAction = 0, start = 0) {
-      if (defaultAction && (event.defaultAction || event.defaultPrevented) || !at.reactions?.length)
-        return;
-
-      const reactions = at.reactions;
       let res = event;
-      for (let i = start; i < (defaultAction || reactions.length); i++) {
-        const reaction = reactions[i];
-        if (reaction === ReactionRegistry.DefaultAction)
+      for (let i = start; i < at.reactions.length; i++) {
+        const reaction = at.reactions[i];
+        if (reaction === ReactionRegistry.DefaultAction) {
+          if (defaultAction) {
+            if (res !== undefined)
+              event.defaultAction = {at, res, target: event.target};
+            break;
+          }
           continue;
+        }
         try {
           res = reaction.call(at, res, ...at.chainBits[i + 1]);
           if (res === undefined)
@@ -312,8 +317,6 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
           return eventLoop.dispatch(new ReactionErrorEvent(error, at, i, start !== 0), at.ownerElement);
         }
       }
-      if (res !== undefined && defaultAction)
-        event.defaultAction = {at, res, target: event.target};
     }
   }
 
