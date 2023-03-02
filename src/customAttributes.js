@@ -1,35 +1,23 @@
 //todo replace CustomAttr with a monkeyPatch on Attr? will be more efficient.
 class CustomAttr extends Attr {
-
-  static parse(unit) {
-    const global = unit[0] === "_";
-    global && (unit = unit.substring(1));
-    const parts = unit.split("_");
-    let type = parts[0];
-    const suffix = parts.slice(1);
-    const eventType = type;
-    global && (type = "_" + type);
-    return {global, parts, type, suffix, eventType};
-  }
-
   get type() {
-    return this.chainChain[0].type;
+    return this.chainChain[0][0] || "_" + this.chainChain[0][1];
   }
 
   get eventType() {
-    return this.chainChain[0].eventType;
+    return this.chainChain[0][0] || this.chainChain[0][1];
   }
 
   get global() {
-    return this.chainChain[0].global;
+    return this.chainChain[0][0] === "";
   }
 
   get suffix() {
-    return this.chainChain[0].suffix;
+    return  this.chainChain[0].slice(this.global ? 2:1);
   }
 
   get chainChain() {
-    return this.chain.map(CustomAttr.parse);
+    return this.chain.map(s => s.split("_"));
   }
 
 //todo this is a ReactionChain object.
