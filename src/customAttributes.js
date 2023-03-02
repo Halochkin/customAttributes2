@@ -90,7 +90,20 @@ class Reaction {
 }
 
 class DefinitionRegistry {
+  #register = {};
   #rules = [];
+  #cache = {"": ""};
+
+  define(prefix, Definition) {
+    if (this.#register[prefix])
+      throw `"${prefix}" is already defined.`;
+    this.#register[prefix] = Definition;
+  }
+
+  defineAll(defs) {
+    for (let [type, Function] of Object.entries(defs))
+      this.define(type, Function);
+  }
 
   defineRule(Function) {
     this.#rules.push(Function);
@@ -102,43 +115,37 @@ class DefinitionRegistry {
       if (Function = Function(reaction)) //todo here we could do an instanceof Reaction/Function.
         return Function;
   }
+
+  getDefinition(type) {
+    return this.#cache[type] ??= this.create(type);
+  }
+
+  create(type) {
+    return this.#register[type] ??= this.tryRules(type);
+  }
 }
 
 class ReactionRegistry extends DefinitionRegistry {
 
-  #register = {};
-
-  define(type, Func) {
-    if (!(Func instanceof Function))
-      throw new SyntaxError("reactions must be Functions.");
-    const funcString = Func.toString();
+  define(type, Definition) {
+    if (!(Definition instanceof Function))
+      throw `"${Definition}" must be a Function.`;
+    super.define(type, Definition);
+    const funcString = Definition.toString();
     if (funcString.indexOf("=>") > 0 && funcString.indexOf("this") > 0)
       console.warn(`ALERT!! arrow function using 'this' in reaction defintion: ${type}. Should this be a named/anonymous function?
 ${funcString}`);
-    if (this.#register[type])
-      throw `The Reaction type: "${type}" is already defined.`;
-    this.#register[type] = Func;
-  }
-
-  defineAll(defs) {
-    for (let [type, Function] of Object.entries(defs))
-      this.define(type, Function);
   }
 
   static toCamelCase(strWithDash) { //todo move this somewhere else..
     return strWithDash.replace(/-([a-z])/g, g => g[1].toUpperCase());
   }
 
-  #cache = {"": ""}; //todo maybe we want to use the empty string attribute for the dotExpressions?
-
-  getDefinition(type) {
-    return this.#cache[type] ??= this.create(type);
-  }
-
   create(reaction) {
     const parts = reaction.split("_");
-    if (this.#register[parts[0]])
-      return new Reaction(parts, this.#register[parts[0]]);
+    const Func = super.create(parts[0]);
+    if (Func)
+      return new Reaction(parts, Func);
     return this.tryRules(reaction);
   }
 }
@@ -162,18 +169,15 @@ class WeakArrayDict {
   }
 }
 
-class AttributeRegistry extends DefinitionRegistry{
+class AttributeRegistry extends DefinitionRegistry {
 
   #unknownEvents = new WeakArrayDict();
   #globals = new WeakArrayDict();
-  #register = {};
 
   define(prefix, Definition) {
     if (!(Definition.prototype instanceof CustomAttr))
-      throw `"${Definition.name}" must extend "CustomAttr".`;
-    if (this.getDefinition(prefix))
-      throw `The customAttribute "${prefix}" is already defined.`;
-    this.#register[prefix] = Definition;
+      throw `"${Definition.name}" must be a CustomAttr.`;
+    super.define(prefix, Definition);
     for (let at of this.#unknownEvents.values(prefix))
       this.#upgradeAttribute(at, Definition);
     delete this.#unknownEvents[prefix];
@@ -190,21 +194,8 @@ class AttributeRegistry extends DefinitionRegistry{
     }
   }
 
-  getDefinition(type) {
-    return this.create(type);
-  }
-
-  create(type) {
-    return this.#register[type] ??= this.tryRules(type);
-  }
-
   globalListeners(type) {
     return this.#globals.values(type);
-  }
-
-  //todo if elements with global a customAttr is removed in JS but not yet GCed, this will still run
-  globalEmpty(type) {
-    return !this.#globals.gc(type);
   }
 
   #upgradeAttribute(at, Definition) {
