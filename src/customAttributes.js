@@ -13,7 +13,7 @@ class CustomAttr extends Attr {
   }
 
   get suffix() {
-    return  this.chainChain[0].slice(this.global ? 2:1);
+    return this.chainChain[0].slice(this.global ? 2 : 1);
   }
 
   get chainChain() {
@@ -266,7 +266,7 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
     //todo I think that we should build the path here too.. Now, we are asking for the path from the
     for (let el = target; el; el = el.parentElement || !slotMode && el.parentNode?.host) {
       for (let at of el.attributes)
-        if (!at.global && at.eventType === type)
+        if (at.type === type)
           globalTarget = target, yield at;
       if (el.assignedSlot)
         yield* bubbleAttr(el.assignedSlot, type, true);
