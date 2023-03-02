@@ -7,9 +7,7 @@ class CustomAttr extends Attr {
     const parts = unit.split("_");
     let type = parts[0];
     const suffix = parts.slice(1);
-    let eventType = type;
-    if (type.startsWith("fast"))                      //todo move the passive out of the parse?
-      eventType = eventType.substring(4);
+    const eventType = type;
     global && (type = "_" + type);
     return {global, parts, type, suffix, eventType};
   }
