@@ -7,16 +7,14 @@
     <style>
         #elem {
             position: absolute;
-            left: 100px;
-            top: 100px;
+            left: 300px;
+            top: 300px;
             height: 200px;
             width: 200px;
             border: 2px solid skyblue;
             background-color: #b7e9fd;
         }
     </style>
-
-
 
     <script src="./src/touch-emulator.js"></script>
     <script> TouchEmulator(); </script>
@@ -28,7 +26,6 @@
 <div id="elem" pinch></div>
 </body>
 <script>
-  // (function () {
 
   let supportsPassive = false;
   try {
@@ -43,20 +40,9 @@
   }
   const thirdArg = supportsPassive ? {capture: true, passive: false} : true;
 
-
   function captureEvent(e, stopProp) {
     e.preventDefault();
     stopProp && e.stopImmediatePropagation ? e.stopImmediatePropagation() : e.stopPropagation();
-  }
-
-  function filterOnAttribute(e, attributeName) {                                                 //4. FilterByAttribute
-    for (let el = e.target; el; el = el.parentNode) {
-      if (!el.hasAttribute)
-        return null;
-      if (el.hasAttribute(attributeName))
-        return el;
-    }
-    return null;
   }
 
   function replaceDefaultAction(target, composedEvent, trigger) {      //[3] ReplaceDefaultAction
@@ -71,30 +57,21 @@
   }
 
   function findLastEventOlderThan(events, timeTest) {
-    for (let i = events.length - 1; i >= 0; i--) {
+    for (let i = events.length - 1; i >= 0; i--)
       if (events[i].timeStamp < timeTest) return events[i];
-    }
     return null;
   }
 
   function makePinchEvent(name, trigger) {
-    let detail;
-    if (name === "stop" || name === "cancel") {
-      detail = globalSequence.recorded[globalSequence.recorded.length - 1].detail;
-    } else {
-      detail = makepinchDetail(trigger);
-    }
+    let detail = (name === "stop" || name === "cancel") ? globalSequence.recorded[globalSequence.recorded.length - 1].detail : makepinchDetail(trigger);
     return new CustomEvent("pinch-" + name, {bubbles: true, composed: true, detail});
   }
 
   function makepinchDetail(touchevent) {
-    let prevAngle = globalSequence ? globalSequence.recorded[globalSequence.recorded.length - 1].detail.angle : 0;
-    const f1 = touchevent.targetTouches[0];
-    const f2 = touchevent.targetTouches[1];
-    const x1 = f1.pageX;
-    const y1 = f1.pageY;
-    const x2 = f2.pageX;
-    const y2 = f2.pageY;
+    const prevAngle = globalSequence ? globalSequence.recorded[globalSequence.recorded.length - 1].detail.angle : 0;
+    const [f1, f2] = touchevent.targetTouches;
+    const {pageX: x1, pageY: y1} = f1;
+    const {pageX: x2, pageY: y2} = f2;
     const width = Math.abs(x2 - x1);
     const height = Math.abs(y2 - y1);
     const diagonal = Math.sqrt(width * width + height * height);
@@ -133,7 +110,6 @@
   let oneHit = false;
   let globalSequence;
 
-
   function startSequence(target, e) {                                                            //5. Event Sequence
     const body = document.querySelector("body");
     const sequence = {
@@ -142,10 +118,11 @@
       spinDistance: parseInt(target.getAttribute("spin-distance")) || 100,
       recorded: [e],
       userSelectStart: body.style.userSelect,                                                    //10. Grabtouch
-      touchActionStart: body.style.touchAction,
+      touchActionStart: body.style.touchAction
     };
     document.children[0].style.userSelect = "none";
     document.children[0].style.touchAction = "none";
+
     target.removeAttribute("touchstart:touchinitial_pinch_start");
     target.removeAttribute("touchend:touchinitial_pinch_start");
     target.setAttribute("touchstart:touchsecondary_cancel");
@@ -164,7 +141,6 @@
   function stopSequence(target) {
     document.children[0].style.userSelect = globalSequence.userSelectStart;
     document.children[0].style.touchAction = globalSequence.touchActionStart;
-
     target.removeAttribute("touchmove:touchmove_move");
     target.removeAttribute("touchend:touchend_stop_spin");
     target.removeAttribute("blur:onblur_cancel");
@@ -175,81 +151,81 @@
     return undefined;
   }
 
-
-  function onTouchend(trigger) {
-    oneHit = false;
-    trigger.preventDefault();
-    const stopEvent = makePinchEvent("stop", trigger);
-    const spinEvent = makeSpinEvent(trigger, globalSequence);
-    captureEvent(trigger, false);
-    const target = globalSequence.target;
-    globalSequence = stopSequence(target);
-    replaceDefaultAction(target, stopEvent, trigger);
-    if (spinEvent)
-      replaceDefaultAction(target, spinEvent, trigger);
-  }
+  // function onTouchend(trigger) {
+  //   oneHit = false;
+  //   trigger.preventDefault();
+  //   const stopEvent = makePinchEvent("stop", trigger);
+  //   const spinEvent = makeSpinEvent(trigger, globalSequence);
+  //   captureEvent(trigger, false);
+  //   const target = globalSequence.target;
+  //   globalSequence = stopSequence(target);
+  //   replaceDefaultAction(target, stopEvent, trigger);
+  //   if (spinEvent)
+  //     replaceDefaultAction(target, spinEvent, trigger);
+  // }
 
   customAttributes.define("pinch", class Pinch extends CustomAttr {
 
     upgrade() {
-      customReactions.define("touchinitial", function (e, prefix, attribute, name) {
-        if (e.defaultPrevented) return;
-        //filter 1
-        const touches = e.targetTouches.length;
-        // should start from one finger
-        if (touches === 1) oneHit = true;
-        if (touches !== 2) return;
-        if (!oneHit) return;
-
-        const target = filterOnAttribute(e, attribute);
-        if (!target) return;
-        const composedEvent = makePinchEvent(name, e);
-        captureEvent(e, false);
-        globalSequence = startSequence(target, composedEvent);
-        // dispatchPriorEvent(target, composedEvent, trigger);
-        replaceDefaultAction(target, composedEvent, e);
-      });
-
-      customReactions.define("touchsecondary", function (e, prefix, name) {
-        const cancelEvent = makePinchEvent(name, e);
-        const target = globalSequence.target;
-        globalSequence = stopSequence(target);
-        replaceDefaultAction(target, cancelEvent, e);
-      });
-
-      customReactions.define("touchmove", function (e, prefix, name) {
-        const composedEvent = makePinchEvent(name, e);
-        captureEvent(e, false);
-        globalSequence = updateSequence(globalSequence, composedEvent);
-        replaceDefaultAction(globalSequence.target, composedEvent, e);
-      });
-
-      customReactions.define("touchend", function (e, prefix, stop, spin) {
-        oneHit = false;
-        e.preventDefault();
-        const stopEvent = makePinchEvent(stop, e);
-        const spinEvent = makeSpinEvent(e, globalSequence, spin);
-        captureEvent(e, false);
-        const target = globalSequence.target;
-        globalSequence = stopSequence(target);
-        replaceDefaultAction(target, stopEvent, e);
-        if (spinEvent) replaceDefaultAction(target, spinEvent, e);
-      });
-
-      customReactions.define("onblur", function (e, prefix, name) {
-        const blurInEvent = makePinchEvent(name, e);
-        const target = globalSequence.target;
-        globalSequence = stopSequence(target);
-        replaceDefaultAction(target, blurInEvent, e);
-      });
-
-      customReactions.define("onselectstart", function (e) {
-        e.preventDefault();
-        e.stopImmediatePropagation ? e.stopImmediatePropagation() : e.stopPropagation();
-      });
-
       this.ownerElement.setAttribute("touchstart:touchinitial_pinch_start");
     }
+
+    destructor() {
+
+    }
+  });
+
+  customReactions.define("touchinitial", function (e, prefix, attribute, name) {
+    if (e.defaultPrevented) return;
+    //filter 1
+    const touches = e.targetTouches.length;
+    // should start from one finger
+    if (touches === 1) oneHit = true;
+    if (touches !== 2) return;
+    if (!oneHit) return;
+
+    const target = this.ownerElement;
+    const composedEvent = makePinchEvent(name, e);
+    globalSequence = startSequence(target, composedEvent);
+    eventLoop.dispatch(composedEvent, target);
+  });
+
+  customReactions.define("touchsecondary", function (e, prefix, name) {
+    const cancelEvent = makePinchEvent(name, e);
+    const target = globalSequence.target;
+    globalSequence = stopSequence(target);
+    replaceDefaultAction(target, cancelEvent, e);
+  });
+
+  customReactions.define("touchmove", function (e, prefix, name) {
+    const composedEvent = makePinchEvent(name, e);
+    captureEvent(e, false);
+    globalSequence = updateSequence(globalSequence, composedEvent);
+    const target = globalSequence.target;
+    eventLoop.dispatch(composedEvent, target);
+  });
+
+  customReactions.define("touchend", function (e, prefix, stop, spin) {
+    oneHit = false;
+    e.preventDefault();
+    const stopEvent = makePinchEvent(stop, e);
+    const spinEvent = makeSpinEvent(e, globalSequence, spin);
+    const target = globalSequence.target;
+    globalSequence = stopSequence(target);
+    eventLoop.dispatch(stopEvent, target);
+    if (spinEvent) eventLoop.dispatch(spinEvent, target);
+  });
+
+  customReactions.define("onblur", function (e, prefix, name) {
+    const blurInEvent = makePinchEvent(name, e);
+    const target = globalSequence.target;
+    globalSequence = stopSequence(target);
+    replaceDefaultAction(target, blurInEvent, e);
+  });
+
+  customReactions.define("onselectstart", function (e) {
+    e.preventDefault();
+    e.stopImmediatePropagation ? e.stopImmediatePropagation() : e.stopPropagation();
   });
 
 </script>
@@ -258,35 +234,39 @@
 <script>
   var element = document.querySelector("#elem");
   var body = document.querySelector("body");
-  var startRotate = undefined;
+  var startRotate = 0;
 
-  window.addEventListener("pinch-start", e => {
+
+  customReactions.define("listen1", function (e) {
     startRotate = startRotate ? startRotate : 0;
   });
+  document.documentElement.setAttribute("pinch-start:listen1");
 
-  window.addEventListener("pinch-move", e => {
+  const listen2 = e => {
     element.style.transform = `rotate(${startRotate -= e.detail.rotation}deg)`;
-  });
+  };
 
-  window.addEventListener("pinch-stop", e => {
+  customReactions.define("listen2", listen2);
+  document.documentElement.setAttribute("pinch-move:listen2");
+
+  const listen3 = function (e) {
     startRotate = parseFloat(element.style.transform.substring(7));
-  });
+  };
 
-  window.addEventListener("spin", e => {
+  customReactions.define("listen3", listen3);
+  document.documentElement.setAttribute("pinch-stop:listen3");
+
+  const spin = e => {
     element.style.transition = "all 0.3s cubic-bezier(0.39, 0.58, 0.57, 1)";
     element.style.transform = `rotate(${startRotate - e.detail.rotation * 1.2}deg)`;
     setTimeout(function () {
       element.style.transition = undefined;
     }, 300);
-  });
+  };
 
-  window.addEventListener("pinch-cancel", (e) => {
-    if (e.trigger.type === "blur")
-      confirm("you just got blurred!");
-    if (e.trigger.type === "mouseout")
-      confirm("you just got mouseouted!");
-    if (e.trigger.type === "mousedown")
-      confirm("you just pressed to many buttons!");
-  });
+  customReactions.define("spin1", spin);
+  document.documentElement.setAttribute("spin:spin1");
+
+
 </script>
 </html>
