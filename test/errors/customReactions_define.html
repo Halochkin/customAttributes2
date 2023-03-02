@@ -24,4 +24,10 @@
   } catch (e) {
     console.log(e)
   }
+  //3. the definition must be a function
+  try {
+    customReactions.define("co", "NotAFunction");
+  } catch (e) {
+    console.log(e)
+  }
 </script>
