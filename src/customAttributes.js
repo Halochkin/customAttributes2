@@ -1,31 +1,41 @@
 //todo replace CustomAttr with a monkeyPatch on Attr? will be more efficient.
 class CustomAttr extends Attr {
+
+  static parse(unit) {
+    const global = unit[0] === "_";
+    global && (unit = unit.substring(1));
+    const parts = unit.split("_");
+    let type = parts[0];
+    const suffix = parts.slice(1);
+    let eventType = type, passive = false;
+    if (type.startsWith("fast"))
+      eventType = eventType.substring(4), passive = true;
+    global && (type = "_" + type);
+    return {global, parts, type, suffix, eventType, passive};
+  }
+
   get type() {
-    const value = this.name.match(/(_?[^_:]+)/)[1];
-    Object.defineProperty(this, "type", {value, writable: false, configurable: true});
-    return value;
+    return this.chainChain[0].type;
   }
 
   get eventType() {
-    let value = this.type;
-    if (value[0] === "_") value = value.substring(1);
-    if (value.startsWith("fast")) value = value.substring(4);      //annoying
-    Object.defineProperty(this, "eventType", {value, writable: false, configurable: true});
-    return value;
+    return this.chainChain[0].eventType;
   }
 
   get global() {
-    return this.name[0] === "_";
+    return this.chainChain[0].global;
   }
 
   get passive() {
-    const value = this.name[0].startsWith("_fast") || this.name[0].startsWith("fast");
-    Object.defineProperty(this, "passive", {value, writable: false, configurable: true});
-    return value;
+    return this.chainChain[0].passive;
   }
 
   get suffix() {
-    return this.name.match(/_?([^:]+)/)[1].split("_").slice(1);
+    return this.chainChain[0].suffix;
+  }
+
+  get chainChain() {
+    return this.chain.map(CustomAttr.parse);
   }
 
 //todo this is a ReactionChain object.
@@ -36,7 +46,8 @@ class CustomAttr extends Attr {
   }
 
   get defaultAction() {
-    const value = this.chain.slice(1).indexOf("") + 1 || 0;
+    let value = this.chain.indexOf("") || 0;
+    if (value < 0) value = 0;
     Object.defineProperty(this, "defaultAction", {value, writable: false, configurable: true});
     return value;
   }
@@ -55,7 +66,7 @@ class CustomAttr extends Attr {
 
   errorString(i) {  //todo this.ownerElement can void when the error is printed..
     const chain = this.chain.slice(0);
-    chain[i+1] = `==>${chain[i+1]}<==`;
+    chain[i + 1] = `==>${chain[i + 1]}<==`;
     return `<${this.ownerElement?.tagName.toLowerCase()} ${chain.join(":")}>`;
   }
 
@@ -74,6 +85,23 @@ class CustomAttr extends Attr {
 
   get value() {
     return super.value;
+  }
+}
+
+class WeakArrayDict {
+  push(key, value) {
+    (this[key] ??= []).push(new WeakRef(value));
+  }
+
+  * values(key) {
+    if (this.gc(key))
+      yield* this[key].map(ref => ref.deref());
+  }
+
+  //sync with native gc and remove all attributes without .ownerElement.
+  gc(key) {
+    this[key] = this[key]?.filter(ref => ref.deref()?.ownerElement);
+    return this[key]?.length || 0;
   }
 }
 
@@ -151,23 +179,6 @@ ${funcString}`);
 }
 
 window.customReactions = new ReactionRegistry();
-
-class WeakArrayDict {
-  push(key, value) {
-    (this[key] ??= []).push(new WeakRef(value));
-  }
-
-  * values(key) {
-    if (this.gc(key))
-      yield* this[key].map(ref => ref.deref());
-  }
-
-  //sync with native gc and remove all attributes without .ownerElement.
-  gc(key) {
-    this[key] = this[key]?.filter(ref => ref.deref()?.ownerElement);
-    return this[key]?.length || 0;
-  }
-}
 
 class AttributeRegistry extends DefinitionRegistry {
 
