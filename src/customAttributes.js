@@ -1,17 +1,22 @@
 //todo replace CustomAttr with a monkeyPatch on Attr? will be more efficient.
 class CustomAttr extends Attr {
   get type() {
-    return this.chain[0].split(/(?<=.)_/)[0];
+    return this.chainBits[0][0];
   }
 
   get suffix() {
-    return this.chain[0].split(/(?<=.)_/).slice(1);
+    return this.chainBits[0].slice(1);
   }
 
-//todo this is a ReactionChain object.
   get chain() {
     const value = this.name.split(":");
     Object.defineProperty(this, "chain", {value, writable: false, configurable: true});
+    return value;
+  }
+
+  get chainBits() {
+    const value = this.chain.map(s => s.split(/(?<=.)_/));
+    Object.defineProperty(this, "chainBits", {value, writable: false, configurable: true});
     return value;
   }
 
@@ -296,7 +301,7 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
         if (reaction === ReactionRegistry.DefaultAction)
           continue;
         try {
-          res = reaction.call(at, res, ...at.chain[i + 1].split(/(?<=.)_/));
+          res = reaction.call(at, res, ...at.chainBits[i + 1]);
           if (res === undefined)
             return;
           if (res instanceof Promise) {
