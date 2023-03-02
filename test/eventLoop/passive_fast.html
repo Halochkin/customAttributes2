@@ -1,7 +1,7 @@
 <script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.2/observeElementCreation.js"></script>
 <script src="../../src/customAttributes.js"></script>
 
-<div id="one" style="height: 100vh" fastwheel:m__e.prevent-default fastwheel:log _fastwheel:log>hello fastwheel:prevent _fastwheel:log(should log and scroll)</div>
+<div id="one" style="height: 100vh" wheel:e.prevent-default wheel:log _wheel:log>hello wheel:prevent _wheel:log(should log and scroll)</div>
 <div id="two" style="height: 100vh" wheel:prevent wheel:log _wheel:log>hello wheel:prevent _wheel:log (should log, but not scroll)</div>
 
 todo the first event should ignore the native preventDefault(), while the second should accept it.

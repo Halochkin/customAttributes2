@@ -1,31 +1,19 @@
 //todo replace CustomAttr with a monkeyPatch on Attr? will be more efficient.
 class CustomAttr extends Attr {
   get type() {
-    const value = this.name.match(/(_?[^_:]+)/)[1];
-    Object.defineProperty(this, "type", {value, writable: false, configurable: true});
-    return value;
-  }
-
-  get eventType() {
-    let value = this.type;
-    if (value[0] === "_") value = value.substring(1);
-    if (value.startsWith("fast")) value = value.substring(4);      //annoying
-    Object.defineProperty(this, "eventType", {value, writable: false, configurable: true});
-    return value;
+    return this.chainChain[0][0] || "_" + this.chainChain[0][1];
   }
 
   get global() {
-    return this.name[0] === "_";
-  }
-
-  get passive() {
-    const value = this.name[0].startsWith("_fast") || this.name[0].startsWith("fast");
-    Object.defineProperty(this, "passive", {value, writable: false, configurable: true});
-    return value;
+    return this.chainChain[0][0] === "";
   }
 
   get suffix() {
-    return this.name.match(/_?([^:]+)/)[1].split("_").slice(1);
+    return this.chainChain[0].slice(this.global ? 2 : 1);
+  }
+
+  get chainChain() {
+    return this.chain.map(s => s.split("_"));
   }
 
 //todo this is a ReactionChain object.
@@ -36,7 +24,8 @@ class CustomAttr extends Attr {
   }
 
   get defaultAction() {
-    const value = this.chain.slice(1).indexOf("") + 1 || 0;
+    let value = this.chain.indexOf("") || 0;
+    if (value < 0) value = 0;
     Object.defineProperty(this, "defaultAction", {value, writable: false, configurable: true});
     return value;
   }
@@ -55,7 +44,7 @@ class CustomAttr extends Attr {
 
   errorString(i) {  //todo this.ownerElement can void when the error is printed..
     const chain = this.chain.slice(0);
-    chain[i+1] = `==>${chain[i+1]}<==`;
+    chain[i + 1] = `==>${chain[i + 1]}<==`;
     return `<${this.ownerElement?.tagName.toLowerCase()} ${chain.join(":")}>`;
   }
 
@@ -74,6 +63,23 @@ class CustomAttr extends Attr {
 
   get value() {
     return super.value;
+  }
+}
+
+class WeakArrayDict {
+  push(key, value) {
+    (this[key] ??= []).push(new WeakRef(value));
+  }
+
+  * values(key) {
+    if (this.gc(key))
+      yield* this[key].map(ref => ref.deref());
+  }
+
+  //sync with native gc and remove all attributes without .ownerElement.
+  gc(key) {
+    this[key] = this[key]?.filter(ref => ref.deref()?.ownerElement);
+    return this[key]?.length || 0;
   }
 }
 
@@ -152,23 +158,6 @@ ${funcString}`);
 
 window.customReactions = new ReactionRegistry();
 
-class WeakArrayDict {
-  push(key, value) {
-    (this[key] ??= []).push(new WeakRef(value));
-  }
-
-  * values(key) {
-    if (this.gc(key))
-      yield* this[key].map(ref => ref.deref());
-  }
-
-  //sync with native gc and remove all attributes without .ownerElement.
-  gc(key) {
-    this[key] = this[key]?.filter(ref => ref.deref()?.ownerElement);
-    return this[key]?.length || 0;
-  }
-}
-
 class AttributeRegistry extends DefinitionRegistry {
 
   #unknownEvents = new WeakArrayDict();
@@ -190,7 +179,7 @@ class AttributeRegistry extends DefinitionRegistry {
       Definition ?
         this.#upgradeAttribute(at, Definition) :        //upgrade to a defined CustomAttribute
         this.#unknownEvents.push(at.type, at);          //or register as unknown
-      at.global && this.#globals.push(at.eventType, at);//and then register globals
+      at.global && this.#globals.push(at.type, at);     //and then register globals
     }
   }
 
@@ -273,7 +262,7 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
     //todo I think that we should build the path here too.. Now, we are asking for the path from the
     for (let el = target; el; el = el.parentElement || !slotMode && el.parentNode?.host) {
       for (let at of el.attributes)
-        if (!at.global && at.eventType === type)
+        if (at.type === type)
           globalTarget = target, yield at;
       if (el.assignedSlot)
         yield* bubbleAttr(el.assignedSlot, type, true);
@@ -311,7 +300,7 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
       //   as we don't have any "justBeforeGC" callback, that will be very difficult.
       //   todo so, here we might want to add a check that if the !attr.ownerElement.isConnected, the _global: listener attr will be removed?? That will break all gestures.. They will be stuck in the wrong state when elements are removed and then added again during execution.
       globalTarget = null;
-      for (let attr of customAttributes.globalListeners(event.type))
+      for (let attr of customAttributes.globalListeners("_" + event.type))
         EventLoop.#runReactions(event, attr, attr.defaultAction);
 
       for (let at of bubbleAttr(rootTarget, event.type))
@@ -403,10 +392,17 @@ function deprecated() {
   EventTarget.prototype.addEventListener = deprecated.bind("EventTarget.addEventListener");
   EventTarget.prototype.removeEventListener = deprecated.bind("EventTarget.removeEventListener");
 
-  class NativeBubblingEvent extends CustomAttr {
+  class NativeAttr extends CustomAttr {
+    //todo restrict e.preventDefault() to the "prevent" reaction only
+    get passive() {
+      return !(this.chain.indexOf("prevent") || this.chain.indexOf("e.prevent-default"));
+    }
+  }
+
+  class NativeBubblingEvent extends NativeAttr {
     upgrade() {
       this._listener = NativeBubblingEvent.listener.bind(this);
-      addEventListener.call(this.ownerElement, this.eventType, this._listener, {passive: this.passive});
+      addEventListener.call(this.ownerElement, this.type, this._listener, {passive: this.passive});
     }
 
     static listener(e) {
@@ -417,11 +413,11 @@ function deprecated() {
     }
 
     destructor() {
-      removeEventListener.call(this.ownerElement, this.eventType, this._listener);
+      removeEventListener.call(this.ownerElement, this.type, this._listener);
     }
   }
 
-  class NativeWindowEvent extends CustomAttr {
+  class NativeWindowEvent extends NativeAttr {
     listener(e) {
       e.stopImmediatePropagation();
       eventLoop.dispatch(e);
@@ -429,6 +425,10 @@ function deprecated() {
 
     get nativeTarget() {
       return window;
+    }
+
+    get eventType(){
+      return this.type.substring(1);
     }
 
     upgrade() {
@@ -454,6 +454,10 @@ function deprecated() {
   }
 
   class NativeDCLEvent extends NativeDocumentEvent {
+    get type() {
+      return "_DOMContentLoaded";
+    }
+
     get eventType() {
       return "DOMContentLoaded";
     }
@@ -471,7 +475,6 @@ function deprecated() {
   }
 
   function isDomEvent(type) {
-    type.startsWith("fast") && (type = type.substring(4));
     return `on${type}` in HTMLElement.prototype || /^touch(start|move|end|cancel)$/.exec(type);
   }
 
