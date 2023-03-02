@@ -30,19 +30,19 @@ class CustomAttr extends Attr {
 
 //todo this is a ReactionChain object.
   get chain() {
-    const value = this.name.split(":").slice(1);
+    const value = this.name.split(":");
     Object.defineProperty(this, "chain", {value, writable: false, configurable: true});
     return value;
   }
 
   get defaultAction() {
-    const value = this.chain?.indexOf("") + 1 || 0;
+    const value = this.chain.slice(1).indexOf("") + 1 || 0;
     Object.defineProperty(this, "defaultAction", {value, writable: false, configurable: true});
     return value;
   }
 
   get reactions() {
-    const value = this.chain.map(reaction => customReactions.getDefinition(reaction));
+    const value = this.chain.slice(1).map(reaction => customReactions.getDefinition(reaction));
     if (value.indexOf(undefined) >= 0)
       return undefined;
     Object.defineProperty(this, "reactions", {value, writable: false, configurable: true});
@@ -55,8 +55,8 @@ class CustomAttr extends Attr {
 
   errorString(i) {  //todo this.ownerElement can void when the error is printed..
     const chain = this.chain.slice(0);
-    chain[i] = `==>${chain[i]}<==`;
-    return `<${this.ownerElement?.tagName.toLowerCase()} ${this.name.split(":")[0]}:${chain.join(":")}>`;
+    chain[i+1] = `==>${chain[i+1]}<==`;
+    return `<${this.ownerElement?.tagName.toLowerCase()} ${chain.join(":")}>`;
   }
 
   set value(value) {

@@ -11,7 +11,7 @@ class GestureAttr extends CustomAttr {
   //3. there can only be one instance of a GestureAttr on the same element.
   //4. The .stateMachine() must return an object with an empty string default state.
   upgrade() {
-    if (this.chain.length)
+    if (this.chain.length>1)
       throw new SyntaxError(`GestureAttr ${this.type} cannot contain reactions: ${this.name}`);
     if (this.global)
       throw new SyntaxError(`GestureAttr ${this.name} cannot be _global.`);
