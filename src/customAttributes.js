@@ -1,19 +1,11 @@
 //todo replace CustomAttr with a monkeyPatch on Attr? will be more efficient.
 class CustomAttr extends Attr {
   get type() {
-    return this.chainChain[0][0] || "_" + this.chainChain[0][1];
-  }
-
-  get global() {
-    return this.chainChain[0][0] === "";
+    return this.chain[0].split(/(?<=.)_/)[0];
   }
 
   get suffix() {
-    return this.chainChain[0].slice(this.global ? 2 : 1);
-  }
-
-  get chainChain() {
-    return this.chain.map(s => s.split("_"));
+    return this.chain[0].split(/(?<=.)_/).slice(1);
   }
 
 //todo this is a ReactionChain object.
@@ -177,9 +169,9 @@ class AttributeRegistry extends DefinitionRegistry {
       Object.setPrototypeOf(at, CustomAttr.prototype);
       const Definition = this.getDefinition(at.type);
       Definition ?
-        this.#upgradeAttribute(at, Definition) :        //upgrade to a defined CustomAttribute
-        this.#unknownEvents.push(at.type, at);          //or register as unknown
-      at.global && this.#globals.push(at.type, at);     //and then register globals
+        this.#upgradeAttribute(at, Definition) :             //upgrade to a defined CustomAttribute
+        this.#unknownEvents.push(at.type, at);               //or register as unknown
+      at.name[0] === "_" && this.#globals.push(at.type, at); //and then register globals
     }
   }
 
@@ -427,7 +419,7 @@ function deprecated() {
       return window;
     }
 
-    get eventType(){
+    get eventType() {
       return this.type.substring(1);
     }
 

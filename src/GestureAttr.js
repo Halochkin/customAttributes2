@@ -13,7 +13,7 @@ class GestureAttr extends CustomAttr {
   upgrade() {
     if (this.chain.length>1)
       throw new SyntaxError(`GestureAttr ${this.type} cannot contain reactions: ${this.name}`);
-    if (this.global)
+    if (this.name[0] === "_")
       throw new SyntaxError(`GestureAttr ${this.name} cannot be _global.`);
     for (let at of this.ownerElement.attributes)
       if (at !== this && at.type === this.type)
