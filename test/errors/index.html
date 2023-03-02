@@ -11,7 +11,8 @@
 
 <test-html test="customReactions_define.html">
   <script expected>[
-    "The Reaction type: \"co\" is already defined."
+    "\"co\" is already defined.",
+    "\"NotAFunction\" must be a Function."
   ]</script>
 </test-html>
 <test-html test="upgradeChangeDestructor.html">
@@ -44,8 +45,8 @@
 
 <test-html test="customAttributes_define.html">
   <script expected>[
-    "The customAttribute \"hello\" is already defined.",
-    "\"NotExtendCustomAttr\" must extend \"CustomAttr\"."
+    "\"hello\" is already defined.",
+    "\"NotExtendCustomAttr\" must be a CustomAttr."
   ]</script>
 </test-html>
 

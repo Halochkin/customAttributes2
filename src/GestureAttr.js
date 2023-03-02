@@ -11,7 +11,7 @@ class GestureAttr extends CustomAttr {
   //3. there can only be one instance of a GestureAttr on the same element.
   //4. The .stateMachine() must return an object with an empty string default state.
   upgrade() {
-    if (this.chain.length)
+    if (this.chain.length>1)
       throw new SyntaxError(`GestureAttr ${this.type} cannot contain reactions: ${this.name}`);
     if (this.global)
       throw new SyntaxError(`GestureAttr ${this.name} cannot be _global.`);
@@ -19,7 +19,7 @@ class GestureAttr extends CustomAttr {
       if (at !== this && at.type === this.type)
         throw new SyntaxError(`Cannot add the same GestureAttr ${this.type} to the same element twice: ${this.name}`);
 
-    this._transitions = this.constructor.stateMachine(this.type, this.suffix);
+    this._transitions = this.constructor.stateMachine(this.type, ...this.suffix);
     if (!this._transitions[""])    //todo this error should come at define time, not upgrade time
       throw new SyntaxError(`${this.constructor.name}.stateMachine(..) must return an object with a default, empty-string state.`);
     for (let state in this._transitions)
@@ -37,7 +37,7 @@ class GestureAttr extends CustomAttr {
     if (oldValue.length > 1)
       oldValue.shift();
     oldValue.unshift(state);
-    return this.ownerElement.setAttribute(this.name, oldValue.join(" "));
+    return this.value = oldValue.join(" ");
   }
 
   getState() {

@@ -144,7 +144,7 @@
 
 
     m: function monadish(e, _, prop, ...nestedReaction) {
-      const reaction = customReactions.getReaction(nestedReaction.join("_"));
+      const reaction = customReactions.getDefinition(nestedReaction.join("_"));
       const value = reaction.run(this, e);
       if (e instanceof Array && !prop)
         e.push(value);

@@ -28,20 +28,21 @@ class CustomAttr extends Attr {
     return this.name.match(/_?([^:]+)/)[1].split("_").slice(1);
   }
 
+//todo this is a ReactionChain object.
   get chain() {
-    const value = this.name.split(":").slice(1);
+    const value = this.name.split(":");
     Object.defineProperty(this, "chain", {value, writable: false, configurable: true});
     return value;
   }
 
   get defaultAction() {
-    const value = this.chain?.indexOf("") + 1 || 0;
+    const value = this.chain.slice(1).indexOf("") + 1 || 0;
     Object.defineProperty(this, "defaultAction", {value, writable: false, configurable: true});
     return value;
   }
 
   get reactions() {
-    const value = this.chain.map(reaction => customReactions.getReaction(reaction));
+    const value = this.chain.slice(1).map(reaction => customReactions.getDefinition(reaction));
     if (value.indexOf(undefined) >= 0)
       return undefined;
     Object.defineProperty(this, "reactions", {value, writable: false, configurable: true});
@@ -54,8 +55,8 @@ class CustomAttr extends Attr {
 
   errorString(i) {  //todo this.ownerElement can void when the error is printed..
     const chain = this.chain.slice(0);
-    chain[i] = `==>${chain[i]}<==`;
-    return `<${this.ownerElement?.tagName.toLowerCase()} ${this.name.split(":")[0]}:${chain.join(":")}>`;
+    chain[i+1] = `==>${chain[i+1]}<==`;
+    return `<${this.ownerElement?.tagName.toLowerCase()} ${chain.join(":")}>`;
   }
 
   set value(value) {
@@ -83,29 +84,20 @@ class Reaction {
     [this.prefix, ...this.suffix] = parts;
   }
 
-  //todo if the reaction Function returns a Reaction object, then the Reaction will replace itself with that new Reaction, and run again. All later runs of that reaction will not need to run the first function.
   run(at, e) {
-    let res;
-    while ((res = this.Function.call(at, e, this.prefix, ...this.suffix)) instanceof Reaction)
-      Object.assign(this, res);
-    return res;
+    return this.Function.call(at, e, this.prefix, ...this.suffix);
   }
 }
 
-class ReactionRegistry {
-
+class DefinitionRegistry {
   #register = {};
+  #rules = [];
+  #cache = {"": ""};
 
-  define(type, Func) {
-    if (!(Func instanceof Function))
-      throw new SyntaxError("reactions must be Functions.");
-    const funcString = Func.toString();
-    if (funcString.indexOf("=>") > 0 && funcString.indexOf("this") > 0)
-      console.warn(`ALERT!! arrow function using 'this' in reaction defintion: ${type}. Should this be a named/anonymous function?
-${funcString}`);
-    if (type in this.#register)
-      throw `The Reaction type: "${type}" is already defined.`;
-    this.#register[type] = Func;
+  define(prefix, Definition) {
+    if (this.#register[prefix])
+      throw `"${prefix}" is already defined.`;
+    this.#register[prefix] = Definition;
   }
 
   defineAll(defs) {
@@ -113,22 +105,48 @@ ${funcString}`);
       this.define(type, Function);
   }
 
+  defineRule(Function) {
+    this.#rules.push(Function);
+    //todo here we need to try all the existing unknown attributes/reactions against this new rule.
+  }
+
+  tryRules(reaction) {
+    for (let Function of this.#rules)                       //try to create a Reaction using Rule
+      if (Function = Function(reaction)) //todo here we could do an instanceof Reaction/Function.
+        return Function;
+  }
+
+  getDefinition(type) {
+    return this.#cache[type] ??= this.create(type);
+  }
+
+  create(type) {
+    return this.#register[type] ??= this.tryRules(type);
+  }
+}
+
+class ReactionRegistry extends DefinitionRegistry {
+
+  define(type, Definition) {
+    if (!(Definition instanceof Function))
+      throw `"${Definition}" must be a Function.`;
+    super.define(type, Definition);
+    const funcString = Definition.toString();
+    if (funcString.indexOf("=>") > 0 && funcString.indexOf("this") > 0)
+      console.warn(`ALERT!! arrow function using 'this' in reaction defintion: ${type}. Should this be a named/anonymous function?
+${funcString}`);
+  }
+
   static toCamelCase(strWithDash) { //todo move this somewhere else..
     return strWithDash.replace(/-([a-z])/g, g => g[1].toUpperCase());
   }
 
-  #cache = {"": ""}; //todo maybe we want to use the empty string attribute for the dotExpressions?
-
-  getReaction(reaction) {
-    return this.#cache[reaction] ??= this.#create(reaction);
-  }
-
-  #create(reaction) {
+  create(reaction) {
     const parts = reaction.split("_");
-    //todo should we add a dotReaction regex matcher here, so that we could .define(/\./, dotReaction)?
-    //todo would match parts[0]?
-    if (this.#register[parts[0]])
-      return new Reaction(parts, this.#register[parts[0]]);
+    const Func = super.create(parts[0]);
+    if (Func)
+      return new Reaction(parts, Func);
+    return this.tryRules(reaction);
   }
 }
 
@@ -151,17 +169,15 @@ class WeakArrayDict {
   }
 }
 
-class AttributeRegistry {
+class AttributeRegistry extends DefinitionRegistry {
 
   #unknownEvents = new WeakArrayDict();
   #globals = new WeakArrayDict();
 
   define(prefix, Definition) {
     if (!(Definition.prototype instanceof CustomAttr))
-      throw `"${Definition.name}" must extend "CustomAttr".`;
-    if (this.getDefinition(prefix))
-      throw `The customAttribute "${prefix}" is already defined.`;
-    this[prefix] = Definition;
+      throw `"${Definition.name}" must be a CustomAttr.`;
+    super.define(prefix, Definition);
     for (let at of this.#unknownEvents.values(prefix))
       this.#upgradeAttribute(at, Definition);
     delete this.#unknownEvents[prefix];
@@ -178,17 +194,8 @@ class AttributeRegistry {
     }
   }
 
-  getDefinition(type) {
-    return this[type];
-  }
-
   globalListeners(type) {
     return this.#globals.values(type);
-  }
-
-  //todo if elements with global a customAttr is removed in JS but not yet GCed, this will still run
-  globalEmpty(type) {
-    return !this.#globals.gc(type);
   }
 
   #upgradeAttribute(at, Definition) {
@@ -245,26 +252,33 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
     }
   });
 
-  const eventToTarget = new WeakMap();
   Object.defineProperty(Event.prototype, "target", {
     get: function () {
-      return eventToTarget.get(this);
+      return globalTarget;
     }
   });
-  const _event_to_Document_to_Target = new WeakMap();
-
-  function getTargetForEvent(event, target, root = target.getRootNode()) {
-    const map = _event_to_Document_to_Target.get(event);
-    if (!map) {
-      _event_to_Document_to_Target.set(event, new Map([[root, target]]));
-      return target;
+  //todo not sure that we should use path at all actually. If we have dynamic path, then path cannot be safely queried in advance or in the past.
+  Object.defineProperty(Event.prototype, "path", {
+    get: function () {
+      const path = [];
+      for (let el = this.target; el instanceof Element; el = el.parentElement)
+        path.push(el)
+      return path;
     }
-    let prevTarget = map.get(root);
-    !prevTarget && map.set(root, prevTarget = target);
-    return prevTarget;
-  }
+  });
 
-  //todo path is not supported
+  let globalTarget;
+
+  function* bubbleAttr(target, type, slotMode) {
+    //todo I think that we should build the path here too.. Now, we are asking for the path from the
+    for (let el = target; el; el = el.parentElement || !slotMode && el.parentNode?.host) {
+      for (let at of el.attributes)
+        if (!at.global && at.eventType === type)
+          globalTarget = target, yield at;
+      if (el.assignedSlot)
+        yield* bubbleAttr(el.assignedSlot, type, true);
+    }
+  }
 
   class EventLoop {
     #eventLoop = [];
@@ -272,7 +286,7 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
     dispatch(event, target) {
       if (!(event instanceof Event))
         throw new SyntaxError("First argument of eventLoop.dispatch(event, target?) must be an Event.");
-      if (!(target === undefined || target === null || target instanceof Element || target instanceof Attr))
+      if (!(target === undefined || target === null || target instanceof Element || target instanceof Attr))  //a bug in the ElementObserver.js causes "instanceof HTMLElement" to fail.
         throw new SyntaxError("Second argument of eventLoop.dispatch(event, target?) must be either undefined, an Element, or an Attr.");
       if (event.type[0] === "_")
         throw new SyntaxError(`eventLoop.dispatch(..) doesn't accept events beginning with "_": ${event.type}.`);
@@ -282,56 +296,54 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
       while (this.#eventLoop.length) {
         const {target, event} = this.#eventLoop[0];
         if (target instanceof Attr)
-          EventLoop.#runReactions(target.reactions, event, target, undefined);
-        else /*if (!target || target instanceof Element)*/   //a bug in the ElementObserver.js causes "instanceof HTMLElement" to fail.
+          EventLoop.#runReactions(event, target, undefined);
+        else /*if (!target || target instanceof Element)*/
           EventLoop.bubble(target, event);
         //todo if (target?.isConnected === false) then bubble without default action?? I think that we need the global listeners to run for disconnected targets, as this will make them able to trigger _error for example. I also think that attributes on disconnected ownerElements should still catch the _global events. Don't see why not.
         this.#eventLoop.shift();
       }
     }
 
-    static bubble(rootTarget, event, target = rootTarget) {
+    static bubble(rootTarget, event) {
 
+      //todo bug
+      //3. we need to check if the attr should be garbage collected.
+      //   as we don't have any "justBeforeGC" callback, that will be very difficult.
+      //   todo so, here we might want to add a check that if the !attr.ownerElement.isConnected, the _global: listener attr will be removed?? That will break all gestures.. They will be stuck in the wrong state when elements are removed and then added again during execution.
+      globalTarget = null;
       for (let attr of customAttributes.globalListeners(event.type))
-        EventLoop.#runReactions(attr.reactions, event, attr, false);
+        EventLoop.#runReactions(event, attr, attr.defaultAction);
 
-      for (let prev, t = rootTarget; t; prev = t, t = t.assignedSlot || t.parentElement || t.parentNode?.host) {
-        t !== prev?.parentElement && eventToTarget.set(event, target = getTargetForEvent(event, t));
-        for (let attr of t.attributes) {
-          //todo check that the attr.chain is something. If it is nothing, then skip the attribute.
-          if (attr.eventType === event.type && attr.name[0] !== "_") {
-            if (attr.defaultAction && (event.defaultAction || event.defaultPrevented))
-              continue;
-            const res = EventLoop.#runReactions(attr.reactions, event, attr, !!attr.defaultAction);
-            if (res !== undefined && attr.defaultAction)
-              event.defaultAction = {attr, res, target};
-          }
-        }
-      }
+      for (let at of bubbleAttr(rootTarget, event.type))
+        EventLoop.#runReactions(event, at, at.defaultAction);
 
       if (event.defaultAction && !event.defaultPrevented) {
-        const {attr, res, target} = event.defaultAction;
-        eventToTarget.set(event, target);
-        EventLoop.#runReactions(attr.reactions, res, attr, false, attr.defaultAction);
+        const {at, res, target} = event.defaultAction;
+        globalTarget = target;
+        EventLoop.#runReactions(res, at, 0, at.defaultAction);
       }
     }
 
-    static #runReactions(reactions = [], event, at, syncOnly = false, start = 0) {
-      for (let i = start; i < reactions.length; i++) {
+    static #runReactions(event, at, defaultAction = 0, start = 0) {
+      if (defaultAction && (event.defaultAction || event.defaultPrevented))
+        return;
+      const reactions = at.reactions || [];
+      if (!reactions?.length > 0)
+        return;
+      let res = event;
+      for (let i = start; i < (defaultAction || reactions.length); i++) {
         const reaction = reactions[i];
-        if (!reaction && syncOnly)
-          return event;
-        else if (!reaction)
+        if (!reaction)
           continue;
         try {
-          event = reaction.run(at, event);
-          if (event === undefined)
+          res = reaction.run(at, res);
+          if (res === undefined)
             return;
-          if (event instanceof Promise) {
-            if (syncOnly)
+          if (res instanceof Promise) {
+            if (defaultAction)
               throw new SyntaxError("You cannot use reactions that return Promises before default actions.");
-            event
-              .then(event => this.#runReactions(reactions, event, at, false, i + 1))
+            res
+              .then(event => this.#runReactions(event, at, false, i + 1))
               //todo we can pass in the input to the reaction to the error event here too
               .catch(error => eventLoop.dispatch(new ReactionErrorEvent(error, at, i, true), at.ownerElement));
             return;
@@ -340,7 +352,8 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
           return eventLoop.dispatch(new ReactionErrorEvent(error, at, i, start !== 0), at.ownerElement);
         }
       }
-      return event;
+      if (res !== undefined && defaultAction)
+        event.defaultAction = {at, res, target: event.target};
     }
   }
 
@@ -408,8 +421,6 @@ function deprecated() {
     }
   }
 
-  const register = new FinalizationRegistry(held => held.destructor());
-
   class NativeWindowEvent extends CustomAttr {
     listener(e) {
       e.stopImmediatePropagation();
@@ -421,7 +432,6 @@ function deprecated() {
     }
 
     upgrade() {
-      register.register(this, "", this);
       this._listener = this.listener.bind(this);
       addEventListener.call(this.nativeTarget, this.eventType, this._listener, {
         passive: this.passive,
@@ -430,7 +440,6 @@ function deprecated() {
     }
 
     destructor() {
-      register.unregister(this);
       removeEventListener.call(this.nativeTarget, this.eventType, this._listener, {
         passive: this.passive,
         capture: true
@@ -461,29 +470,20 @@ function deprecated() {
     }
   }
 
-  class NativeEventsAttributeRegistry extends AttributeRegistry {
-    #cache = {};
-
-    findNativeDefinition(type) {
-      const global = type[0] === "_";
-      global === true && (type = type.substring(1));
-      if (type.startsWith("fast")) type = type.substring(4);
-      if (`on${type}` in HTMLElement.prototype || "touchstart" === type || "touchmove" === type || "touchend" === type || "touchcancel" === type)
-        return global ? ShadowRootEvent : NativeBubblingEvent;
-      const res = type === "domcontentloaded" ? NativeDCLEvent :
-        `on${type}` in window ? NativeWindowEvent :
-          `on${type}` in Document.prototype ? NativeDocumentEvent : null;
-      if (res && !global)
-        throw new SyntaxError("_global must have _");
-      return res;
-    }
-
-    getDefinition(type) {
-      return super.getDefinition(type) || (this.#cache[type] ??= this.findNativeDefinition(type));
-    }
+  function isDomEvent(type) {
+    type.startsWith("fast") && (type = type.substring(4));
+    return `on${type}` in HTMLElement.prototype || /^touch(start|move|end|cancel)$/.exec(type);
   }
 
-  window.customAttributes = new NativeEventsAttributeRegistry();
+  customAttributes.defineRule(t => isDomEvent(t) && NativeBubblingEvent);
+  customAttributes.defineRule(t => t[0] === "_" && isDomEvent(t.substring(1)) && ShadowRootEvent);
+  customAttributes.defineRule(t => t === "_domcontentloaded" && NativeDCLEvent);
+  customAttributes.defineRule(t => t[0] === "_" && `on${t.substring(1)}` in window && NativeWindowEvent);
+  customAttributes.defineRule(t => t[0] === "_" && `on${t.substring(1)}` in Document.prototype && NativeDocumentEvent);
+  customAttributes.defineRule(t => {
+    if (`on${t}` in window || `on${t}` in Document.prototype || t === "domcontentloaded")
+      throw new SyntaxError("_global must have _");
+  });
 })(addEventListener, removeEventListener);
 
 observeElementCreation(els => els.forEach(el => window.customAttributes.upgrade(...el.attributes)));
