@@ -37,7 +37,7 @@ class GestureAttr extends CustomAttr {
     if (oldValue.length > 1)
       oldValue.shift();
     oldValue.unshift(state);
-    return this.ownerElement.setAttribute(this.name, oldValue.join(" "));
+    return this.value = oldValue.join(" ");
   }
 
   getState() {
