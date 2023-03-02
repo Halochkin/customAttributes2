@@ -47,7 +47,6 @@
   typeToEvent["problems"] = [
     "domcontentloaded",//weirdo. No window.onDOMContentLoaded & case sensitive. annoying.
     "touchstart", "touchmove", "touchend", "touchcancel",  //no element.ontouchstart = handler. Annoying.
-    "fastwheel", "fastmousewheel", "fasttouchstart", "fasttouchmove"  //special event names for passive events.
   ];
 
   for (let type in typeToEvent) {

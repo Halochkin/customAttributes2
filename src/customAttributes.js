@@ -7,11 +7,11 @@ class CustomAttr extends Attr {
     const parts = unit.split("_");
     let type = parts[0];
     const suffix = parts.slice(1);
-    let eventType = type, passive = false;
-    if (type.startsWith("fast"))
-      eventType = eventType.substring(4), passive = true;
+    let eventType = type;
+    if (type.startsWith("fast"))                      //todo move the passive out of the parse?
+      eventType = eventType.substring(4);
     global && (type = "_" + type);
-    return {global, parts, type, suffix, eventType, passive};
+    return {global, parts, type, suffix, eventType};
   }
 
   get type() {
@@ -24,10 +24,6 @@ class CustomAttr extends Attr {
 
   get global() {
     return this.chainChain[0].global;
-  }
-
-  get passive() {
-    return this.chainChain[0].passive;
   }
 
   get suffix() {
@@ -414,7 +410,14 @@ function deprecated() {
   EventTarget.prototype.addEventListener = deprecated.bind("EventTarget.addEventListener");
   EventTarget.prototype.removeEventListener = deprecated.bind("EventTarget.removeEventListener");
 
-  class NativeBubblingEvent extends CustomAttr {
+  class NativeAttr extends CustomAttr {
+    //todo restrict e.preventDefault() to the "prevent" reaction only
+    get passive() {
+      return !(this.chain.indexOf("prevent") || this.chain.indexOf("e.prevent-default"));
+    }
+  }
+
+  class NativeBubblingEvent extends NativeAttr {
     upgrade() {
       this._listener = NativeBubblingEvent.listener.bind(this);
       addEventListener.call(this.ownerElement, this.eventType, this._listener, {passive: this.passive});
@@ -432,7 +435,7 @@ function deprecated() {
     }
   }
 
-  class NativeWindowEvent extends CustomAttr {
+  class NativeWindowEvent extends NativeAttr {
     listener(e) {
       e.stopImmediatePropagation();
       eventLoop.dispatch(e);
@@ -482,7 +485,6 @@ function deprecated() {
   }
 
   function isDomEvent(type) {
-    type.startsWith("fast") && (type = type.substring(4));
     return `on${type}` in HTMLElement.prototype || /^touch(start|move|end|cancel)$/.exec(type);
   }
 
