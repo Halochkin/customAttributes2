@@ -42,7 +42,7 @@ class CustomAttr extends Attr {
   }
 
   get reactions() {
-    const value = this.chain.map(reaction => customReactions.getReaction(reaction));
+    const value = this.chain.map(reaction => customReactions.getDefinition(reaction));
     if (value.indexOf(undefined) >= 0)
       return undefined;
     Object.defineProperty(this, "reactions", {value, writable: false, configurable: true});
@@ -131,11 +131,11 @@ ${funcString}`);
 
   #cache = {"": ""}; //todo maybe we want to use the empty string attribute for the dotExpressions?
 
-  getReaction(reaction) {
-    return this.#cache[reaction] ??= this.#create(reaction);
+  getDefinition(type) {
+    return this.#cache[type] ??= this.create(type);
   }
 
-  #create(reaction) {
+  create(reaction) {
     const parts = reaction.split("_");
     if (this.#register[parts[0]])
       return new Reaction(parts, this.#register[parts[0]]);
@@ -191,6 +191,10 @@ class AttributeRegistry extends DefinitionRegistry{
   }
 
   getDefinition(type) {
+    return this.create(type);
+  }
+
+  create(type) {
     return this.#register[type] ??= this.tryRules(type);
   }
 
