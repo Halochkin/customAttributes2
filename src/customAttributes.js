@@ -289,22 +289,22 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
       }
     }
 
-    static #runReactions(event, at, breakOnDefault, start = 0, target = event.target) {
+    static #runReactions(event, at, doDA, start = 0, target = event.target, allowAsync = doDA && at.defaultAction) {
       for (let i = start; i < at.reactions.length && event !== undefined; i++) {
         const reaction = at.reactions[i];
         if (reaction !== ReactionRegistry.DefaultAction)
-          event = this.#runReaction(event, reaction, at, i, start > 0);
-        else if (breakOnDefault)
+          event = this.#runReaction(event, reaction, at, i, start > 0, allowAsync);
+        else if (doDA)
           return event.defaultAction = {at, res: event, target};
       }
     }
 
-    static #runReaction(input, reaction, at, i, async) {
+    static #runReaction(input, reaction, at, i, async, allowAsync) {
       try {
         const output = reaction.call(at, input, ...at.chainBits[i + 1]);
         if (!(output instanceof Promise))
           return output;
-        if (at.defaultAction)
+        if (allowAsync)
           throw new SyntaxError("You cannot use reactions that return Promises before default actions.");
         output
           .then(input => this.#runReactions(input, at, false, i + 1))
