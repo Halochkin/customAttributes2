@@ -104,12 +104,16 @@ class DefinitionRegistry {
 
 class ReactionRegistry extends DefinitionRegistry {
 
+  static isArrowFunctionRegex(Function) {
+    return /^(async\s+|)(\(|[^([]+=)/.test(Function.toString());
+  }
+
   define(type, Definition) {
     if (!(Definition instanceof Function))
       throw `"${Definition}" must be a Function.`;
     super.define(type, Definition);
     const funcString = Definition.toString();
-    if (funcString.indexOf("=>") > 0 && funcString.indexOf("this") > 0)
+    if (ReactionRegistry.isArrowFunctionRegex(Definition) && funcString.match("this"))
       console.warn(`ALERT!! arrow function using 'this' in reaction defintion: ${type}. Should this be a named/anonymous function?
 ${funcString}`);
   }
