@@ -92,9 +92,9 @@ class DefinitionRegistry {
   }
 
   tryRules(type) {
-    for (let Function of this.#rules)                       //try to create a CustomAttr/Reaction using Rule
-      if (Function = Function(type)) //todo here we could do an instanceof CustomAttr/Function.
-        return Function;
+    for (let Def of this.#rules)
+      if ((Def = Def(type)) instanceof Function)        //todo Def.prototype instanceof CustomAttr
+        return Def;
   }
 
   getDefinition(type) {
@@ -114,7 +114,7 @@ class ReactionRegistry extends DefinitionRegistry {
 
   static arrowFunctionWithThis(Definition) {
     let txt = Definition.toString();
-    if(!/^(async\s+|)(\(|[^([]+=)/.test(txt))
+    if (!/^(async\s+|)(\(|[^([]+=)/.test(txt))
       return false;
     txt = txt.replace(/\/\*[\s\S]*?\*\/|([^\\:]|^)\/\/.*$/gm, ''); //remove comments
     //ATT!! `${"`"}this` only works when "" is removed before ``
@@ -127,8 +127,7 @@ class ReactionRegistry extends DefinitionRegistry {
     return strWithDash.replace(/-([a-z])/g, g => g[1].toUpperCase());
   }
 
-  static DefaultAction = function () {
-  };
+  static DefaultAction = function () {};
 }
 
 window.customReactions = new ReactionRegistry();
