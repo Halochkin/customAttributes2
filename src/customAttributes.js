@@ -289,13 +289,13 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
       }
     }
 
-    static #runReactions(event, at, doDA, start = 0, target = event.target, allowAsync = doDA && at.defaultAction) {
-      for (let i = start; i < at.reactions.length && event !== undefined; i++) {
+    static #runReactions(event, at, doDA, start = 0, allowAsync = doDA && at.defaultAction) {
+      for (let i = start, res = event; i < at.reactions.length && res !== undefined; i++) {
         const reaction = at.reactions[i];
         if (reaction !== ReactionRegistry.DefaultAction)
-          event = this.#runReaction(event, reaction, at, i, start > 0, allowAsync);
+          res = this.#runReaction(res, reaction, at, i, start > 0, allowAsync);
         else if (doDA)
-          return event.defaultAction = {at, res: event, target};
+          return event.defaultAction = {at, res, target: event.target};
       }
     }
 
@@ -307,7 +307,7 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
         if (allowAsync)
           throw new SyntaxError("You cannot use reactions that return Promises before default actions.");
         output
-          .then(input => this.#runReactions(input, at, false, i + 1))
+          .then(input => input !== undefined && this.#runReactions(input, at, false, i + 1))
           .catch(error => eventLoop.dispatch(new ReactionErrorEvent(error, at, i, true, input), at.ownerElement));
       } catch (error) {
         eventLoop.dispatch(new ReactionErrorEvent(error, at, i, async, input), at.ownerElement);
