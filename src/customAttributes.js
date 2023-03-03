@@ -127,7 +127,8 @@ class ReactionRegistry extends DefinitionRegistry {
     return strWithDash.replace(/-([a-z])/g, g => g[1].toUpperCase());
   }
 
-  static DefaultAction = function () {};
+  static DefaultAction = function () {
+  };
 }
 
 window.customReactions = new ReactionRegistry();
@@ -240,14 +241,15 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
 
   let globalTarget;
 
-  function* bubbleAttr(target, type, slotMode) {
-    //todo I think that we should build the path here too.. Now, we are asking for the path from the
+  function* bubbleAttr(target, event, slotMode) {
     for (let el = target; el; el = el.parentElement || !slotMode && el.parentNode?.host) {
       for (let at of el.attributes)
-        if (at.type === type)
-          globalTarget = target, yield at;
+        if (at.type === event.type)
+          if (at.reactions?.length)
+            if (!at.defaultAction || !event.defaultAction && !event.defaultPrevented)
+              globalTarget = target, yield at;      //todo build path here too?
       if (el.assignedSlot)
-        yield* bubbleAttr(el.assignedSlot, type, true);
+        yield* bubbleAttr(el.assignedSlot, event, true);
     }
   }
 
@@ -286,9 +288,8 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
         if (!(at.defaultAction && (event.defaultAction || event.defaultPrevented)) && at.reactions?.length)
           EventLoop.#runReactions(event, at, true);
 
-      for (let at of bubbleAttr(rootTarget, event.type))
-        if (!(at.defaultAction && (event.defaultAction || event.defaultPrevented)) && at.reactions?.length)
-          EventLoop.#runReactions(event, at, true);
+      for (let at of bubbleAttr(rootTarget, event))
+        EventLoop.#runReactions(event, at, true);
 
       if (event.defaultAction && !event.defaultPrevented) {
         const {at, res, target} = event.defaultAction;
