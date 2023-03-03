@@ -175,11 +175,12 @@ window.customAttributes = new AttributeRegistry();
 
 class ReactionErrorEvent extends ErrorEvent {
 
-  constructor(error, at, i, async) {
+  constructor(error, at, i, async, input) {
     super("error", {error, cancelable: true});
     this.pos = i;
     this.at = at;
     this.async = async;
+    this.inputCausingTheReactionToFail = input;
   }
 
   get attribute() {
@@ -274,12 +275,12 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
       //   todo so, here we might want to add a check that if the !attr.ownerElement.isConnected, the _global: listener attr will be removed?? That will break all gestures.. They will be stuck in the wrong state when elements are removed and then added again during execution.
       globalTarget = null;
       for (let at of customAttributes.globalListeners("_" + event.type))
-        if (!(at.defaultAction && (event.defaultAction || event.defaultPrevented) || !at.reactions?.length))
-          EventLoop.#runReactions(event, at, at.defaultAction);
+        if (!(at.defaultAction && (event.defaultAction || event.defaultPrevented)) && at.reactions?.length)
+          EventLoop.#runReactions(event, at, !!at.defaultAction);//todo there is no need for varying iteration here?
 
       for (let at of bubbleAttr(rootTarget, event.type))
-        if (!(at.defaultAction && (event.defaultAction || event.defaultPrevented) || !at.reactions?.length))
-          EventLoop.#runReactions(event, at, at.defaultAction);
+        if (!(at.defaultAction && (event.defaultAction || event.defaultPrevented)) && at.reactions?.length)
+          EventLoop.#runReactions(event, at, !!at.defaultAction);
 
       if (event.defaultAction && !event.defaultPrevented) {
         const {at, res, target} = event.defaultAction;
@@ -306,18 +307,18 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
       }
     }
 
-    static #runReaction(res, reaction, at, i, defaultAction, start) {
+    static #runReaction(input, reaction, at, i, defaultAction, start) {
       try {
-        const out = reaction.call(at, res, ...at.chainBits[i + 1]);
-        if (!(out instanceof Promise))
-          return out;
+        const output = reaction.call(at, input, ...at.chainBits[i + 1]);
+        if (!(output instanceof Promise))
+          return output;
         if (defaultAction)
           throw new SyntaxError("You cannot use reactions that return Promises before default actions.");
-        out.then(event => this.#runReactions(event, at, false, i + 1))
-          //todo we can pass in the input to the reaction to the error event here too
-          .catch(error => eventLoop.dispatch(new ReactionErrorEvent(error, at, i, true), at.ownerElement));
-      } catch (error) {    //todo we can pass in the input to the error event here.
-        eventLoop.dispatch(new ReactionErrorEvent(error, at, i, start !== 0), at.ownerElement);
+        output
+          .then(input => this.#runReactions(input, at, false, i + 1))
+          .catch(error => eventLoop.dispatch(new ReactionErrorEvent(error, at, i, true, input), at.ownerElement));
+      } catch (error) {
+        eventLoop.dispatch(new ReactionErrorEvent(error, at, i, start !== 0, input), at.ownerElement);
       }
     }
   }
