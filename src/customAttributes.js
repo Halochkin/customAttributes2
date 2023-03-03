@@ -104,18 +104,23 @@ class DefinitionRegistry {
 
 class ReactionRegistry extends DefinitionRegistry {
 
-  static isArrowFunctionRegex(Function) {
-    return /^(async\s+|)(\(|[^([]+=)/.test(Function.toString());
-  }
-
   define(type, Definition) {
     if (!(Definition instanceof Function))
       throw `"${Definition}" must be a Function.`;
+    if (ReactionRegistry.arrowFunctionWithThis(Definition))
+      throw ` ==> ${type} <==  Arrow function using 'this' keyword. Convert it into non-array function please.`;
     super.define(type, Definition);
-    const funcString = Definition.toString();
-    if (ReactionRegistry.isArrowFunctionRegex(Definition) && funcString.match("this"))
-      console.warn(`ALERT!! arrow function using 'this' in reaction defintion: ${type}. Should this be a named/anonymous function?
-${funcString}`);
+  }
+
+  static arrowFunctionWithThis(Definition) {
+    let txt = Definition.toString();
+    if(!/^(async\s+|)(\(|[^([]+=)/.test(txt))
+      return false;
+    txt = txt.replace(/\/\*[\s\S]*?\*\/|([^\\:]|^)\/\/.*$/gm, ''); //remove comments
+    //ATT!! `bob${"`"}` works because "" is removed before ``
+    txt = txt.replace(/(["'])(?:(?=(\\?))\2.)*?\1/g, '');   //remove "'-strings
+    txt = txt.replace(/(`)(?:(?=(\\?))\2.)*?\1/g, '');   //remove `strings
+    return /\bthis\b/.test(txt); //the word this
   }
 
   static toCamelCase(strWithDash) { //todo move this somewhere else..

@@ -1,0 +1,29 @@
+<script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.2/observeElementCreation.js"></script>
+<script src="../../src/customAttributes.js"></script>
+
+<script type="module">
+  const arrow = (e) => this;
+
+  const arrow2 = _bob => {
+    console.log("one", [this.one]);
+  }
+
+  const arrow3 = ({_bob = this.something}) => console.log("one", _bob);
+
+  const asyncArrow = async (e = this) => {
+    console.log("one", "this");
+  }
+
+  for (let [name, Definition] of Object.entries({
+    arrow,
+    arrow2,
+    arrow3,
+    asyncArrow,
+  })) {
+    try {
+      customReactions.define(name, Definition);
+    } catch (err) {
+      console.log(err);
+    }
+  }
+</script>

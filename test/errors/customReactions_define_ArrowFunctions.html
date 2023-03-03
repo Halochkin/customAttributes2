@@ -99,8 +99,6 @@
     asyncArrow3,
     boundFunction
   })) {
-    if(name === "arrow3")
-      debugger
     customReactions.define(name, Definition);
     const reaction = customReactions.getDefinition(`${name}_1`);
     console.log(name, isArrowFunction(Definition), isArrowFunctionRegex(Definition), isBoundFunction(Definition));
