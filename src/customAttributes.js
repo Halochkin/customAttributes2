@@ -117,7 +117,7 @@ class ReactionRegistry extends DefinitionRegistry {
     if(!/^(async\s+|)(\(|[^([]+=)/.test(txt))
       return false;
     txt = txt.replace(/\/\*[\s\S]*?\*\/|([^\\:]|^)\/\/.*$/gm, ''); //remove comments
-    //ATT!! `bob${"`"}` works because "" is removed before ``
+    //ATT!! `${"`"}this` only works when "" is removed before ``
     txt = txt.replace(/(["'])(?:(?=(\\?))\2.)*?\1/g, '');   //remove "'-strings
     txt = txt.replace(/(`)(?:(?=(\\?))\2.)*?\1/g, '');   //remove `strings
     return /\bthis\b/.test(txt); //the word this
