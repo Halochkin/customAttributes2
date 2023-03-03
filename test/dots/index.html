@@ -5,7 +5,10 @@
   <script expected>[false]</script>
 </test-html>
 <test-html test="assignment.html">
-  <script expected>["bobsy"]</script>
+  <script expected>[
+    "bobsy",
+    ["<div _click:==>._e_undefined-prop<==:._console.log_bug2>",{}]
+  ]</script>
 </test-html>
 <test-html test="dotGetComputedStyle.html">
   <script expected>["110px"]</script>

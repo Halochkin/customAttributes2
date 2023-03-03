@@ -1,6 +1,9 @@
 <script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.2/observeElementCreation.js"></script>
 <script src="../../src/customAttributes.js"></script>
 <script src="../../src/dotReaction.js"></script>
+<script>
+  console.error = (...args)=>console.log(...args);
+</script>
 
 <div _click:._window.test_bobsy:._console.log_window.test></div>
 <div _click:._e_undefined-prop:._console.log_bug2></div>
