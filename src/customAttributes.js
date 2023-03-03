@@ -285,16 +285,16 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
       if (event.defaultAction && !event.defaultPrevented) {
         const {at, res, target} = event.defaultAction;
         globalTarget = target;
-        EventLoop.#runReactions(res, at, 0, at.defaultAction);
+        EventLoop.#runReactions(res, at, false, at.defaultAction);
       }
     }
 
-    static #runReactions(event, at, defaultAction = 0, start = 0) {
+    static #runReactions(event, at, breakOnDefault, start = 0) {
       let res = event;
       for (let i = start; i < at.reactions.length; i++) {
         const reaction = at.reactions[i];
         if (reaction === ReactionRegistry.DefaultAction) {
-          if (defaultAction) {
+          if (breakOnDefault) {
             if (res !== undefined)
               event.defaultAction = {at, res, target: event.target};
             break;
