@@ -289,21 +289,13 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
       }
     }
 
-    static #runReactions(event, at, breakOnDefault, start = 0) {
-      let res = event;
-      for (let i = start; i < at.reactions.length; i++) {
+    static #runReactions(event, at, breakOnDefault, start = 0, target = event.target) {
+      for (let i = start; i < at.reactions.length && event !== undefined; i++) {
         const reaction = at.reactions[i];
-        if (reaction === ReactionRegistry.DefaultAction) {
-          if (breakOnDefault) {
-            if (res !== undefined)
-              event.defaultAction = {at, res, target: event.target};
-            break;
-          }
-          continue;
-        }
-        res = this.#runReaction(res, reaction, at, i, start > 0);
-        if (res === undefined)
-          return;
+        if (reaction !== ReactionRegistry.DefaultAction)
+          event = this.#runReaction(event, reaction, at, i, start > 0);
+        else if (breakOnDefault)
+          return event.defaultAction = {at, res: event, target};
       }
     }
 
