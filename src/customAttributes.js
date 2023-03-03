@@ -70,6 +70,29 @@ class WeakArrayDict {
   }
 }
 
+class WeakAttributeArray {
+  #ref = [];
+
+  push(value) {
+    this.#ref.push(new WeakRef(value));
+  }
+
+  //this has cost, we make two new temporary arrays. We do this to:
+  //1. ensure no mutation on the list while the same list is being iterated,
+  //2. provide only the derefenced attribute,
+  //3. provide efficient enough manual GC
+  dereffedCopy() {
+    const res = [], missing = [];
+    for (let i = 0; i < this.#ref.length; i++) {
+      const ref = this.#ref[i].deref();
+      ref?.ownerElement ? res.push(ref) : missing.push(i);
+    }
+    for (let num of missing)
+      this.#ref.splice(num, 1)[0]?.destructor();
+    res;
+  }
+}
+
 class DefinitionRegistry {
   #register = {};
   #rules = [];
