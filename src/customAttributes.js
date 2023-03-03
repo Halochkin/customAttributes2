@@ -276,11 +276,11 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
       globalTarget = null;
       for (let at of customAttributes.globalListeners("_" + event.type))
         if (!(at.defaultAction && (event.defaultAction || event.defaultPrevented)) && at.reactions?.length)
-          EventLoop.#runReactions(event, at, !!at.defaultAction);//todo there is no need for varying iteration here?
+          EventLoop.#runReactions(event, at, true);
 
       for (let at of bubbleAttr(rootTarget, event.type))
         if (!(at.defaultAction && (event.defaultAction || event.defaultPrevented)) && at.reactions?.length)
-          EventLoop.#runReactions(event, at, !!at.defaultAction);
+          EventLoop.#runReactions(event, at, true);
 
       if (event.defaultAction && !event.defaultPrevented) {
         const {at, res, target} = event.defaultAction;
@@ -301,24 +301,24 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
           }
           continue;
         }
-        res = this.#runReaction(res, reaction, at, i, defaultAction, start);
+        res = this.#runReaction(res, reaction, at, i, start > 0);
         if (res === undefined)
           return;
       }
     }
 
-    static #runReaction(input, reaction, at, i, defaultAction, start) {
+    static #runReaction(input, reaction, at, i, async) {
       try {
         const output = reaction.call(at, input, ...at.chainBits[i + 1]);
         if (!(output instanceof Promise))
           return output;
-        if (defaultAction)
+        if (at.defaultAction)
           throw new SyntaxError("You cannot use reactions that return Promises before default actions.");
         output
           .then(input => this.#runReactions(input, at, false, i + 1))
           .catch(error => eventLoop.dispatch(new ReactionErrorEvent(error, at, i, true, input), at.ownerElement));
       } catch (error) {
-        eventLoop.dispatch(new ReactionErrorEvent(error, at, i, start !== 0, input), at.ownerElement);
+        eventLoop.dispatch(new ReactionErrorEvent(error, at, i, async, input), at.ownerElement);
       }
     }
   }
