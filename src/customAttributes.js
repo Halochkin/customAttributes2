@@ -300,22 +300,24 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
           }
           continue;
         }
-        try {
-          res = reaction.call(at, res, ...at.chainBits[i + 1]);
-          if (res === undefined)
-            return;
-          if (res instanceof Promise) {
-            if (defaultAction)
-              throw new SyntaxError("You cannot use reactions that return Promises before default actions.");
-            res
-              .then(event => this.#runReactions(event, at, false, i + 1))
-              //todo we can pass in the input to the reaction to the error event here too
-              .catch(error => eventLoop.dispatch(new ReactionErrorEvent(error, at, i, true), at.ownerElement));
-            return;
-          }
-        } catch (error) {    //todo we can pass in the input to the error event here.
-          return eventLoop.dispatch(new ReactionErrorEvent(error, at, i, start !== 0), at.ownerElement);
-        }
+        res = this.#runReaction(res, reaction, at, i, defaultAction, start);
+        if (res === undefined)
+          return;
+      }
+    }
+
+    static #runReaction(res, reaction, at, i, defaultAction, start) {
+      try {
+        const out = reaction.call(at, res, ...at.chainBits[i + 1]);
+        if (!(out instanceof Promise))
+          return out;
+        if (defaultAction)
+          throw new SyntaxError("You cannot use reactions that return Promises before default actions.");
+        out.then(event => this.#runReactions(event, at, false, i + 1))
+          //todo we can pass in the input to the reaction to the error event here too
+          .catch(error => eventLoop.dispatch(new ReactionErrorEvent(error, at, i, true), at.ownerElement));
+      } catch (error) {    //todo we can pass in the input to the error event here.
+        eventLoop.dispatch(new ReactionErrorEvent(error, at, i, start !== 0), at.ownerElement);
       }
     }
   }
