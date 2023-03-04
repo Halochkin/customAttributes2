@@ -12,6 +12,8 @@
 
 <script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.2/observeElementCreation.js"></script>
 <script src="../../src/customAttributes.js"></script>
+<script src="../../src/attributes.js"></script>
+<script src="../../src/reactions.js"></script>
 <script src="../../src/GestureAttr.js"></script>
 
 <div id="elem" draggable dragging-start:listen1 dragging-move:listen2 dragging-stop:listen3 fling:listen4>This text
@@ -80,14 +82,13 @@
   customAttributes.define("draggable", class DragAttribute extends GestureAttr {
     static stateMachine() {
       return {
-        init: [["mousedown:onmousedown_start", "start"]],
+        "": [["mousedown:onmousedown_start", "start"]],
         start: [
           ["mousemove:onmousemove_move_cancel"],
-          ["mouseup:onmouseup_stop_fling", "stop"],
-          ["mouseout:onmouseup_stop", "stop"],
-          ["mousedown:onmousedown_stop", "stop"]
+          ["mouseup:onmouseup_stop_fling", ""],
+          ["mouseout:onmouseup_stop", ""],
+          ["mousedown:onmousedown_stop", ""]
         ],
-        stop: [["mousedown:onmousedown_start", "start"]]
       };
     }
   });
