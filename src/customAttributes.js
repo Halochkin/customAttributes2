@@ -443,7 +443,6 @@ function deprecated() {
     }
 
     upgrade() {
-
       this._args = [this.nativeTarget, this.eventType, this.listener.bind({}), {passive: this.passive, capture: true}];
       NativeWindowEvent.#GC.register(this, this._args);
       addEventListener.call(...this._args);
