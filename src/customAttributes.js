@@ -63,13 +63,14 @@ class WeakArrayDict {
       yield* this[key].map(ref => ref.deref());
   }
 
-  //sync with native gc and remove all attributes without .ownerElement.
+  //sync with native gc and remove all attributes
   gc(key) {
-    this[key] = this[key]?.filter(ref => ref.deref()?.ownerElement);
+    this[key] = this[key]?.filter(ref => ref.deref());
     return this[key]?.length || 0;
   }
 }
 
+//todo use this instead of the upper WeakMap.
 class WeakAttributeArray {
   #ref = [];
 
@@ -85,7 +86,7 @@ class WeakAttributeArray {
     const res = [], missing = [];
     for (let i = 0; i < this.#ref.length; i++) {
       const ref = this.#ref[i].deref();
-      ref?.ownerElement ? res.push(ref) : missing.push(i);
+      ref ? res.push(ref) : missing.push(i);
     }
     for (let num of missing)
       this.#ref.splice(num, 1)[0]?.destructor();
@@ -306,6 +307,12 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
       //3. we need to check if the attr should be garbage collected.
       //   as we don't have any "justBeforeGC" callback, that will be very difficult.
       //   todo so, here we might want to add a check that if the !attr.ownerElement.isConnected, the _global: listener attr will be removed?? That will break all gestures.. They will be stuck in the wrong state when elements are removed and then added again during execution.
+
+      //todo
+      if (rootTarget instanceof Element && !rootTarget.isConnected)
+        throw new Error(`Global listeners for events occuring off-dom needs to be filtered..
+        Then we need to check that the other elements are connected to the same root. This is a heavy operation..
+        `);
       globalTarget = null;
       for (let at of customAttributes.globalListeners("_" + event.type))
         if (!(at.defaultAction && (event.defaultAction || event.defaultPrevented)) && at.reactions?.length)
@@ -419,6 +426,9 @@ function deprecated() {
   }
 
   class NativeWindowEvent extends NativeAttr {
+
+    static #GC = new FinalizationRegistry(args => removeEventListener.call(...args));
+
     listener(e) {
       e.stopImmediatePropagation();
       eventLoop.dispatch(e);
@@ -433,18 +443,14 @@ function deprecated() {
     }
 
     upgrade() {
-      this._listener = this.listener.bind(this);
-      addEventListener.call(this.nativeTarget, this.eventType, this._listener, {
-        passive: this.passive,
-        capture: true
-      });
+
+      this._args = [this.nativeTarget, this.eventType, this.listener.bind({}), {passive: this.passive, capture: true}];
+      NativeWindowEvent.#GC.register(this, this._args);
+      addEventListener.call(...this._args);
     }
 
     destructor() {
-      removeEventListener.call(this.nativeTarget, this.eventType, this._listener, {
-        passive: this.passive,
-        capture: true
-      });
+      removeEventListener.call(...this._args);
     }
   }
 
