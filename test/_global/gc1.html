@@ -1,0 +1,48 @@
+<script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.2/observeElementCreation.js"></script>
+<script src="../../src/customAttributes.js"></script>
+<script src="../../src/core.js"></script>
+
+<div _click:log></div>
+
+<script>
+  //setting up the callback from GC. It will log that it is removed, and the <body>.click()
+  const gc = new FinalizationRegistry(held => {
+    console.log(1 + held);
+    document.body.click();
+    console.log(2 + held);
+  });
+  gc.register(document.querySelector("div"), "GC div");
+
+  let i = 1;
+  customReactions.define("log", _ => console.log(i++));
+
+  //simple test that the global listeners still work when the element is off-dom.
+  (function () {
+    const div = document.querySelector("div");
+    document.body.click();    //1
+    div.remove();             //   div off-dom, but not garbageCollectable
+                              //   (the "div" variable keeps it alive inside the current closure)
+    document.body.click();    //2
+  })();                       //   div off-dom AND garbageCollectable
+
+  document.body.click();      //3
+                              //   waiting for GC..., and then
+                              //1GC div
+                              //2GC div
+                              //   if you see "4", between 1GC and 2GC, then the global listener has not been cleaned up.
+</script>
+
+<pre>
+  The global listener problem:
+
+  1. the global listener is a closure (with object references) that are added to another dom element than the attribute itself.
+  2. when the attribute is deleted, that means that there still is an event listener object associated with the dom object that was not deleted. The listener is still there.
+  3. when anAttribute is removed directly, via el.removeAttribute(anAttribute)), then this is not a problem. Then the anAttribute.destructor() is triggered, and this can do the cleanup of the event listener object associated with the other dom object.
+  4. but, when an attribute is deleted indirectly, such as when the owner element is deleted directly (or indirectly by simply being overwritten in the dom via .innerHTML), then there will be no call to the custom attribute .destructor(), and hence no cleanup. This is to big to tackle.
+  5. so, instead, a FinalizationRegister call on anAttribute is added that calls the removeEventListener on the other object.
+
+  Are global off-dom reactions "leaking side effects" or "ensuring that state for off-dom elements are kept up to date"?
+
+  take your pick. A safer strategy would be to ensure that elements cannot be added as existing js objects. only as html text. THEN, we could kill all off-dom reactions as the state of off-dom elements will never come back to hurt us. THEN, we should also stop all raf/timeout/interval for off-dom attributes.
+
+</pre>

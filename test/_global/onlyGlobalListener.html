@@ -9,6 +9,4 @@
   customReactions.define("log", e => console.log(e.type));
   document.body.click();
   document.body.dispatchEvent(new Event("auxclick"));
-  //these are natively dispatched events from script, and they don't work.
-  //we need to override/monkeypatch the native event dispatch to make this work.
 </script>
