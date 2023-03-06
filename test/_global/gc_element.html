@@ -1,0 +1,34 @@
+<script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.2/observeElementCreation.js"></script>
+<script src="../../src/customAttributes.js"></script>
+<script src="../../src/core.js"></script>
+
+<div _click:log></div>
+
+<script>
+  //setting up the callback from GC. It will log that it is removed, and the <body>.click()
+  const gc = new FinalizationRegistry(held => {
+    console.log(1 + held);
+    document.body.click();
+    console.log(2 + held);
+  });
+  gc.register(document.querySelector("div"), "GC div");
+
+  let i = 1;
+  customReactions.define("log", _ => console.log(i++));
+
+  (function () {
+    const div = document.querySelector("div");
+    document.body.click();        //1
+    div.remove();                 //   div off-dom, but not garbageCollectable
+                                  //   (the "div" variable keeps it alive inside the current closure)
+    document.body.click();        //*nothing*
+    document.body.prepend(div);
+    document.body.click();        //2
+    div.remove();
+  })();                           //   div off-dom AND garbageCollectable
+  document.body.click();      //*nothing*
+                              //   waiting for GC..., and then
+                              //1GC div
+                              //2GC div
+                              //   if you see "4", between 1GC and 2GC, then the global listener has not been cleaned up.
+</script>

@@ -28,7 +28,7 @@ class GestureAttr extends CustomAttr {
   }
 
   changeCallback(oldState) {
-    if (oldState)
+    if (oldState !== undefined)
       for (let attr of this._transitions[oldState])
         this.ownerElement.removeAttribute(attr);
     for (let attr of this._transitions[this.value])
