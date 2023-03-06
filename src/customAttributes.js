@@ -65,7 +65,7 @@ class WeakArrayDict {
 
   //sync with native gc and remove all attributes
   gc(key) {
-    this[key] = this[key]?.filter(ref => ref.deref());
+    this[key] = this[key]?.filter(ref => ref.deref()?.ownerElement);
     return this[key]?.length || 0;
   }
 }
@@ -86,7 +86,7 @@ class WeakAttributeArray {
     const res = [], missing = [];
     for (let i = 0; i < this.#ref.length; i++) {
       const ref = this.#ref[i].deref();
-      ref ? res.push(ref) : missing.push(i);
+      ref?.ownerElement ? res.push(ref) : missing.push(i);
     }
     for (let num of missing)
       this.#ref.splice(num, 1)[0]?.destructor();
@@ -296,7 +296,6 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
           EventLoop.#runReactions(event, target);
         else /*if (!target || target instanceof Element)*/
           EventLoop.bubble(target, event);
-        //todo if (target?.isConnected === false) then bubble without default action?? I think that we need the global listeners to run for disconnected targets, as this will make them able to trigger _error for example. I also think that attributes on disconnected ownerElements should still catch the _global events. Don't see why not.
         this.#eventLoop.shift();
       }
     }
@@ -304,6 +303,7 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
     static bubble(rootTarget, event) {
 
       //todo bug
+      //todo if (target?.isConnected === false) then bubble without default action?? I think that we need the global listeners to run for disconnected targets, as this will make them able to trigger _error for example. I also think that attributes on disconnected ownerElements should still catch the _global events.
       //3. we need to check if the attr should be garbage collected.
       //   as we don't have any "justBeforeGC" callback, that will be very difficult.
       //   todo so, here we might want to add a check that if the !attr.ownerElement.isConnected, the _global: listener attr will be removed?? That will break all gestures.. They will be stuck in the wrong state when elements are removed and then added again during execution.
@@ -315,8 +315,9 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
         `);
       globalTarget = null;
       for (let at of customAttributes.globalListeners("_" + event.type))
-        if (!(at.defaultAction && (event.defaultAction || event.defaultPrevented)) && at.reactions?.length)
-          EventLoop.#runReactions(event, at, true);
+        if (at.ownerElement.isConnected)
+          if (!(at.defaultAction && (event.defaultAction || event.defaultPrevented)) && at.reactions?.length)
+            EventLoop.#runReactions(event, at, true);
 
       for (let at of bubbleAttr(rootTarget, event))
         EventLoop.#runReactions(event, at, true);

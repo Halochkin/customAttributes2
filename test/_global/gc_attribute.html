@@ -2,7 +2,8 @@
 <script src="../../src/customAttributes.js"></script>
 <script src="../../src/core.js"></script>
 
-<div _click:log></div>
+<div id="one" _click:log_one></div>
+<div id="two" _click:log_two></div>
 
 <script>
   //setting up the callback from GC. It will log that it is removed, and the <body>.click()
@@ -14,22 +15,16 @@
   gc.register(document.querySelector("div"), "GC div");
 
   let i = 1;
-  customReactions.define("log", _ => console.log(i++));
+  customReactions.define("log", (e, _, name) => console.log(name, i++));
 
-  //simple test that the global listeners still work when the element is off-dom.
   (function () {
-    const div = document.querySelector("div");
-    document.body.click();    //1
-    div.remove();             //   div off-dom, but not garbageCollectable
-                              //   (the "div" variable keeps it alive inside the current closure)
-    document.body.click();    //2
-  })();                       //   div off-dom AND garbageCollectable
-
-  document.body.click();      //3
-                              //   waiting for GC..., and then
-                              //1GC div
-                              //2GC div
-                              //   if you see "4", between 1GC and 2GC, then the global listener has not been cleaned up.
+    document.body.click();                   //one 1, two 2,
+    document.getElementById("one").removeAttribute("_click:log_one");//should remove one global listener
+    document.body.click();                   //two 3
+    document.getElementById("two").remove();                         //should remove two global listener
+    document.body.click();                   //*nothing*
+    console.log("end");
+  })();
 </script>
 
 <pre>
