@@ -39,7 +39,17 @@
     ["arrow2", true, true, false],
     ["arrow3", true, true, false],
     ["asyncArrow", true, true, false],
+    ["asyncArrow2", true, true, false],
+    ["asyncArrow3", true, true, false],
     ["boundFunction", false, false, true]
+  ]</script>
+</test-html>
+<test-html test="customReactions_define_ArrowFunctionsWithThis.html">
+  <script expected>[
+    " ==> arrow <==  Arrow function using 'this' keyword. Convert it into non-array function please.",
+    " ==> arrow2 <==  Arrow function using 'this' keyword. Convert it into non-array function please.",
+    " ==> arrow3 <==  Arrow function using 'this' keyword. Convert it into non-array function please.",
+    " ==> asyncArrow <==  Arrow function using 'this' keyword. Convert it into non-array function please."
   ]</script>
 </test-html>
 
@@ -195,4 +205,4 @@
   ]</script>
 </test-html>
 <!-- Note!! You must load the test-html component at the end -->
-<script src="https://cdn.jsdelivr.net/gh/orstavik/TestHTML@v1.0.3/TestHTML.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/orstavik/TestHTML@v1.1.1/TestHTML.js"></script>

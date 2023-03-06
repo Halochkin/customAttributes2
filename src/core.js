@@ -1,7 +1,7 @@
 //import:, ready:, timeout:, raf:
 (function () {
   function dispatchWhenReactionReady(attr, event, delay = 4, i = 0) {
-    attr.ready ?
+    attr.reactions ?
       eventLoop.dispatch(event, attr) :
       attr._timer = setTimeout(_ => dispatchWhenReactionReady(attr, event, delay, ++i), delay ** i);
   }
@@ -44,7 +44,7 @@
       let countDown = parseInt(this.suffix[1]) || Infinity;
       eventLoop.dispatch(new Event(this.type), this);
       this._interval = setInterval(_ => {
-        if (!this.ready)
+        if (!this.reactions)
           return;
         eventLoop.dispatch(new Event(this.type), this);
         //the countdown state is not reflected in the DOM. We could implement this by actually adding/removing the attribute with a new attribute. That would be ok.
@@ -65,7 +65,7 @@
     }
 
     _trigger(i, delay = 4) {
-      this.ready ?
+      this.reactions ?
         eventLoop.dispatch(new Event(this.type), this) :
         this._timer = setTimeout(_ => this._trigger(++i, delay), delay ** i);
     }
@@ -84,7 +84,7 @@
     trigger() {
       if (!this._count)
         this.destructor();
-      if (!this.ready)
+      if (!this.reactions)
         return;
       this._count--;
       eventLoop.dispatch(new Event(this.type), this);
@@ -145,7 +145,7 @@
 
     m: function monadish(e, _, prop, ...nestedReaction) {
       const reaction = customReactions.getDefinition(nestedReaction.join("_"));
-      const value = reaction.run(this, e);
+      const value = reaction.call(this, e, ...nestedReaction);
       if (e instanceof Array && !prop)
         e.push(value);
       else if (e instanceof Array && Number.isInteger(+prop))

@@ -5,7 +5,10 @@
   <script expected>[false]</script>
 </test-html>
 <test-html test="assignment.html">
-  <script expected>["bobsy"]</script>
+  <script expected>[
+    "bobsy",
+    ["<div _click:==>._e_undefined-prop<==:._console.log_bug2>",{}]
+  ]</script>
 </test-html>
 <test-html test="dotGetComputedStyle.html">
   <script expected>["110px"]</script>
@@ -25,4 +28,4 @@
 
 
 <!-- Note!! You must load the test-html component at the end -->
-<script src="https://cdn.jsdelivr.net/gh/orstavik/TestHTML@v1.0.3/TestHTML.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/orstavik/TestHTML@v1.1.1/TestHTML.js"></script>

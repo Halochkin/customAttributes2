@@ -19,23 +19,25 @@
   }
 
   const arrow = (e) => {
-    console.log("one");
+    console.log("one"); // this
   }
 
-  const arrow2 = _bob => {
-    console.log("one");
+  const arrow2 = _bob => /*this*/{
+    console.log("one"); /*
+     this
+     */
   }
 
-  const arrow3 = ({_bob = "=> {...omg"}) => console.log("one", _bob);
+  const arrow3 = ({_bob = "=> {...omg"}) => console.log("one", _bob, `${"`"} this `);
 
   const asyncArrow = async (e) => {
-    console.log("one");
+    console.log("one", `this`);
   }
 
   const asyncArrow2 = async _bob => {
-    console.log("one");
+    console.log("one", '  this "');
   }
-  const asyncArrow3 = async ({_bob = "=> {...omg"}) => console.log("one", _bob);
+  const asyncArrow3 = async ({_bob = "=> {...omg, this"}) => console.log("one", _bob);
 
   const boundFunction = (function () {
   }).bind({});
@@ -93,10 +95,12 @@
     arrow2,
     arrow3,
     asyncArrow,
+    asyncArrow2,
+    asyncArrow3,
     boundFunction
   })) {
     customReactions.define(name, Definition);
-    const {Function, prefix, suffix} = customReactions.getDefinition(`${name}_1`);
+    const reaction = customReactions.getDefinition(`${name}_1`);
     console.log(name, isArrowFunction(Definition), isArrowFunctionRegex(Definition), isBoundFunction(Definition));
   }
 </script>

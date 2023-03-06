@@ -1,25 +1,22 @@
 //todo replace CustomAttr with a monkeyPatch on Attr? will be more efficient.
 class CustomAttr extends Attr {
   get type() {
-    return this.chainChain[0][0] || "_" + this.chainChain[0][1];
-  }
-
-  get global() {
-    return this.chainChain[0][0] === "";
+    return this.chainBits[0][0];
   }
 
   get suffix() {
-    return this.chainChain[0].slice(this.global ? 2 : 1);
+    return this.chainBits[0].slice(1);
   }
 
-  get chainChain() {
-    return this.chain.map(s => s.split("_"));
-  }
-
-//todo this is a ReactionChain object.
   get chain() {
     const value = this.name.split(":");
     Object.defineProperty(this, "chain", {value, writable: false, configurable: true});
+    return value;
+  }
+
+  get chainBits() {
+    const value = this.chain.map(s => s.split(/(?<=.)_/));
+    Object.defineProperty(this, "chainBits", {value, writable: false, configurable: true});
     return value;
   }
 
@@ -36,16 +33,6 @@ class CustomAttr extends Attr {
       return undefined;
     Object.defineProperty(this, "reactions", {value, writable: false, configurable: true});
     return value;
-  }
-
-  get ready() {
-    return this.reactions !== undefined;
-  }
-
-  errorString(i) {  //todo this.ownerElement can void when the error is printed..
-    const chain = this.chain.slice(0);
-    chain[i + 1] = `==>${chain[i + 1]}<==`;
-    return `<${this.ownerElement?.tagName.toLowerCase()} ${chain.join(":")}>`;
   }
 
   set value(value) {
@@ -76,29 +63,41 @@ class WeakArrayDict {
       yield* this[key].map(ref => ref.deref());
   }
 
-  //sync with native gc and remove all attributes without .ownerElement.
+  //sync with native gc and remove all attributes
   gc(key) {
-    this[key] = this[key]?.filter(ref => ref.deref()?.ownerElement);
+    this[key] = this[key]?.filter(ref => ref.deref());
     return this[key]?.length || 0;
   }
 }
 
-class Reaction {
+//todo use this instead of the upper WeakMap.
+class WeakAttributeArray {
+  #ref = [];
 
-  constructor(parts, Function) {
-    this.Function = Function;
-    [this.prefix, ...this.suffix] = parts;
+  push(value) {
+    this.#ref.push(new WeakRef(value));
   }
 
-  run(at, e) {
-    return this.Function.call(at, e, this.prefix, ...this.suffix);
+  //this has cost, we make two new temporary arrays. We do this to:
+  //1. ensure no mutation on the list while the same list is being iterated,
+  //2. provide only the derefenced attribute,
+  //3. provide efficient enough manual GC
+  dereffedCopy() {
+    const res = [], missing = [];
+    for (let i = 0; i < this.#ref.length; i++) {
+      const ref = this.#ref[i].deref();
+      ref ? res.push(ref) : missing.push(i);
+    }
+    for (let num of missing)
+      this.#ref.splice(num, 1)[0]?.destructor();
+    res;
   }
 }
 
 class DefinitionRegistry {
   #register = {};
   #rules = [];
-  #cache = {"": ""};
+  #cache = {"": ReactionRegistry.DefaultAction};
 
   define(prefix, Definition) {
     if (this.#register[prefix])
@@ -116,18 +115,14 @@ class DefinitionRegistry {
     //todo here we need to try all the existing unknown attributes/reactions against this new rule.
   }
 
-  tryRules(reaction) {
-    for (let Function of this.#rules)                       //try to create a Reaction using Rule
-      if (Function = Function(reaction)) //todo here we could do an instanceof Reaction/Function.
-        return Function;
+  tryRules(type) {
+    for (let Def of this.#rules)
+      if ((Def = Def(type)) instanceof Function)        //todo Def.prototype instanceof CustomAttr
+        return Def;
   }
 
   getDefinition(type) {
-    return this.#cache[type] ??= this.create(type);
-  }
-
-  create(type) {
-    return this.#register[type] ??= this.tryRules(type);
+    return this.#cache[type] ??= this.#register[type.split(/(?<=.)_/)[0]] ?? this.tryRules(type);
   }
 }
 
@@ -136,24 +131,28 @@ class ReactionRegistry extends DefinitionRegistry {
   define(type, Definition) {
     if (!(Definition instanceof Function))
       throw `"${Definition}" must be a Function.`;
+    if (ReactionRegistry.arrowFunctionWithThis(Definition))
+      throw ` ==> ${type} <==  Arrow function using 'this' keyword. Convert it into non-array function please.`;
     super.define(type, Definition);
-    const funcString = Definition.toString();
-    if (funcString.indexOf("=>") > 0 && funcString.indexOf("this") > 0)
-      console.warn(`ALERT!! arrow function using 'this' in reaction defintion: ${type}. Should this be a named/anonymous function?
-${funcString}`);
+  }
+
+  static arrowFunctionWithThis(Definition) {
+    let txt = Definition.toString();
+    if (!/^(async\s+|)(\(|[^([]+=)/.test(txt))
+      return false;
+    txt = txt.replace(/\/\*[\s\S]*?\*\/|([^\\:]|^)\/\/.*$/gm, ''); //remove comments
+    //ATT!! `${"`"}this` only works when "" is removed before ``
+    txt = txt.replace(/(["'])(?:(?=(\\?))\2.)*?\1/g, '');   //remove "'-strings
+    txt = txt.replace(/(`)(?:(?=(\\?))\2.)*?\1/g, '');   //remove `strings
+    return /\bthis\b/.test(txt); //the word this
   }
 
   static toCamelCase(strWithDash) { //todo move this somewhere else..
     return strWithDash.replace(/-([a-z])/g, g => g[1].toUpperCase());
   }
 
-  create(reaction) {
-    const parts = reaction.split("_");
-    const Func = super.create(parts[0]);
-    if (Func)
-      return new Reaction(parts, Func);
-    return this.tryRules(reaction);
-  }
+  static DefaultAction = function () {
+  };
 }
 
 window.customReactions = new ReactionRegistry();
@@ -174,12 +173,13 @@ class AttributeRegistry extends DefinitionRegistry {
 
   upgrade(...attrs) {
     for (let at of attrs) {
+      //todo getDefinitions for both attribute and reactions
       Object.setPrototypeOf(at, CustomAttr.prototype);
       const Definition = this.getDefinition(at.type);
       Definition ?
-        this.#upgradeAttribute(at, Definition) :        //upgrade to a defined CustomAttribute
-        this.#unknownEvents.push(at.type, at);          //or register as unknown
-      at.global && this.#globals.push(at.type, at);     //and then register globals
+        this.#upgradeAttribute(at, Definition) :             //upgrade to a defined CustomAttribute
+        this.#unknownEvents.push(at.type, at);               //or register as unknown
+      at.name[0] === "_" && this.#globals.push(at.type, at); //and then register globals
     }
   }
 
@@ -208,11 +208,12 @@ window.customAttributes = new AttributeRegistry();
 
 class ReactionErrorEvent extends ErrorEvent {
 
-  constructor(error, at, i, async) {
+  constructor(error, at, i, async, input) {
     super("error", {error, cancelable: true});
     this.pos = i;
     this.at = at;
     this.async = async;
+    this.inputCausingTheReactionToFail = input;
   }
 
   get attribute() {
@@ -220,7 +221,13 @@ class ReactionErrorEvent extends ErrorEvent {
   }
 
   get message() {
-    return (this.async ? "ASYNC" : "") + this.at.errorString(this.pos);
+    return (this.async ? "ASYNC" : "") + ReactionErrorEvent.errorString(this.at, this.pos);
+  }
+
+  static errorString(at, i) {  //todo this.ownerElement can void when the error is printed..
+    const chain = at.chain.slice(0);
+    chain[i + 1] = `==>${chain[i + 1]}<==`;
+    return `<${at.ownerElement?.tagName.toLowerCase()} ${chain.join(":")}>`;
   }
 }
 
@@ -258,14 +265,15 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
 
   let globalTarget;
 
-  function* bubbleAttr(target, type, slotMode) {
-    //todo I think that we should build the path here too.. Now, we are asking for the path from the
+  function* bubbleAttr(target, event, slotMode) {
     for (let el = target; el; el = el.parentElement || !slotMode && el.parentNode?.host) {
       for (let at of el.attributes)
-        if (at.type === type)
-          globalTarget = target, yield at;
+        if (at.type === event.type)
+          if (at.reactions?.length)
+            if (!at.defaultAction || !event.defaultAction && !event.defaultPrevented)
+              globalTarget = target, yield at;      //todo build path here too?
       if (el.assignedSlot)
-        yield* bubbleAttr(el.assignedSlot, type, true);
+        yield* bubbleAttr(el.assignedSlot, event, true);
     }
   }
 
@@ -285,7 +293,7 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
       while (this.#eventLoop.length) {
         const {target, event} = this.#eventLoop[0];
         if (target instanceof Attr)
-          EventLoop.#runReactions(event, target, undefined);
+          EventLoop.#runReactions(event, target);
         else /*if (!target || target instanceof Element)*/
           EventLoop.bubble(target, event);
         //todo if (target?.isConnected === false) then bubble without default action?? I think that we need the global listeners to run for disconnected targets, as this will make them able to trigger _error for example. I also think that attributes on disconnected ownerElements should still catch the _global events. Don't see why not.
@@ -299,50 +307,50 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
       //3. we need to check if the attr should be garbage collected.
       //   as we don't have any "justBeforeGC" callback, that will be very difficult.
       //   todo so, here we might want to add a check that if the !attr.ownerElement.isConnected, the _global: listener attr will be removed?? That will break all gestures.. They will be stuck in the wrong state when elements are removed and then added again during execution.
-      globalTarget = null;
-      for (let attr of customAttributes.globalListeners("_" + event.type))
-        EventLoop.#runReactions(event, attr, attr.defaultAction);
 
-      for (let at of bubbleAttr(rootTarget, event.type))
-        EventLoop.#runReactions(event, at, at.defaultAction);
+      //todo
+      if (rootTarget instanceof Element && !rootTarget.isConnected)
+        throw new Error(`Global listeners for events occuring off-dom needs to be filtered..
+        Then we need to check that the other elements are connected to the same root. This is a heavy operation..
+        `);
+      globalTarget = null;
+      for (let at of customAttributes.globalListeners("_" + event.type))
+        if (!(at.defaultAction && (event.defaultAction || event.defaultPrevented)) && at.reactions?.length)
+          EventLoop.#runReactions(event, at, true);
+
+      for (let at of bubbleAttr(rootTarget, event))
+        EventLoop.#runReactions(event, at, true);
 
       if (event.defaultAction && !event.defaultPrevented) {
         const {at, res, target} = event.defaultAction;
         globalTarget = target;
-        EventLoop.#runReactions(res, at, 0, at.defaultAction);
+        EventLoop.#runReactions(res, at, false, at.defaultAction);
       }
     }
 
-    static #runReactions(event, at, defaultAction = 0, start = 0) {
-      if (defaultAction && (event.defaultAction || event.defaultPrevented))
-        return;
-      const reactions = at.reactions || [];
-      if (!reactions?.length > 0)
-        return;
-      let res = event;
-      for (let i = start; i < (defaultAction || reactions.length); i++) {
-        const reaction = reactions[i];
-        if (!reaction)
-          continue;
-        try {
-          res = reaction.run(at, res);
-          if (res === undefined)
-            return;
-          if (res instanceof Promise) {
-            if (defaultAction)
-              throw new SyntaxError("You cannot use reactions that return Promises before default actions.");
-            res
-              .then(event => this.#runReactions(event, at, false, i + 1))
-              //todo we can pass in the input to the reaction to the error event here too
-              .catch(error => eventLoop.dispatch(new ReactionErrorEvent(error, at, i, true), at.ownerElement));
-            return;
-          }
-        } catch (error) {    //todo we can pass in the input to the error event here.
-          return eventLoop.dispatch(new ReactionErrorEvent(error, at, i, start !== 0), at.ownerElement);
-        }
+    static #runReactions(event, at, doDA, start = 0, allowAsync = doDA && at.defaultAction) {
+      for (let i = start, res = event; i < at.reactions.length && res !== undefined; i++) {
+        const reaction = at.reactions[i];
+        if (reaction !== ReactionRegistry.DefaultAction)
+          res = this.#runReaction(res, reaction, at, i, start > 0, allowAsync);
+        else if (doDA)
+          return event.defaultAction = {at, res, target: event.target};
       }
-      if (res !== undefined && defaultAction)
-        event.defaultAction = {at, res, target: event.target};
+    }
+
+    static #runReaction(input, reaction, at, i, async, allowAsync) {
+      try {
+        const output = reaction.call(at, input, ...at.chainBits[i + 1]);
+        if (!(output instanceof Promise))
+          return output;
+        if (allowAsync)
+          throw new SyntaxError("You cannot use reactions that return Promises before default actions.");
+        output
+          .then(input => input !== undefined && this.#runReactions(input, at, false, i + 1))
+          .catch(error => eventLoop.dispatch(new ReactionErrorEvent(error, at, i, true, input), at.ownerElement));
+      } catch (error) {
+        eventLoop.dispatch(new ReactionErrorEvent(error, at, i, async, input), at.ownerElement);
+      }
     }
   }
 
@@ -418,6 +426,9 @@ function deprecated() {
   }
 
   class NativeWindowEvent extends NativeAttr {
+
+    static #GC = new FinalizationRegistry(args => removeEventListener.call(...args));
+
     listener(e) {
       e.stopImmediatePropagation();
       eventLoop.dispatch(e);
@@ -427,23 +438,18 @@ function deprecated() {
       return window;
     }
 
-    get eventType(){
+    get eventType() {
       return this.type.substring(1);
     }
 
     upgrade() {
-      this._listener = this.listener.bind(this);
-      addEventListener.call(this.nativeTarget, this.eventType, this._listener, {
-        passive: this.passive,
-        capture: true
-      });
+      this._args = [this.nativeTarget, this.eventType, this.listener.bind({}), {passive: this.passive, capture: true}];
+      NativeWindowEvent.#GC.register(this, this._args);
+      addEventListener.call(...this._args);
     }
 
     destructor() {
-      removeEventListener.call(this.nativeTarget, this.eventType, this._listener, {
-        passive: this.passive,
-        capture: true
-      });
+      removeEventListener.call(...this._args);
     }
   }
 
