@@ -25,7 +25,7 @@
   }
 </style>
 
-<body swipe:swipe-longer-than_100:replace>
+<body swipe:swipe-longer-than_100:replace swipe:log>
 <div
     swipeable_100
     swipe:swipe-longer-than_200:left-right
@@ -117,4 +117,19 @@
     this.ownerElement.classList.add(e.direction); //
     return e;
   });
+  customReactions.define("log", function (e) {
+    console.log(e.direction, e.length);
+    return e;
+  });
+  (function () {
+    const div = document.querySelector("div");
+    setTimeout(_ => div.dispatchEvent(new MouseEvent("mousedown", {clientX: 0})), 50);
+    setTimeout(_ => document.body.dispatchEvent(new MouseEvent("mouseup", {bubbles: true, clientX: 350})), 300);
+  })();
+  setTimeout(function () {
+    const div = document.querySelector("div");
+    setTimeout(_ => div.dispatchEvent(new MouseEvent("mousedown", {clientX: 500})), 50);
+    setTimeout(_ => document.body.dispatchEvent(new MouseEvent("mouseup", {bubbles: true, clientX: 150})), 300);
+  }, 1000);
+
 </script>
