@@ -55,22 +55,15 @@ class CustomAttr extends Attr {
 
 class WeakArrayDict {
   push(key, value) {
-    (this[key] ??= []).push(new WeakRef(value));
+    (this[key] ??= new WeakAttributeArray()).push(value);
   }
 
   * values(key) {
-    if (this.gc(key))
-      yield* this[key].map(ref => ref.deref());
-  }
-
-  //sync with native gc and remove all attributes
-  gc(key) {
-    this[key] = this[key]?.filter(ref => ref.deref()?.ownerElement);
-    return this[key]?.length || 0;
+    if (this[key])
+      yield* this[key].derefCopy();
   }
 }
 
-//todo use this instead of the upper WeakMap.
 class WeakAttributeArray {
   #ref = [];
 
@@ -82,22 +75,22 @@ class WeakAttributeArray {
   //1. ensure no mutation on the list while the same list is being iterated,
   //2. provide only the derefenced attribute,
   //3. provide efficient enough manual GC
-  dereffedCopy() {
+  derefCopy() {
     const res = [], missing = [];
     for (let i = 0; i < this.#ref.length; i++) {
       const ref = this.#ref[i].deref();
       ref?.ownerElement ? res.push(ref) : missing.push(i);
     }
     for (let num of missing)
-      this.#ref.splice(num, 1)[0]?.destructor();
-    res;
+      this.#ref.splice(num, 1)[0].deref()?.destructor();
+    return res;
   }
 }
 
 class DefinitionRegistry {
   #register = {};
   #rules = [];
-  #cache = {"": ReactionRegistry.DefaultAction};
+  #cache = {};
 
   define(prefix, Definition) {
     if (this.#register[prefix])
@@ -112,7 +105,6 @@ class DefinitionRegistry {
 
   defineRule(Function) {
     this.#rules.push(Function);
-    //todo here we need to try all the existing unknown attributes/reactions against this new rule.
   }
 
   tryRules(type) {
@@ -127,6 +119,11 @@ class DefinitionRegistry {
 }
 
 class ReactionRegistry extends DefinitionRegistry {
+
+  constructor() {
+    super();
+    super.define("", ReactionRegistry.DefaultAction);
+  }
 
   define(type, Definition) {
     if (!(Definition instanceof Function))
@@ -169,6 +166,12 @@ class AttributeRegistry extends DefinitionRegistry {
     for (let at of this.#unknownEvents.values(prefix))
       this.#upgradeAttribute(at, Definition);
     delete this.#unknownEvents[prefix];
+  }
+
+  defineRule(Function) {
+    super.defineRule(Function);
+    //todo here we need to run all the this.#unknownEvents and try to upgrade it.
+    //todo problem is how to remove the attr from the WeakAttrArray once a new rule matches it.
   }
 
   upgrade(...attrs) {
