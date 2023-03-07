@@ -1,3 +1,4 @@
+//todo rename to g.., g., g.state. and more??  or g_, g., g-state_ etc? have only one rule??
 customReactions.defineRule(function (fullReaction) {                   //o..swipeable
   const type = fullReaction.match(/^o\.\.([a-zA-Z0-9]+)$/)?.[1];
   if (!type)
@@ -24,9 +25,8 @@ customReactions.defineRule(function (fullReaction) {                   //o.value
   };
 });
 
-customReactions.define("value", function (e, _, state) {            //todo this is changing the state..
-  this.value = state;
-  return state;
+customReactions.define("value", function (e, _, state) {  //todo rename?
+  return this.value = state;
 });
 
 class GestureAttr extends CustomAttr {
