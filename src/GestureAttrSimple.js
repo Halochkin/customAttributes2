@@ -1,34 +1,31 @@
-//todo the "o." reaction
-customReactions.defineRule(function (fullReaction) {
-  const match = fullReaction.match(/^o\.(\w+)\.(.+)/);
-  if (!match)
+customReactions.defineRule(function (fullReaction) {                   //o..swipeable
+  const type = fullReaction.match(/^o\.\.([a-zA-Z0-9]+)$/)?.[1];
+  if (!type)
     return;
-  const [_, type, reaction] = match;
-  const reactionImpl = customReactions.getDefinition(reaction);
-  if (reactionImpl)            //else undefined
-    return function (...args) {
-      let owner;
-      for (let at of this.ownerElement.attributes)
-        if (at.type === type) {
-          owner = at;
-          break;
-        }
-      if (!owner)
-        throw new Error(`${fullReaction}: can't find owner attribute: "${type}.`);
-      // delete this attribute together with the owner.
-      // const fullOwnerName = owner.name;
-      // const ownerRemoved = new MutationObserver(mrs=>{
-      //   debugger;
-      //   if(!mrs[0].target.hasAttribute(fullOwnerName))  //check if the attribute is removed.
-      //     this.ownerElement.removeAttribute(this.name);
-      // }); //adding the owner attribute in a closure. I think it is ok.
-      // ownerRemoved.observe(this.ownerElement, {attributes:true, attributeFilter: [fullOwnerName]});
-      return reactionImpl.call(owner, ...args);
-    };
+  return function (e) {
+    if (this.owner)                             //todo an efficiency bump can occur here..
+      return e;
+    for (let at of this.ownerElement.attributes)
+      if (at.type === type)
+        return this.owner = at, e;
+    throw new Error(`${fullReaction}: can't find owner attribute: "${type}.`);
+  };
 });
 
-customReactions.define("value", function (e, _, state) {
-  this.ownerElement.setAttribute(this.name, state);
+customReactions.defineRule(function (fullReaction) {                   //o.value_observe
+  const reaction = fullReaction.match(/^o\.(.+)/)?.[1];
+  if (!reaction)
+    return;
+  const reactionImpl = customReactions.getDefinition(reaction);
+  if (!reactionImpl)
+    return;
+  return function (...args) {
+    return reactionImpl.call(this.owner, ...args);
+  };
+});
+
+customReactions.define("value", function (e, _, state) {            //todo this is changing the state..
+  this.value = state;
   return state;
 });
 
@@ -50,8 +47,13 @@ class GestureAttr extends CustomAttr {
     if (!this._transitions[""])    //todo this error should come at define time, not upgrade time
       throw new SyntaxError(`${this.constructor.name}.stateMachine(..) must return an object with a default, empty-string state.`);
     for (let state in this._transitions)
-      this._transitions[state] = this._transitions[state].map(
-        ([chain, next]) => next ? chain + `:await:o.${this.type}.value_${next}` : chain);
+      this._transitions[state] = this._transitions[state].map(([chain, next]) => {
+        if (next)
+          chain += `:await:o.value_${next}`;
+        chain = chain.split(":");
+        chain.splice(1, 0, `o..${this.type}`);
+        return chain.join(":");
+      });
   }
 
   changeCallback(oldState) {
@@ -60,5 +62,11 @@ class GestureAttr extends CustomAttr {
         this.ownerElement.removeAttribute(attr);
     for (let attr of this._transitions[this.value])
       this.ownerElement.setAttribute(attr, "");
+  }
+
+  destructor() {
+    for (let attr of this._transitions[this.value])
+      this.ownerElement.removeAttribute(attr);
+    super.destructor?.();
   }
 }
