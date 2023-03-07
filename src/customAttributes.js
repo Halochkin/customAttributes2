@@ -131,7 +131,7 @@ class ReactionRegistry extends DefinitionRegistry {
     if (!(Definition instanceof Function))
       throw `"${Definition}" must be a Function.`;
     if (ReactionRegistry.arrowFunctionWithThis(Definition))
-      throw ` ==> ${type} <==  Arrow function using 'this' keyword. Convert it into non-array function please.`;
+      throw ` ==> ${type} <==  Arrow function using 'this' keyword. Convert it into an anonymous function please.`;
     super.define(type, Definition);
   }
 
