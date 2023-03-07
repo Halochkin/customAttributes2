@@ -71,10 +71,11 @@ class WeakAttributeArray {
     this.#ref.push(new WeakRef(value));
   }
 
-  //this has cost, we make two new temporary arrays. We do this to:
+  //Att! performance vs consistency
+  //This functions makes two new temporary arrays. We do this to:
   //1. ensure no mutation on the list while the same list is being iterated,
   //2. provide only the derefenced attribute,
-  //3. provide efficient enough manual GC
+  //3. provide efficient enough manual GC of the array and the attributes.
   derefCopy() {
     const res = [], missing = [];
     for (let i = 0; i < this.#ref.length; i++) {
@@ -83,6 +84,7 @@ class WeakAttributeArray {
     }
     for (let num of missing)
       this.#ref.splice(num, 1)[0].deref()?.destructor();
+    //the .destructor() may be called before this point and more than once here.
     return res;
   }
 }
@@ -129,7 +131,7 @@ class ReactionRegistry extends DefinitionRegistry {
     if (!(Definition instanceof Function))
       throw `"${Definition}" must be a Function.`;
     if (ReactionRegistry.arrowFunctionWithThis(Definition))
-      throw ` ==> ${type} <==  Arrow function using 'this' keyword. Convert it into non-array function please.`;
+      throw ` ==> ${type} <==  Arrow function using 'this' keyword. Convert it into an anonymous function please.`;
     super.define(type, Definition);
   }
 
