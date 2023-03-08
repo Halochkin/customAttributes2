@@ -3,9 +3,14 @@
 <script src="../../src/core.js"></script>
 <script src="../../src/dotReaction.js"></script>
 
-<div _click:m..this.owner-element.test_e.type:console.log_e.type_this.owner-element.test></div>
-<div _click:e.type:new_-array:m..e.length:m..e.length:console.log_e></div>
+<body test:console.log_e.type>
 
 <script>
-  eventLoop.dispatch(new Event("click"), document.body);
+  customReactions.define("dispatch2", function dispatch2(e, _) {
+    eventLoop.dispatch(e, this.ownerElement);
+    return e;
+  });
 </script>
+
+<h1 ready:new_-event_test:dispatch2>hello sunshine</h1>
+</body>

@@ -2,7 +2,7 @@
 <script src="../../src/customAttributes.js"></script>
 <script src="../../src/dotReaction.js"></script>
 
-<div _click:._console.log_...e.detail></div>
+<div _click:console.log_...e.detail></div>
 
 <script>
   eventLoop.dispatch(new CustomEvent("click", {detail: [1, 2]}), document.body);

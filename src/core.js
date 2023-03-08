@@ -142,18 +142,18 @@
       return e;
     },
 
-
-    m: function monadish(e, _, prop, ...nestedReaction) {
-      const reaction = customReactions.getDefinition(nestedReaction.join("_"));
-      const value = reaction.call(this, e, ...nestedReaction);
-      if (e instanceof Array && !prop)
-        e.push(value);
-      else if (e instanceof Array && Number.isInteger(+prop))
-        e.splice(prop < 0 ? Math.max(e.length + 1 + prop, 0) : Math.min(prop, e.length), 0, value);
-      else if (prop)
-        e[prop] = value;
-      return e;
-    },
+    //turn this into a rule!
+    // m: function monadish(e, _, prop, ...nestedReaction) {
+    //   const reaction = customReactions.getDefinition(nestedReaction.join("_"));
+    //   const value = reaction.call(this, e, ...nestedReaction);
+    //   if (e instanceof Array && !prop)
+    //     e.push(value);
+    //   else if (e instanceof Array && Number.isInteger(+prop))
+    //     e.splice(prop < 0 ? Math.max(e.length + 1 + prop, 0) : Math.min(prop, e.length), 0, value);
+    //   else if (prop)
+    //     e[prop] = value;
+    //   return e;
+    // },
     //todo untested.
     plus: (s, _, ...as) => as.reduce((s, a) => s + a, s),
     minus: (s, _, ...as) => as.reduce((s, a) => s - a, s),
@@ -210,6 +210,25 @@
         customReactions.define(tag, Def);
       else
         throw "You cannot define a class that isn't either a CustomAttr, an HTMLElement, or a Function.";
+    }
+  });
+
+  customReactions.defineRule(function (reaction) {
+    reaction = reaction.split("_")[0];
+    if (!reaction.startsWith("m."))
+      return;
+    let [m, prop, ...original] = reaction.split(".");
+    original = original.join(".");
+    const reactionImpl = customReactions.getDefinition(original);
+    return function (e, prefix,...args) {
+      const value = reactionImpl.call(this, e, original, ...args);
+      if (e instanceof Array && !prop)
+        e.push(value);
+      else if (e instanceof Array && Number.isInteger(+prop))
+        e.splice(prop < 0 ? Math.max(e.length + 1 + prop, 0) : Math.min(prop, e.length), 0, value);
+      else if (prop)
+        e[prop] = value;
+      return e;
     }
   });
 })();

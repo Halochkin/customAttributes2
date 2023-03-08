@@ -35,6 +35,18 @@ class CustomAttr extends Attr {
     return value;
   }
 
+  get reactionArgs() {
+    const value = this.chainBits.map(([reaction, ...args]) => {
+      return args.map(arg => {
+        return customTypes.getDefinition(arg);
+      });
+    });
+    if (value.indexOf(undefined) >= 0)
+      return undefined;
+    Object.defineProperty(this, "reactionArgs", {value, writable: false, configurable: true});
+    return value;
+  }
+
   set value(value) {
     const oldValue = super.value;
     if (value === oldValue)
@@ -111,7 +123,7 @@ class DefinitionRegistry {
 
   tryRules(type) {
     for (let Def of this.#rules)
-      if ((Def = Def(type)) instanceof Function)        //todo Def.prototype instanceof CustomAttr
+      if (Def = Def(type))
         return Def;
   }
 
@@ -119,6 +131,46 @@ class DefinitionRegistry {
     return this.#cache[type] ??= this.#register[type.split(/(?<=.)_/)[0]] ?? this.tryRules(type);
   }
 }
+
+window.customTypes = new DefinitionRegistry();
+customTypes.defineAll({
+  true: true,
+  false: false,
+  null: null,
+  window: window,
+  document: document,
+  undefined: _ => undefined,
+  e: e => e,
+  this: function () {
+    return this;
+  },
+});
+customTypes.defineRule(function (part) {
+  if (!isNaN(part)) return Number(part);
+});
+customTypes.defineRule(function (part) {
+  let props = part.split(".");
+  if (props.length < 2)
+    return;
+  if (props[0] === "") props[0] = "window";   //:.get-computed-style_this.owner-element
+  if (props[0] !== "e" && props[0] !== "this" && props[0] !== "window")
+    props.unshift("window");
+  if(props[props.length-1] === "") props.pop();
+  const root = props.shift();
+  props = props.map(ReactionRegistry.toCamelCase);
+  return function (e) {
+    e = root === "e" ? e : (root === "this") ? this : /*window|""*/ window;
+    for (let prop of props) {
+      e = e[prop]
+      if (e === undefined)
+        return e;
+    }
+    return e;
+  };
+});
+customTypes.defineRule(function (part) {
+  return part;
+});
 
 class ReactionRegistry extends DefinitionRegistry {
 
@@ -346,7 +398,12 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
 
     static #runReaction(input, reaction, at, i, async, allowAsync) {
       try {
-        const output = reaction.call(at, input, ...at.chainBits[i + 1]);
+        //todo 
+        const args = at.reactionArgs[i + 1].map(arg => arg instanceof Function ? arg.call(at, input) : arg);
+        //// todo here we can add the rules for the DotPathArguments.
+        const x = [at.chainBits[i + 1][0], ...args];
+        const output = reaction.call(at, input, ...x);
+        // const output = reaction.call(at, input, ...at.chainBits[i + 1]);
         if (!(output instanceof Promise))
           return output;
         if (allowAsync)
