@@ -37,9 +37,7 @@ class CustomAttr extends Attr {
 
   get reactionArgs() {
     const value = this.chainBits.map(([reaction, ...args]) => {
-      return args.map(arg => {
-        return customTypes.getDefinition(arg);
-      });
+      return [reaction, ...args.map(arg => customTypes.getDefinition(arg))];
     });
     if (value.indexOf(undefined) >= 0)
       return undefined;
@@ -320,15 +318,9 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
       }
     }
 
+    //bubble only runs on elements while they are connected to the DOM.
+    //todo problems will arise if you take gestures on/off DOM while their state is not empty/in the default state.
     static bubble(rootTarget, event) {
-
-      //todo bug
-      //todo if (target?.isConnected === false) then bubble without default action?? I think that we need the global listeners to run for disconnected targets, as this will make them able to trigger _error for example. I also think that attributes on disconnected ownerElements should still catch the _global events.
-      //3. we need to check if the attr should be garbage collected.
-      //   as we don't have any "justBeforeGC" callback, that will be very difficult.
-      //   todo so, here we might want to add a check that if the !attr.ownerElement.isConnected, the _global: listener attr will be removed?? That will break all gestures.. They will be stuck in the wrong state when elements are removed and then added again during execution.
-
-      //todo
       if (rootTarget instanceof Element && !rootTarget.isConnected)
         throw new Error(`Global listeners for events occuring off-dom needs to be filtered..
         Then we need to check that the other elements are connected to the same root. This is a heavy operation..
@@ -363,10 +355,7 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
       try {
         //todo 
         const args = at.reactionArgs[i + 1].map(arg => arg instanceof Function ? arg.call(at, input) : arg);
-        //// todo here we can add the rules for the DotPathArguments.
-        const x = [at.chainBits[i + 1][0], ...args];
-        const output = reaction.call(at, input, ...x);
-        // const output = reaction.call(at, input, ...at.chainBits[i + 1]);
+        const output = reaction.call(at, input, ...args);
         if (!(output instanceof Promise))
           return output;
         if (allowAsync)
