@@ -344,13 +344,13 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
       for (let i = start, res = event; i < at.reactions.length && res !== undefined; i++) {
         const reaction = at.reactions[i];
         if (reaction[0] !== ReactionRegistry.DefaultAction)
-          res = this.#runReaction(res, reaction, at, i, start > 0, allowAsync);
+          res = this.#runReaction(reaction, at, res, i, start > 0, allowAsync);
         else if (doDA)
           return event.defaultAction = {at, res, target: event.target};
       }
     }
 
-    static #runReaction(input, [reaction, ...args], at, i, async, allowAsync) {
+    static #runReaction([reaction, ...args], at, input, i, async, allowAsync) {
       try {
         const output = reaction.call(at, input, ...args.map(a => a instanceof Function ? a.call(at, input) : a));
         if (!(output instanceof Promise))
