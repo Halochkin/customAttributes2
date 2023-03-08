@@ -28,7 +28,7 @@ class CustomAttr extends Attr {
   }
 
   get reactions() {
-    const value = this.chain.slice(1).map(reaction => customReactions.getDefinition(reaction));
+    const value = this.chainBits.slice(1).map(([reaction]) => customReactions.getDefinition(reaction));
     if (value.indexOf(undefined) >= 0)
       return undefined;
     Object.defineProperty(this, "reactions", {value, writable: false, configurable: true});
@@ -128,7 +128,7 @@ class DefinitionRegistry {
   }
 
   getDefinition(type) {
-    return this.#cache[type] ??= this.#register[type.split(/(?<=.)_/)[0]] ?? this.tryRules(type);
+    return this.#cache[type] ??= this.#register[type] ?? this.tryRules(type);
   }
 }
 
