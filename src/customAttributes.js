@@ -179,8 +179,13 @@ class AttributeRegistry extends DefinitionRegistry {
 
   defineRule(Function) {
     super.defineRule(Function);
-    //todo here we need to run all the this.#unknownEvents and try to upgrade it.
-    //todo problem is how to remove the attr from the WeakAttrArray once a new rule matches it.
+    // for (let unknownAt of this.#unknownEvents.all()) { //todo .all() doesn't exist
+    //   const match = Function(unknownAt);
+    //   if(match){
+    //     this.#unknownEvents.remove(unknownAt); //todo doesn't exists
+    //     this.#upgradeAttribute(unknownAt, Function);
+    //   }
+    // }
   }
 
   upgrade(...attrs) {
@@ -337,15 +342,15 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
 
     static #runReactions(event, at, doDA, start = 0, allowAsync = doDA && at.defaultAction) {
       for (let i = start, res = event; i < at.reactions.length && res !== undefined; i++) {
-        const [reaction, ...args] = at.reactions[i];
-        if (reaction !== ReactionRegistry.DefaultAction)
-          res = this.#runReaction(res, reaction, at, i, start > 0, allowAsync, ...args);
+        const reaction = at.reactions[i];
+        if (reaction[0] !== ReactionRegistry.DefaultAction)
+          res = this.#runReaction(res, reaction, at, i, start > 0, allowAsync);
         else if (doDA)
           return event.defaultAction = {at, res, target: event.target};
       }
     }
 
-    static #runReaction(input, reaction, at, i, async, allowAsync, ...args) {
+    static #runReaction(input, [reaction, ...args], at, i, async, allowAsync) {
       try {
         const output = reaction.call(at, input, ...args.map(a => a instanceof Function ? a.call(at, input) : a));
         if (!(output instanceof Promise))
