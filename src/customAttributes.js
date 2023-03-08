@@ -28,20 +28,14 @@ class CustomAttr extends Attr {
   }
 
   get reactions() {
-    const value = this.chainBits.slice(1).map(([reaction]) => customReactions.getDefinition(reaction));
-    if (value.indexOf(undefined) >= 0)
-      return undefined;
+    const value = [];
+    for (let [prefix, ...args] of this.chainBits.slice(1)) {
+      const r = customReactions.getDefinition(prefix);
+      if (r === undefined)
+        return r;
+      value.push([r, prefix, ...args.map(arg => customTypes.getDefinition(arg))]);
+    }
     Object.defineProperty(this, "reactions", {value, writable: false, configurable: true});
-    return value;
-  }
-
-  get reactionArgs() {
-    const value = this.chainBits.map(([reaction, ...args]) => {
-      return [reaction, ...args.map(arg => customTypes.getDefinition(arg))];
-    });
-    if (value.indexOf(undefined) >= 0)
-      return undefined;
-    Object.defineProperty(this, "reactionArgs", {value, writable: false, configurable: true});
     return value;
   }
 
@@ -343,19 +337,17 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
 
     static #runReactions(event, at, doDA, start = 0, allowAsync = doDA && at.defaultAction) {
       for (let i = start, res = event; i < at.reactions.length && res !== undefined; i++) {
-        const reaction = at.reactions[i];
+        const [reaction, ...args] = at.reactions[i];
         if (reaction !== ReactionRegistry.DefaultAction)
-          res = this.#runReaction(res, reaction, at, i, start > 0, allowAsync);
+          res = this.#runReaction(res, reaction, at, i, start > 0, allowAsync, ...args);
         else if (doDA)
           return event.defaultAction = {at, res, target: event.target};
       }
     }
 
-    static #runReaction(input, reaction, at, i, async, allowAsync) {
+    static #runReaction(input, reaction, at, i, async, allowAsync, ...args) {
       try {
-        //todo 
-        const args = at.reactionArgs[i + 1].map(arg => arg instanceof Function ? arg.call(at, input) : arg);
-        const output = reaction.call(at, input, ...args);
+        const output = reaction.call(at, input, ...args.map(a => a instanceof Function ? a.call(at, input) : a));
         if (!(output instanceof Promise))
           return output;
         if (allowAsync)
