@@ -118,7 +118,7 @@ class DefinitionRegistry {
   }
 
   defineRule(Function) {
-    this.#rules.push(Function);
+    this.#rules.unshift(Function);
   }
 
   tryRules(type) {
@@ -133,44 +133,7 @@ class DefinitionRegistry {
 }
 
 window.customTypes = new DefinitionRegistry();
-customTypes.defineAll({
-  true: true,
-  false: false,
-  null: null,
-  window: window,
-  document: document,
-  undefined: _ => undefined,
-  e: e => e,
-  this: function () {
-    return this;
-  },
-});
-customTypes.defineRule(function (part) {
-  if (!isNaN(part)) return Number(part);
-});
-customTypes.defineRule(function (part) {
-  let props = part.split(".");
-  if (props.length < 2)
-    return;
-  if (props[0] === "") props[0] = "window";   //:.get-computed-style_this.owner-element
-  if (props[0] !== "e" && props[0] !== "this" && props[0] !== "window")
-    props.unshift("window");
-  if(props[props.length-1] === "") props.pop();
-  const root = props.shift();
-  props = props.map(ReactionRegistry.toCamelCase);
-  return function (e) {
-    e = root === "e" ? e : (root === "this") ? this : /*window|""*/ window;
-    for (let prop of props) {
-      e = e[prop]
-      if (e === undefined)
-        return e;
-    }
-    return e;
-  };
-});
-customTypes.defineRule(function (part) {
-  return part;
-});
+customTypes.defineRule(part => part);
 
 class ReactionRegistry extends DefinitionRegistry {
 
@@ -547,15 +510,15 @@ function deprecated() {
     return `on${type}` in HTMLElement.prototype || /^touch(start|move|end|cancel)$/.exec(type);
   }
 
-  customAttributes.defineRule(t => isDomEvent(t) && NativeBubblingEvent);
-  customAttributes.defineRule(t => t[0] === "_" && isDomEvent(t.substring(1)) && ShadowRootEvent);
-  customAttributes.defineRule(t => t === "_domcontentloaded" && NativeDCLEvent);
-  customAttributes.defineRule(t => t[0] === "_" && `on${t.substring(1)}` in window && NativeWindowEvent);
-  customAttributes.defineRule(t => t[0] === "_" && `on${t.substring(1)}` in Document.prototype && NativeDocumentEvent);
   customAttributes.defineRule(t => {
     if (`on${t}` in window || `on${t}` in Document.prototype || t === "domcontentloaded")
       throw new SyntaxError("_global must have _");
   });
+  customAttributes.defineRule(t => t[0] === "_" && `on${t.substring(1)}` in Document.prototype && NativeDocumentEvent);
+  customAttributes.defineRule(t => t[0] === "_" && `on${t.substring(1)}` in window && NativeWindowEvent);
+  customAttributes.defineRule(t => t === "_domcontentloaded" && NativeDCLEvent);
+  customAttributes.defineRule(t => t[0] === "_" && isDomEvent(t.substring(1)) && ShadowRootEvent);
+  customAttributes.defineRule(t => isDomEvent(t) && NativeBubblingEvent);
 })(addEventListener, removeEventListener);
 
 observeElementCreation(els => els.forEach(el => window.customAttributes.upgrade(...el.attributes)));
