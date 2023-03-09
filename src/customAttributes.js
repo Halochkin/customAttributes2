@@ -72,14 +72,15 @@ class UnknownAttributes {
     }
   }
 
-  tryAgainstTriggerDef(prefix, Def){
+  tryAgainstTriggerDef(prefix, Def) {
     this.tryAgain();
   }
 
-  tryAgainstTriggerRule(Rule){
+  tryAgainstTriggerRule(Rule) {
     this.tryAgain();
   }
 }
+
 window.unknownAttributes = new UnknownAttributes();
 
 class GlobalTriggers {
@@ -248,10 +249,6 @@ class ReactionErrorEvent extends ErrorEvent {
   }
 }
 
-//todo move this to core.js? //todo
-customReactions.define("console-error", e => (console.error(e.message, e.error), e));
-document.documentElement.setAttributeNode(document.createAttribute("error::console-error"));
-
 (function () {
 
 //Event.uid
@@ -405,6 +402,8 @@ function deprecated() {
   };
 })(Element.prototype, document.createAttribute);
 
+observeElementCreation(els => els.forEach(el => window.customAttributes.upgrade(...el.attributes)));
+
 //** CustomAttribute registry with builtin support for the native HTML events.
 (function (addEventListener, removeEventListener) {
   EventTarget.prototype.addEventListener = deprecated.bind("EventTarget.addEventListener");
@@ -495,14 +494,21 @@ function deprecated() {
   }
 
   customAttributes.defineRule(t => {
+    if (isDomEvent(t))
+      return NativeBubblingEvent;
+    if (t[0] === "_" && isDomEvent(t.substring(1)))
+      return ShadowRootEvent;
+    if (t === "_domcontentloaded")
+      return NativeDCLEvent;
+    if (t[0] === "_" && `on${t.substring(1)}` in window)
+      return NativeWindowEvent;
+    if (t[0] === "_" && `on${t.substring(1)}` in Document.prototype)
+      return NativeDocumentEvent;
     if (`on${t}` in window || `on${t}` in Document.prototype || t === "domcontentloaded")
       throw new SyntaxError("_global must have _");
   });
-  customAttributes.defineRule(t => t[0] === "_" && `on${t.substring(1)}` in Document.prototype && NativeDocumentEvent);
-  customAttributes.defineRule(t => t[0] === "_" && `on${t.substring(1)}` in window && NativeWindowEvent);
-  customAttributes.defineRule(t => t === "_domcontentloaded" && NativeDCLEvent);
-  customAttributes.defineRule(t => t[0] === "_" && isDomEvent(t.substring(1)) && ShadowRootEvent);
-  customAttributes.defineRule(t => isDomEvent(t) && NativeBubblingEvent);
 })(addEventListener, removeEventListener);
 
-observeElementCreation(els => els.forEach(el => window.customAttributes.upgrade(...el.attributes)));
+//** default error event handling
+customReactions.define("console-error", e => (console.error(e.message, e.error), e));
+document.documentElement.setAttribute("error::console-error");
