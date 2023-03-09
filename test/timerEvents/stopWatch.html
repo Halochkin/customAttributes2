@@ -6,22 +6,17 @@
 <body test:e.time-stamp:stopwatch:window.-math.min_e_25:console.log_e>
 
 <script>
-  //todo a diff/aggregator of sorts. same as throttle. it joins the output of many different events across async time.
+  //a diff/aggregator of sorts. same as throttle. It joins the output of many different events across async time.
   const stopWatches = new WeakMap();
   customReactions.define("stopwatch", function stopwatch(timeStamp) {
     const lastTime = stopWatches.get(this) || timeStamp;
     stopWatches.set(this, timeStamp);
     return timeStamp - lastTime;
   });
-  customReactions.define("dispatch2", function dispatch2(e, _, type) {
-    const e2 = e instanceof Event ? new e.constructor(type, e) : new CustomEvent(type, {detail: e});
-    eventLoop.dispatch(e2, this.ownerElement);
-    return e2;
-  });
 </script>
 
 <h1
-    ready:dispatch2_test
-    timeout_50:dispatch2_test
-    timeout_100:dispatch2_test>hello sunshine</h1>
+    ready:new_-event_test:dispatch
+    timeout_200:new_-event_test:dispatch
+    timeout_400:new_-event_test:dispatch>hello sunshine</h1>
 </body>
