@@ -1,30 +1,67 @@
-customReactions.defineRule(function (fullReaction) {
-  const reaction = fullReaction.split("_")[0];
-  let props = reaction.split(".");
-  if (props.length < 2)
-    return;
+function eGetter(props) {
+  return function (e) {
+    for (let prop of props) {
+      e = e[prop]
+      if (e === undefined)
+        return e;
+    }
+    return e;
+  };
+}
+
+function thisGetter(props) {
+  return function () {
+    let e = this;
+    for (let prop of props) {
+      e = e[prop]
+      if (e === undefined)
+        return e;
+    }
+    return e;
+  };
+}
+
+function windowGetter(props) {
+  return function () {
+    let e = window;
+    for (let prop of props) {
+      e = e[prop]
+      if (e === undefined)
+        return e;
+    }
+    return e;
+  };
+}
+
+function normalizePath(props) {
   if (props[0] === "") props[0] = "window";
   if (props[0] !== "e" && props[0] !== "this" && props[0] !== "window")
     props.unshift("window");
-  props = props.map(ReactionRegistry.toCamelCase);
   const root = props.shift();
-  const getter = props[props.length - 1] === "";
-  if (getter) props.pop();
+  const getter = props[props.length - 1] === "" ? !props.pop() : false;
+  return {root, props: props.map(ReactionRegistry.toCamelCase), getter};
+}
+
+customReactions.defineRule(function (reaction) {
+  let parts = reaction.split(".");
+  if (parts.length < 2)
+    return;
+  let {props, root, getter} = normalizePath(parts);
+  if (getter)
+    return root === "e" ? eGetter(props) :
+      root === "this" ? thisGetter(props) :
+        windowGetter(props);
   return function (e, _, ...args) {
-    e = root === "e" ? e : (root === "this") ? this : /*window|""*/ window;
-    let previous;
-    for (let i = 0; i < props.length; i++) {
-      let prop = props[i];
-      previous = e;
-      e = e[prop];
-      if (e === undefined && i !== props.length - 1)
-        return e;
+    let p = root === "e" ? e : root === "this" ? this : window;
+    for (let i = 0; i < props.length - 1; i++) {
+      p = p[props[i]];
+      if (p === undefined)
+        return;
     }
-    if (!getter && previous && e instanceof Function)
-      return e.call(previous, ...args);
-    if (args.length > 0)    //todo this is a setter
-      return previous[props[props.length - 1]] = args.length === 1 ? args[0] : args;
-    return e;
+    e = p[props[props.length - 1]];
+    return e instanceof Function ? e.call(p, ...args) :
+      args.length > 0 ? (p[props[props.length - 1]] = args.length === 1 ? args[0] : args) : //setter
+        e;
   };
 });
 
@@ -40,26 +77,23 @@ customTypes.defineAll({
     return this;
   },
 });
+customTypes.defineRule(part => isNaN(part) ? undefined : Number(part));
 customTypes.defineRule(function (part) {
-  if (!isNaN(part)) return Number(part);
-});
-customTypes.defineRule(function (part) {
-  let props = part.split(".");
-  if (props.length < 2)
+  let parts = part.split(".");
+  if (parts.length < 2)
     return;
-  if (props[0] === "") props[0] = "window";   //:.get-computed-style_this.owner-element
-  if (props[0] !== "e" && props[0] !== "this" && props[0] !== "window")
-    props.unshift("window");
-  if(props[props.length-1] === "") props.pop();
-  const root = props.shift();
-  props = props.map(ReactionRegistry.toCamelCase);
-  return function (e) {
-    e = root === "e" ? e : (root === "this") ? this : /*window|""*/ window;
-    for (let prop of props) {
-      e = e[prop]
-      if (e === undefined)
-        return e;
-    }
-    return e;
-  };
+  const {root, props} = normalizePath(parts);
+  return root === "e" ? eGetter(props) :
+    root === "this" ? thisGetter(props) :
+      windowGetter(props);
 });
+// customTypes.defineRule(part => part.indexOf(".") >0 ?
+//   windowGetter(part.split(".").map(ReactionRegistry.toCamelCase)) : undefined);
+// customTypes.defineRule(part => part.startsWith(".") ?
+//   windowGetter(part.substring(1).split(".").map(ReactionRegistry.toCamelCase)) : undefined);
+// customTypes.defineRule(part => part.startsWith("e.") ?
+//   eGetter(part.substring(2).split(".").map(ReactionRegistry.toCamelCase)) : undefined);
+// customTypes.defineRule(part => part.startsWith("this.") ?
+//   thisGetter(part.substring(5).split(".").map(ReactionRegistry.toCamelCase)) : undefined);
+// customTypes.defineRule(part => part.startsWith("window.") ?
+//   windowGetter(part.substring(7).split(".").map(ReactionRegistry.toCamelCase)) : undefined);

@@ -1,0 +1,17 @@
+<script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.2/observeElementCreation.js"></script>
+<script src="../../src/customAttributes.js"></script>
+<script src="../../src/dotReaction.js"></script>
+<script src="../../src/core.js"></script>
+
+
+<body click:m..console.log_1:await:console.log_2
+      click:console.log_3
+
+      click:log_a:await_1:console.log_b
+      click:log_c
+>
+</body>
+<script>
+  customReactions.define("log", (e, _, ...args) => (console.log(...args), e));
+  document.body.click();
+</script>
