@@ -1,0 +1,22 @@
+<script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.2/observeElementCreation.js"></script>
+<script src="../../src/customAttributes.js"></script>
+<script src="../../src/dotReaction.js"></script>
+
+<body
+    click:log_true_false_123
+    click:log_e.type_this.owner-element.tag-name
+    click:log_bob._.bob_window.bob.
+>
+hello dot arguments
+</body>
+
+<script>
+  window.bob = function () {
+    return "bob function"
+  }
+  customReactions.define("log", (e, _, ...args) => {
+    for (let a of args)
+      console.log(a, typeof a);
+  });
+  document.body.click();
+</script>

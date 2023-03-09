@@ -28,9 +28,13 @@ class CustomAttr extends Attr {
   }
 
   get reactions() {
-    const value = this.chain.slice(1).map(reaction => customReactions.getDefinition(reaction));
-    if (value.indexOf(undefined) >= 0)
-      return undefined;
+    const value = [];
+    for (let [prefix, ...args] of this.chainBits.slice(1)) {
+      const r = customReactions.getDefinition(prefix);
+      if (r === undefined)
+        return r;
+      value.push([r, prefix, ...args.map(arg => customTypes.getDefinition(arg))]);
+    }
     Object.defineProperty(this, "reactions", {value, writable: false, configurable: true});
     return value;
   }
@@ -53,41 +57,58 @@ class CustomAttr extends Attr {
   }
 }
 
-class WeakArrayDict {
-  push(key, value) {
-    (this[key] ??= new WeakAttributeArray()).push(value);
+class UnknownAttributes {
+  #ref = new Set();
+
+  addTriggerless(value) {
+    this.#ref.add(new WeakRef(value));
   }
 
-  * values(key) {
-    if (this[key])
-      yield* this[key].derefCopy();
-  }
-}
-
-class WeakAttributeArray {
-  #ref = [];
-
-  push(value) {
-    this.#ref.push(new WeakRef(value));
-  }
-
-  //Att! performance vs consistency
-  //This functions makes two new temporary arrays. We do this to:
-  //1. ensure no mutation on the list while the same list is being iterated,
-  //2. provide only the derefenced attribute,
-  //3. provide efficient enough manual GC of the array and the attributes.
-  derefCopy() {
-    const res = [], missing = [];
-    for (let i = 0; i < this.#ref.length; i++) {
-      const ref = this.#ref[i].deref();
-      ref?.ownerElement ? res.push(ref) : missing.push(i);
+  tryAgain() {
+    for (let ref of this.#ref) {
+      const at = ref.deref();
+      if (!at?.ownerElement || customAttributes.tryToUpgrade(at))
+        this.#ref.delete(ref);
     }
-    for (let num of missing)
-      this.#ref.splice(num, 1)[0].deref()?.destructor();
-    //the .destructor() may be called before this point and more than once here.
-    return res;
+  }
+
+  tryAgainstTriggerDef(prefix, Def) {
+    this.tryAgain();
+  }
+
+  tryAgainstTriggerRule(Rule) {
+    this.tryAgain();
   }
 }
+
+window.unknownAttributes = new UnknownAttributes();
+
+class GlobalTriggers {
+  #dict = {};
+
+  put(name, at) {
+    (this.#dict[name] ??= new Set()).add(new WeakRef(at));
+  }
+
+  * loop(event) {
+    const set = this.#dict["_" + event.type];
+    if (!set)
+      return;
+    for (let ref of set) {
+      const at = ref.deref();
+      if (!at?.ownerElement)
+        set.delete(at);
+      else {
+        if (at.ownerElement.isConnected)
+          if (at.reactions?.length) //todo this will be something that we can check before we add it!
+            if (!(at.defaultAction && (event.defaultAction || event.defaultPrevented)))
+              yield at;
+      }
+    }
+  }
+}
+
+window.globalTriggers = new GlobalTriggers();
 
 class DefinitionRegistry {
   #register = {};
@@ -106,19 +127,22 @@ class DefinitionRegistry {
   }
 
   defineRule(Function) {
-    this.#rules.push(Function);
+    this.#rules.unshift(Function);
   }
 
   tryRules(type) {
     for (let Def of this.#rules)
-      if ((Def = Def(type)) instanceof Function)        //todo Def.prototype instanceof CustomAttr
+      if (Def = Def(type))
         return Def;
   }
 
   getDefinition(type) {
-    return this.#cache[type] ??= this.#register[type.split(/(?<=.)_/)[0]] ?? this.tryRules(type);
+    return this.#cache[type] ??= this.#register[type] ?? this.tryRules(type);
   }
 }
+
+window.customTypes = new DefinitionRegistry();
+customTypes.defineRule(part => part);
 
 class ReactionRegistry extends DefinitionRegistry {
 
@@ -158,53 +182,43 @@ window.customReactions = new ReactionRegistry();
 
 class AttributeRegistry extends DefinitionRegistry {
 
-  #unknownEvents = new WeakArrayDict();
-  #globals = new WeakArrayDict();
-
   define(prefix, Definition) {
     if (!(Definition.prototype instanceof CustomAttr))
       throw `"${Definition.name}" must be a CustomAttr.`;
     super.define(prefix, Definition);
-    for (let at of this.#unknownEvents.values(prefix))
-      this.#upgradeAttribute(at, Definition);
-    delete this.#unknownEvents[prefix];
+    unknownAttributes.tryAgainstTriggerDef(prefix, Definition);
   }
 
   defineRule(Function) {
     super.defineRule(Function);
-    //todo here we need to run all the this.#unknownEvents and try to upgrade it.
-    //todo problem is how to remove the attr from the WeakAttrArray once a new rule matches it.
+    unknownAttributes.tryAgainstTriggerRule(Function);
+  }
+
+  tryToUpgrade(at) {
+    const Def = this.getDefinition(at.type)
+    return Def && (AttributeRegistry.#upgradeAttribute(at, Def), true);
   }
 
   upgrade(...attrs) {
     for (let at of attrs) {
-      //todo getDefinitions for both attribute and reactions
-      Object.setPrototypeOf(at, CustomAttr.prototype);
-      const Definition = this.getDefinition(at.type);
-      Definition ?
-        this.#upgradeAttribute(at, Definition) :             //upgrade to a defined CustomAttribute
-        this.#unknownEvents.push(at.type, at);               //or register as unknown
-      at.name[0] === "_" && this.#globals.push(at.type, at); //and then register globals
+      Object.setPrototypeOf(at, CustomAttr.prototype);      //todo getDefinitions for both attribute and reactions
+      this.tryToUpgrade(at) || unknownAttributes.addTriggerless(at);
+      at.name[0] === "_" && globalTriggers.put(at.type, at);
     }
   }
 
-  globalListeners(type) {
-    return this.#globals.values(type);
-  }
-
-  #upgradeAttribute(at, Definition) {
+  //todo this process is under the CustomAttr class..
+  // So this can be a this method. The problem is that it should be hidden.
+  static #upgradeAttribute(at, Definition) {
     Object.setPrototypeOf(at, Definition.prototype);
     try {
       at.upgrade?.();
-    } catch (error) {
-      //todo Rename to AttributeError?
-      eventLoop.dispatch(new ErrorEvent("error", {error}), at.ownerElement);
-    }
-    try {
       at.changeCallback?.();
     } catch (error) {
-      //todo Rename to AttributeError?
-      eventLoop.dispatch(new ErrorEvent("error", {error}), at.ownerElement);
+      // Object.setPrototypeOf(at, CustomAttr.prototype);
+      // todo do we want this?? No.. don't think so. Should we flag the attribute as broken?? yes, maybe.
+      //todo should we catch the error here? or should we do that elsewhere?
+      eventLoop.dispatch(new ErrorEvent("error", {error}), at.ownerElement);  //todo Rename to AttributeError?
     }
   }
 }
@@ -235,10 +249,6 @@ class ReactionErrorEvent extends ErrorEvent {
     return `<${at.ownerElement?.tagName.toLowerCase()} ${chain.join(":")}>`;
   }
 }
-
-//todo move this to core.js? //todo
-customReactions.define("console-error", e => (console.error(e.message, e.error), e));
-document.documentElement.setAttributeNode(document.createAttribute("error::console-error"));
 
 (function () {
 
@@ -305,24 +315,16 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
       }
     }
 
+    //bubble only runs on elements while they are connected to the DOM.
+    //todo problems will arise if you take gestures on/off DOM while their state is not empty/in the default state.
     static bubble(rootTarget, event) {
-
-      //todo bug
-      //todo if (target?.isConnected === false) then bubble without default action?? I think that we need the global listeners to run for disconnected targets, as this will make them able to trigger _error for example. I also think that attributes on disconnected ownerElements should still catch the _global events.
-      //3. we need to check if the attr should be garbage collected.
-      //   as we don't have any "justBeforeGC" callback, that will be very difficult.
-      //   todo so, here we might want to add a check that if the !attr.ownerElement.isConnected, the _global: listener attr will be removed?? That will break all gestures.. They will be stuck in the wrong state when elements are removed and then added again during execution.
-
-      //todo
       if (rootTarget instanceof Element && !rootTarget.isConnected)
         throw new Error(`Global listeners for events occuring off-dom needs to be filtered..
         Then we need to check that the other elements are connected to the same root. This is a heavy operation..
         `);
       globalTarget = null;
-      for (let at of customAttributes.globalListeners("_" + event.type))
-        if (at.ownerElement.isConnected)
-          if (!(at.defaultAction && (event.defaultAction || event.defaultPrevented)) && at.reactions?.length)
-            EventLoop.#runReactions(event, at, true);
+      for (let at of globalTriggers.loop(event))
+        EventLoop.#runReactions(event, at, true);
 
       for (let at of bubbleAttr(rootTarget, event))
         EventLoop.#runReactions(event, at, true);
@@ -337,16 +339,16 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
     static #runReactions(event, at, doDA, start = 0, allowAsync = doDA && at.defaultAction) {
       for (let i = start, res = event; i < at.reactions.length && res !== undefined; i++) {
         const reaction = at.reactions[i];
-        if (reaction !== ReactionRegistry.DefaultAction)
-          res = this.#runReaction(res, reaction, at, i, start > 0, allowAsync);
+        if (reaction[0] !== ReactionRegistry.DefaultAction)
+          res = this.#runReaction(reaction, at, res, i, start > 0, allowAsync);
         else if (doDA)
           return event.defaultAction = {at, res, target: event.target};
       }
     }
 
-    static #runReaction(input, reaction, at, i, async, allowAsync) {
+    static #runReaction([reaction, ...args], at, input, i, async, allowAsync) {
       try {
-        const output = reaction.call(at, input, ...at.chainBits[i + 1]);
+        const output = reaction.call(at, input, ...args.map(a => a instanceof Function ? a.call(at, input) : a));
         if (!(output instanceof Promise))
           return output;
         if (allowAsync)
@@ -400,6 +402,8 @@ function deprecated() {
     removeAttrOG.call(this, name);
   };
 })(Element.prototype, document.createAttribute);
+
+observeElementCreation(els => els.forEach(el => window.customAttributes.upgrade(...el.attributes)));
 
 //** CustomAttribute registry with builtin support for the native HTML events.
 (function (addEventListener, removeEventListener) {
@@ -490,15 +494,22 @@ function deprecated() {
     return `on${type}` in HTMLElement.prototype || /^touch(start|move|end|cancel)$/.exec(type);
   }
 
-  customAttributes.defineRule(t => isDomEvent(t) && NativeBubblingEvent);
-  customAttributes.defineRule(t => t[0] === "_" && isDomEvent(t.substring(1)) && ShadowRootEvent);
-  customAttributes.defineRule(t => t === "_domcontentloaded" && NativeDCLEvent);
-  customAttributes.defineRule(t => t[0] === "_" && `on${t.substring(1)}` in window && NativeWindowEvent);
-  customAttributes.defineRule(t => t[0] === "_" && `on${t.substring(1)}` in Document.prototype && NativeDocumentEvent);
   customAttributes.defineRule(t => {
+    if (isDomEvent(t))
+      return NativeBubblingEvent;
+    if (t[0] === "_" && isDomEvent(t.substring(1)))
+      return ShadowRootEvent;
+    if (t === "_domcontentloaded")
+      return NativeDCLEvent;
+    if (t[0] === "_" && `on${t.substring(1)}` in window)
+      return NativeWindowEvent;
+    if (t[0] === "_" && `on${t.substring(1)}` in Document.prototype)
+      return NativeDocumentEvent;
     if (`on${t}` in window || `on${t}` in Document.prototype || t === "domcontentloaded")
       throw new SyntaxError("_global must have _");
   });
 })(addEventListener, removeEventListener);
 
-observeElementCreation(els => els.forEach(el => window.customAttributes.upgrade(...el.attributes)));
+//** default error event handling
+customReactions.define("console-error", e => (console.error(e.message, e.error), e));
+document.documentElement.setAttribute("error::console-error");

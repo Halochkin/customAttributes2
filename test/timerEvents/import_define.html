@@ -4,26 +4,18 @@
 <script src="../../src/core.js"></script>
 
 <body
-    import:._e.detail.-comp-a.:define_comp-a="./comp-a_attr-b_reaction-c.js"
-    import:._e.detail.-attr-b.:define_attr-b="./comp-a_attr-b_reaction-c.js"
-    import:._e.detail.reaction-c.:define_reaction-c="./comp-a_attr-b_reaction-c.js"
+    import:e.detail.-comp-a.:define_comp-a="./comp-a_attr-b_reaction-c.js"
+    import:e.detail.-attr-b.:define_attr-b="./comp-a_attr-b_reaction-c.js"
+    import:e.detail.reaction-c.:define_reaction-c="./comp-a_attr-b_reaction-c.js"
 >
 <comp-a
-    attr-b:._e.type:log
+    click:e.target.tag-name:log
+    attr-b:e.type:log
     ready:reaction-c:log
-    timeout_100:print-log
 >hello sunshine
 </comp-a>
 
 <script>
-  const res = [];
-  customReactions.defineAll({
-    log: function (e) {
-      res.push(e);
-    },
-    "print-log": function () {
-      console.log(...res.sort(), document.querySelector("comp-a").constructor.name);
-    }
-  })
+  customReactions.define("log", e => console.log(e));
 </script>
 </body>

@@ -1,3 +1,15 @@
+customReactions.defineRule(function (fullReaction) {                   //o.value_observe
+  const reaction = fullReaction.match(/^o\.(.+)/)?.[1];
+  if (!reaction)
+    return;
+  const reactionImpl = customReactions.getDefinition(reaction);
+  if (!reactionImpl)
+    return;
+  return function (...args) {
+    return reactionImpl.call(this.owner, ...args);
+  };
+});
+
 //todo rename to g.., g., g.state. and more??  or g_, g., g-state_ etc? have only one rule??
 customReactions.defineRule(function (fullReaction) {                   //o..swipeable
   const type = fullReaction.match(/^o\.\.([a-zA-Z0-9]+)$/)?.[1];
@@ -10,18 +22,6 @@ customReactions.defineRule(function (fullReaction) {                   //o..swip
       if (at.type === type)
         return this.owner = at, e;
     throw new Error(`${fullReaction}: can't find owner attribute: "${type}.`);
-  };
-});
-
-customReactions.defineRule(function (fullReaction) {                   //o.value_observe
-  const reaction = fullReaction.match(/^o\.(.+)/)?.[1];
-  if (!reaction)
-    return;
-  const reactionImpl = customReactions.getDefinition(reaction);
-  if (!reactionImpl)
-    return;
-  return function (...args) {
-    return reactionImpl.call(this.owner, ...args);
   };
 });
 
@@ -65,6 +65,9 @@ class GestureAttr extends CustomAttr {
   }
 
   destructor() {
+    // for (let at of this.ownerElement.attributes)   //todo alternative structure for removing owned attributes.
+    //   if(at.owner === this)
+    //     this.ownerElement.removeAttribute(at.name);
     for (let attr of this._transitions[this.value])
       this.ownerElement.removeAttribute(attr);
     super.destructor?.();

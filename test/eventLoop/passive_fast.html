@@ -2,7 +2,7 @@
 <script src="../../src/customAttributes.js"></script>
 <script src="../../src/dotReaction.js"></script>
 
-<div id="one" style="height: 100vh" wheel:._e.prevent-default wheel:log _wheel:log>hello wheel:prevent _wheel:log(should log and scroll)</div>
+<div id="one" style="height: 100vh" wheel:e.prevent-default wheel:log _wheel:log>hello wheel:prevent _wheel:log(should log and scroll)</div>
 <div id="two" style="height: 100vh" wheel:prevent wheel:log _wheel:log>hello wheel:prevent _wheel:log (should log, but not scroll)</div>
 
 todo the first event should ignore the native preventDefault(), while the second should accept it.

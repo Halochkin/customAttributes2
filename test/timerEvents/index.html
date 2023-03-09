@@ -13,23 +13,23 @@
 </test-html>
 <test-html test="mo_attributes.html">
   <script expected>[
-    ["attributes","a","","one"],
-    ["attributes","b","","two"],
-    ["attributes","a","bob","one"],
-    ["attributes","b","bob","two"]
+    ["attributes", "a", "", "one"],
+    ["attributes", "b", "", "two"],
+    ["attributes", "a", "bob", "one"],
+    ["attributes", "b", "bob", "two"]
   ]</script>
 </test-html>
 <test-html test="mo_childList.html">
   <script expected>[
-    ["added","DIV"],
-    ["removed","SPAN"]
+    ["added", "DIV"],
+    ["removed", "SPAN"]
   ]</script>
 </test-html>
 <test-html test="w.html">
   <script expected>["50px", "100px", "25px", "50px", "62.5px", "125px"]</script>
 </test-html>
-<test-html test="import_define.html">
-  <script expected>[["attr-b", "reaction-c", "CompA"]]</script>
+<test-html sort test="import_define.html">
+  <script expected>["attr-b", "COMP-A", "reaction-c"]</script>
 </test-html>
 <!-- Note!! You must load the test-html component at the end -->
-<script src="https://cdn.jsdelivr.net/gh/orstavik/TestHTML@v1.1.1/TestHTML.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/orstavik/TestHTML@v1.1.2/TestHTML.js"></script>

@@ -5,8 +5,11 @@
   console.error = (...args)=>console.log(...args);
 </script>
 
-<div _click:._window.test_bobsy:._console.log_window.test></div>
-<div _click:._e_undefined-prop:._console.log_bug2></div>
+<body click:window.test_bobsy:console.log_window.test
+      click:console.log_e.undefined.prop:e.undefined-prop:console.log_bug2
+>
+
+</body>
 
 <script>
   document.body.click();

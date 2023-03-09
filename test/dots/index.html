@@ -5,9 +5,21 @@
   <script expected>[false]</script>
 </test-html>
 <test-html test="assignment.html">
+  <script expected>["bobsy", null]</script>
+</test-html>
+<test-html test="constructor.html">
+  <script expected>["test"]</script>
+</test-html>
+<test-html test="dotArguments.html">
   <script expected>[
-    "bobsy",
-    ["<div _click:==>._e_undefined-prop<==:._console.log_bug2>",{}]
+    [true, "boolean"],
+    [false, "boolean"],
+    [123, "number"],
+    ["click", "string"],
+    ["BODY", "string"],
+    [null, "function"],
+    [null, "function"],
+    [null, "function"]
   ]</script>
 </test-html>
 <test-html test="dotGetComputedStyle.html">
@@ -20,12 +32,12 @@
   <script expected>[[1, 2]]</script>
 </test-html>
 <test-html test="dotNotation.html">
-  <script expected>[false, "bob", ["expectfalse", false], ["click", 1, 2]]</script>
+  <script expected>["bob", ["expecttrue", true], ["click", 1, 2]]</script>
 </test-html>
 <test-html test="monadDots.html">
-  <script expected>[["click", "click"]]</script>
+  <script expected>[["click", "click"], ["click", 1, 2]]</script>
 </test-html>
 
 
 <!-- Note!! You must load the test-html component at the end -->
-<script src="https://cdn.jsdelivr.net/gh/orstavik/TestHTML@v1.1.1/TestHTML.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/orstavik/TestHTML@v1.1.2/TestHTML.js"></script>
