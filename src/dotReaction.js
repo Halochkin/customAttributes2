@@ -1,3 +1,38 @@
+function eGetter(props) {
+  return function (e) {
+    for (let prop of props) {
+      e = e[prop]
+      if (e === undefined)
+        return e;
+    }
+    return e;
+  };
+}
+
+function thisGetter(props) {
+  return function () {
+    let e = this;
+    for (let prop of props) {
+      e = e[prop]
+      if (e === undefined)
+        return e;
+    }
+    return e;
+  };
+}
+
+function windowGetter(props) {
+  return function () {
+    let e = window;
+    for (let prop of props) {
+      e = e[prop]
+      if (e === undefined)
+        return e;
+    }
+    return e;
+  };
+}
+
 function normalizePath(props) {
   if (props[0] === "") props[0] = "window";
   if (props[0] !== "e" && props[0] !== "this" && props[0] !== "window")
@@ -11,9 +46,14 @@ customReactions.defineRule(function (reaction) {
   let parts = reaction.split(".");
   if (parts.length < 2)
     return;
-  const {props, root, getter} = normalizePath(parts);
+  let {props, root, getter} = normalizePath(parts);
+  if(getter){
+    return root === "e" ? eGetter(props) :
+      root === "this" ? thisGetter(props) :
+        windowGetter(props);
+  }
   return function (e, _, ...args) {
-    e = root === "e" ? e : (root === "this") ? this : /*window|""*/ window;
+    e = root === "e" ? e : (root === "this") ? this : window;
     let previous;
     for (let i = 0; i < props.length; i++) {
       let prop = props[i];
@@ -22,9 +62,9 @@ customReactions.defineRule(function (reaction) {
       if (e === undefined && i !== props.length - 1)
         return e;
     }
-    if (!getter && previous && e instanceof Function)
+    if (previous && e instanceof Function)
       return e.call(previous, ...args);
-    if (args.length > 0)    //todo this is a setter
+    if (args.length > 0)
       return previous[props[props.length - 1]] = args.length === 1 ? args[0] : args;
     return e;
   };
@@ -47,14 +87,8 @@ customTypes.defineRule(function (part) {
   let parts = part.split(".");
   if (parts.length < 2)
     return;
-  const {props, root} = normalizePath(parts);
-  return function (e) {
-    e = root === "e" ? e : (root === "this") ? this : /*window|""*/ window;
-    for (let prop of props) {
-      e = e[prop]
-      if (e === undefined)
-        return e;
-    }
-    return e;
-  };
+  const {root, props} = normalizePath(parts);
+  return root === "e" ? eGetter(props) :
+    root === "this" ? thisGetter(props) :
+      windowGetter(props);
 });
