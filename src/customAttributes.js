@@ -57,59 +57,56 @@ class CustomAttr extends Attr {
   }
 }
 
-class WeakArrayDict {
-  push(key, value) {
-    (this[key] ??= new WeakAttributeArray()).push(value);
-  }
-
-  * values(key) {
-    if (this[key])
-      yield* this[key].derefCopy();
-  }
-}
-
 class UnknownAttributes {
   #ref = new Set();
 
-  push(value) {
+  addTriggerless(value) {
     this.#ref.add(new WeakRef(value));
   }
 
   tryAgain() {
-    const toBeRemoved = [];
     for (let ref of this.#ref) {
       const at = ref.deref();
       if (!at?.ownerElement || customAttributes.tryToUpgrade(at))
-        toBeRemoved.push(ref);
+        this.#ref.delete(ref);
     }
-    this.#ref.delete(...toBeRemoved);
+  }
+
+  tryAgainstTriggerDef(prefix, Def){
+    this.tryAgain();
+  }
+
+  tryAgainstTriggerRule(Rule){
+    this.tryAgain();
+  }
+}
+window.unknownAttributes = new UnknownAttributes();
+
+class GlobalTriggers {
+  #dict = {};
+
+  put(name, at) {
+    (this.#dict[name] ??= new Set()).add(new WeakRef(at));
+  }
+
+  * loop(event) {
+    const set = this.#dict["_" + event.type];
+    if (!set)
+      return;
+    for (let ref of set) {
+      const at = ref.deref();
+      if (!at?.ownerElement)
+        set.delete(at);
+      else {
+        if (at.ownerElement.isConnected)
+          if (!(at.defaultAction && (event.defaultAction || event.defaultPrevented)) && at.reactions?.length)
+            yield at;
+      }
+    }
   }
 }
 
-class WeakAttributeArray {
-  #ref = [];
-
-  push(value) {
-    this.#ref.push(new WeakRef(value));
-  }
-
-  //Att! performance vs consistency
-  //This functions makes two new temporary arrays. We do this to:
-  //1. ensure no mutation on the list while the same list is being iterated,
-  //2. provide only the dereferenced attribute,
-  //3. provide efficient enough manual GC of the array and the attributes.
-  derefCopy() {
-    const res = [], missing = [];
-    for (let i = 0; i < this.#ref.length; i++) {
-      const ref = this.#ref[i].deref();
-      ref?.ownerElement ? res.push(ref) : missing.push(i);
-    }
-    for (let num of missing)
-      this.#ref.splice(num, 1)[0].deref()?.destructor();
-    //the .destructor() may be called before this point and more than once here.
-    return res;
-  }
-}
+window.globalTriggers = new GlobalTriggers();
 
 class DefinitionRegistry {
   #register = {};
@@ -180,22 +177,19 @@ class ReactionRegistry extends DefinitionRegistry {
 }
 
 window.customReactions = new ReactionRegistry();
-window.globalListeners = new WeakArrayDict();
 
 class AttributeRegistry extends DefinitionRegistry {
-
-  #unknownTriggers = new UnknownAttributes();
 
   define(prefix, Definition) {
     if (!(Definition.prototype instanceof CustomAttr))
       throw `"${Definition.name}" must be a CustomAttr.`;
     super.define(prefix, Definition);
-    this.#unknownTriggers.tryAgain(/*{prefix, Definition}*/);
+    unknownAttributes.tryAgainstTriggerDef(prefix, Definition);
   }
 
   defineRule(Function) {
     super.defineRule(Function);
-    this.#unknownTriggers.tryAgain(/*Function*/);
+    unknownAttributes.tryAgainstTriggerRule(Function);
   }
 
   tryToUpgrade(at) {
@@ -206,8 +200,8 @@ class AttributeRegistry extends DefinitionRegistry {
   upgrade(...attrs) {
     for (let at of attrs) {
       Object.setPrototypeOf(at, CustomAttr.prototype);      //todo getDefinitions for both attribute and reactions
-      this.tryToUpgrade(at) || this.#unknownTriggers.push(at);
-      at.name[0] === "_" && globalListeners.push(at.type, at);
+      this.tryToUpgrade(at) || unknownAttributes.addTriggerless(at);
+      at.name[0] === "_" && globalTriggers.put(at.type, at);
     }
   }
 
@@ -331,10 +325,8 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
         Then we need to check that the other elements are connected to the same root. This is a heavy operation..
         `);
       globalTarget = null;
-      for (let at of globalListeners.values("_" + event.type))
-        if (at.ownerElement.isConnected)
-          if (!(at.defaultAction && (event.defaultAction || event.defaultPrevented)) && at.reactions?.length)
-            EventLoop.#runReactions(event, at, true);
+      for (let at of globalTriggers.loop(event))
+        EventLoop.#runReactions(event, at, true);
 
       for (let at of bubbleAttr(rootTarget, event))
         EventLoop.#runReactions(event, at, true);
