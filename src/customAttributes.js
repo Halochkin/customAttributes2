@@ -55,6 +55,10 @@ class CustomAttr extends Attr {
   get value() {
     return super.value;
   }
+
+  static upgrade(at, Definition){
+    
+  }
 }
 
 class WeakArrayDict {
@@ -172,8 +176,9 @@ class AttributeRegistry extends DefinitionRegistry {
     if (!(Definition.prototype instanceof CustomAttr))
       throw `"${Definition.name}" must be a CustomAttr.`;
     super.define(prefix, Definition);
+    //todo iterate the unknowns, and then retry them all to this Definition.
     for (let at of this.#unknownEvents.values(prefix))
-      this.#upgradeAttribute(at, Definition);
+      AttributeRegistry.#upgradeAttribute(at, Definition);
     delete this.#unknownEvents[prefix];
   }
 
@@ -194,7 +199,7 @@ class AttributeRegistry extends DefinitionRegistry {
       Object.setPrototypeOf(at, CustomAttr.prototype);
       const Definition = this.getDefinition(at.type);
       Definition ?
-        this.#upgradeAttribute(at, Definition) :             //upgrade to a defined CustomAttribute
+        AttributeRegistry.#upgradeAttribute(at, Definition) :             //upgrade to a defined CustomAttribute
         this.#unknownEvents.push(at.type, at);               //or register as unknown
       at.name[0] === "_" && this.#globals.push(at.type, at); //and then register globals
     }
@@ -204,19 +209,13 @@ class AttributeRegistry extends DefinitionRegistry {
     return this.#globals.values(type);
   }
 
-  #upgradeAttribute(at, Definition) {
+  static #upgradeAttribute(at, Definition) {
     Object.setPrototypeOf(at, Definition.prototype);
     try {
       at.upgrade?.();
-    } catch (error) {
-      //todo Rename to AttributeError?
-      eventLoop.dispatch(new ErrorEvent("error", {error}), at.ownerElement);
-    }
-    try {
       at.changeCallback?.();
     } catch (error) {
-      //todo Rename to AttributeError?
-      eventLoop.dispatch(new ErrorEvent("error", {error}), at.ownerElement);
+      eventLoop.dispatch(new ErrorEvent("error", {error}), at.ownerElement);  //todo Rename to AttributeError?
     }
   }
 }
