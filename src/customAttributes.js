@@ -100,8 +100,9 @@ class GlobalTriggers {
         set.delete(at);
       else {
         if (at.ownerElement.isConnected)
-          if (!(at.defaultAction && (event.defaultAction || event.defaultPrevented)) && at.reactions?.length)
-            yield at;
+          if (at.reactions?.length) //todo this will be something that we can check before we add it!
+            if (!(at.defaultAction && (event.defaultAction || event.defaultPrevented)))
+              yield at;
       }
     }
   }
