@@ -47,26 +47,21 @@ customReactions.defineRule(function (reaction) {
   if (parts.length < 2)
     return;
   let {props, root, getter} = normalizePath(parts);
-  if(getter){
+  if (getter)
     return root === "e" ? eGetter(props) :
       root === "this" ? thisGetter(props) :
         windowGetter(props);
-  }
   return function (e, _, ...args) {
-    e = root === "e" ? e : (root === "this") ? this : window;
-    let previous;
-    for (let i = 0; i < props.length; i++) {
-      let prop = props[i];
-      previous = e;
-      e = e[prop];
-      if (e === undefined && i !== props.length - 1)
-        return e;
+    let p = root === "e" ? e : root === "this" ? this : window;
+    for (let i = 0; i < props.length - 1; i++) {
+      p = p[props[i]];
+      if (p === undefined)
+        return;
     }
-    if (previous && e instanceof Function)
-      return e.call(previous, ...args);
-    if (args.length > 0)
-      return previous[props[props.length - 1]] = args.length === 1 ? args[0] : args;
-    return e;
+    e = p[props[props.length - 1]];
+    return e instanceof Function ? e.call(p, ...args) :
+      args.length > 0 ? (p[props[props.length - 1]] = args.length === 1 ? args[0] : args) : //setter
+        e;
   };
 });
 
@@ -92,3 +87,13 @@ customTypes.defineRule(function (part) {
     root === "this" ? thisGetter(props) :
       windowGetter(props);
 });
+// customTypes.defineRule(part => part.indexOf(".") >0 ?
+//   windowGetter(part.split(".").map(ReactionRegistry.toCamelCase)) : undefined);
+// customTypes.defineRule(part => part.startsWith(".") ?
+//   windowGetter(part.substring(1).split(".").map(ReactionRegistry.toCamelCase)) : undefined);
+// customTypes.defineRule(part => part.startsWith("e.") ?
+//   eGetter(part.substring(2).split(".").map(ReactionRegistry.toCamelCase)) : undefined);
+// customTypes.defineRule(part => part.startsWith("this.") ?
+//   thisGetter(part.substring(5).split(".").map(ReactionRegistry.toCamelCase)) : undefined);
+// customTypes.defineRule(part => part.startsWith("window.") ?
+//   windowGetter(part.substring(7).split(".").map(ReactionRegistry.toCamelCase)) : undefined);
