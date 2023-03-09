@@ -166,11 +166,11 @@ class ReactionRegistry extends DefinitionRegistry {
 }
 
 window.customReactions = new ReactionRegistry();
+window.globalListeners = new WeakArrayDict();
 
 class AttributeRegistry extends DefinitionRegistry {
 
   #unknownEvents = new WeakArrayDict();
-  #globals = new WeakArrayDict();
 
   define(prefix, Definition) {
     if (!(Definition.prototype instanceof CustomAttr))
@@ -202,12 +202,8 @@ class AttributeRegistry extends DefinitionRegistry {
       Definition ?
         AttributeRegistry.#upgradeAttribute(at, Definition) ://upgrade to a defined CustomAttribute
         this.#unknownEvents.push(at.type, at);               //or register as unknown
-      at.name[0] === "_" && this.#globals.push(at.type, at); //and then register globals
-    }
-  }
-
-  globalListeners(type) {
-    return this.#globals.values(type);
+      at.name[0] === "_" && globalListeners.push(at.type, at); //and then register globals
+    }                                                        //todo should we make the #globals into a known object?
   }
 
   //todo this process is under the CustomAttr class..
@@ -329,7 +325,7 @@ document.documentElement.setAttributeNode(document.createAttribute("error::conso
         Then we need to check that the other elements are connected to the same root. This is a heavy operation..
         `);
       globalTarget = null;
-      for (let at of customAttributes.globalListeners("_" + event.type))
+      for (let at of globalListeners.values("_" + event.type))
         if (at.ownerElement.isConnected)
           if (!(at.defaultAction && (event.defaultAction || event.defaultPrevented)) && at.reactions?.length)
             EventLoop.#runReactions(event, at, true);
