@@ -55,10 +55,6 @@ class CustomAttr extends Attr {
   get value() {
     return super.value;
   }
-
-  static upgrade(at, Definition){
-    
-  }
 }
 
 class WeakArrayDict {
@@ -94,6 +90,17 @@ class WeakAttributeArray {
       this.#ref.splice(num, 1)[0].deref()?.destructor();
     //the .destructor() may be called before this point and more than once here.
     return res;
+  }
+
+  tryAgain() {
+    const toBeRemoved = [];
+    for (let i = 0; i < this.#ref.length; i++) {
+      let at = this.#ref[i].deref();
+      if (!at?.ownerElement || customAttributes.tryToUpgrade(at))
+        toBeRemoved.push(i);
+    }
+    for (let num of toBeRemoved)
+      this.#ref.splice(num, 1);
   }
 }
 
@@ -170,40 +177,31 @@ window.globalListeners = new WeakArrayDict();
 
 class AttributeRegistry extends DefinitionRegistry {
 
-  #unknownEvents = new WeakArrayDict();
+  #unknownTriggers = new WeakAttributeArray();
 
   define(prefix, Definition) {
     if (!(Definition.prototype instanceof CustomAttr))
       throw `"${Definition.name}" must be a CustomAttr.`;
     super.define(prefix, Definition);
-    //todo iterate the unknowns, and then retry them all to this Definition.
-    for (let at of this.#unknownEvents.values(prefix))
-      AttributeRegistry.#upgradeAttribute(at, Definition);
-    delete this.#unknownEvents[prefix];
+    this.#unknownTriggers.tryAgain(/*{prefix, Definition}*/);
   }
 
   defineRule(Function) {
-    super.defineRule(Function);   //todo tryToUpgrade returns the at if ok, undefined otherwise
-    // this.#unknownEvents.testDefinition(at=>CustomAttr.tryToUpgrade(at,Function));// todo iterate the list and test the function, if it fits, then remove from the list.
-    // for (let unknownAt of this.#unknownEvents.copy()) { //todo
-    //   const match = Function(unknownAt);
-    //   if(match){
-    //     this.#unknownEvents.remove(unknownAt); //todo doesn't exists
-    //     this.#upgradeAttribute(unknownAt, Function);
-    //   }
-    // }
+    super.defineRule(Function);
+    this.#unknownTriggers.tryAgain(/*Function*/);
+  }
+
+  tryToUpgrade(at) {
+    const Def = this.getDefinition(at.type)
+    return Def && (AttributeRegistry.#upgradeAttribute(at, Def), true);
   }
 
   upgrade(...attrs) {
     for (let at of attrs) {
-      //todo getDefinitions for both attribute and reactions
-      Object.setPrototypeOf(at, CustomAttr.prototype);
-      const Definition = this.getDefinition(at.type);
-      Definition ?
-        AttributeRegistry.#upgradeAttribute(at, Definition) ://upgrade to a defined CustomAttribute
-        this.#unknownEvents.push(at.type, at);               //or register as unknown
-      at.name[0] === "_" && globalListeners.push(at.type, at); //and then register globals
-    }                                                        //todo should we make the #globals into a known object?
+      Object.setPrototypeOf(at, CustomAttr.prototype);      //todo getDefinitions for both attribute and reactions
+      this.tryToUpgrade(at) || this.#unknownTriggers.push(at);
+      at.name[0] === "_" && globalListeners.push(at.type, at);
+    }
   }
 
   //todo this process is under the CustomAttr class..
@@ -214,7 +212,8 @@ class AttributeRegistry extends DefinitionRegistry {
       at.upgrade?.();
       at.changeCallback?.();
     } catch (error) {
-      // Object.setPrototypeOf(at, CustomAttr.prototype); //todo do we want this?? No.. don't think so. Should we flag the attribute as broken??
+      // Object.setPrototypeOf(at, CustomAttr.prototype);
+      // todo do we want this?? No.. don't think so. Should we flag the attribute as broken?? yes, maybe.
       //todo should we catch the error here? or should we do that elsewhere?
       eventLoop.dispatch(new ErrorEvent("error", {error}), at.ownerElement);  //todo Rename to AttributeError?
     }
