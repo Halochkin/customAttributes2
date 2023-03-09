@@ -68,6 +68,24 @@ class WeakArrayDict {
   }
 }
 
+class UnknownAttributes {
+  #ref = new Set();
+
+  push(value) {
+    this.#ref.add(new WeakRef(value));
+  }
+
+  tryAgain() {
+    const toBeRemoved = [];
+    for (let ref of this.#ref) {
+      const at = ref.deref();
+      if (!at?.ownerElement || customAttributes.tryToUpgrade(at))
+        toBeRemoved.push(ref);
+    }
+    this.#ref.delete(...toBeRemoved);
+  }
+}
+
 class WeakAttributeArray {
   #ref = [];
 
@@ -78,7 +96,7 @@ class WeakAttributeArray {
   //Att! performance vs consistency
   //This functions makes two new temporary arrays. We do this to:
   //1. ensure no mutation on the list while the same list is being iterated,
-  //2. provide only the derefenced attribute,
+  //2. provide only the dereferenced attribute,
   //3. provide efficient enough manual GC of the array and the attributes.
   derefCopy() {
     const res = [], missing = [];
@@ -90,17 +108,6 @@ class WeakAttributeArray {
       this.#ref.splice(num, 1)[0].deref()?.destructor();
     //the .destructor() may be called before this point and more than once here.
     return res;
-  }
-
-  tryAgain() {
-    const toBeRemoved = [];
-    for (let i = 0; i < this.#ref.length; i++) {
-      let at = this.#ref[i].deref();
-      if (!at?.ownerElement || customAttributes.tryToUpgrade(at))
-        toBeRemoved.push(i);
-    }
-    for (let num of toBeRemoved)
-      this.#ref.splice(num, 1);
   }
 }
 
@@ -177,7 +184,7 @@ window.globalListeners = new WeakArrayDict();
 
 class AttributeRegistry extends DefinitionRegistry {
 
-  #unknownTriggers = new WeakAttributeArray();
+  #unknownTriggers = new UnknownAttributes();
 
   define(prefix, Definition) {
     if (!(Definition.prototype instanceof CustomAttr))
