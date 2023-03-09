@@ -9,21 +9,13 @@
     import:e.detail.reaction-c.:define_reaction-c="./comp-a_attr-b_reaction-c.js"
 >
 <comp-a
+    click:e.target.tag-name:log
     attr-b:e.type:log
     ready:reaction-c:log
-    timeout_100:print-log
 >hello sunshine
 </comp-a>
 
 <script>
-  const res = [];
-  customReactions.defineAll({
-    log: function (e) {
-      res.push(e);
-    },
-    "print-log": function () {
-      console.log(...res.sort(), document.querySelector("comp-a").constructor.name);
-    }
-  })
+  customReactions.define("log", e => console.log(e));
 </script>
 </body>

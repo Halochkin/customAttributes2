@@ -1,4 +1,8 @@
 export class CompA extends HTMLElement {
+  constructor() {
+    super();
+    this.click();
+  }
 }
 
 export class AttrB extends CustomAttr {
