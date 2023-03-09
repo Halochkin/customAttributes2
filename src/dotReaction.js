@@ -1,15 +1,17 @@
-customReactions.defineRule(function (fullReaction) {
-  const reaction = fullReaction.split("_")[0];
-  let props = reaction.split(".");
-  if (props.length < 2)
-    return;
+function normalizePath(props) {
   if (props[0] === "") props[0] = "window";
   if (props[0] !== "e" && props[0] !== "this" && props[0] !== "window")
     props.unshift("window");
-  props = props.map(ReactionRegistry.toCamelCase);
   const root = props.shift();
-  const getter = props[props.length - 1] === "";
-  if (getter) props.pop();
+  const getter = props[props.length - 1] === "" ? !props.pop() : false;
+  return {root, props: props.map(ReactionRegistry.toCamelCase), getter};
+}
+
+customReactions.defineRule(function (reaction) {
+  let parts = reaction.split(".");
+  if (parts.length < 2)
+    return;
+  const {props, root, getter} = normalizePath(parts);
   return function (e, _, ...args) {
     e = root === "e" ? e : (root === "this") ? this : /*window|""*/ window;
     let previous;
@@ -40,19 +42,12 @@ customTypes.defineAll({
     return this;
   },
 });
+customTypes.defineRule(part => isNaN(part) ? undefined : Number(part));
 customTypes.defineRule(function (part) {
-  if (!isNaN(part)) return Number(part);
-});
-customTypes.defineRule(function (part) {
-  let props = part.split(".");
-  if (props.length < 2)
+  let parts = part.split(".");
+  if (parts.length < 2)
     return;
-  if (props[0] === "") props[0] = "window";   //:.get-computed-style_this.owner-element
-  if (props[0] !== "e" && props[0] !== "this" && props[0] !== "window")
-    props.unshift("window");
-  if(props[props.length-1] === "") props.pop();
-  const root = props.shift();
-  props = props.map(ReactionRegistry.toCamelCase);
+  const {props, root} = normalizePath(parts);
   return function (e) {
     e = root === "e" ? e : (root === "this") ? this : /*window|""*/ window;
     for (let prop of props) {

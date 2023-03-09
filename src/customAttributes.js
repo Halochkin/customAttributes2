@@ -20,6 +20,20 @@ class CustomAttr extends Attr {
     return value;
   }
 
+  static upgrade(at, Definition) {                    //discover time, => check all the definitions.
+    Object.setPrototypeOf(at, Definition.prototype);  //then add to the unknown register what is needed
+    try {                                             //then upgrade
+      at.upgrade?.();
+      at.changeCallback?.();
+    } catch (error) {
+      // Object.setPrototypeOf(at, CustomAttr.prototype);
+      // todo do we want this?? No.. don't think so. Should we flag the attribute as broken?? yes, maybe.
+      //todo should we catch the error here? or should we do that elsewhere?
+      eventLoop.dispatch(new ErrorEvent("error", {error}), at.ownerElement);  //todo Rename to AttributeError?
+    }
+    return at;
+  }
+
   get defaultAction() {
     let value = this.chain.indexOf("") || 0;
     if (value < 0) value = 0;
@@ -64,20 +78,23 @@ class UnknownAttributes {
     this.#ref.add(new WeakRef(value));
   }
 
-  tryAgain() {
+  tryAgainstTriggerDef(prefix, Def) {
     for (let ref of this.#ref) {
       const at = ref.deref();
-      if (!at?.ownerElement || customAttributes.tryToUpgrade(at))
+      if (!at?.ownerElement || at.type === prefix && CustomAttr.upgrade(at, Def))
         this.#ref.delete(ref);
     }
   }
 
-  tryAgainstTriggerDef(prefix, Def) {
-    this.tryAgain();
-  }
-
   tryAgainstTriggerRule(Rule) {
-    this.tryAgain();
+    for (let ref of this.#ref) {
+      const at = ref.deref();
+      if (!at?.ownerElement)
+        this.#ref.delete(ref);
+      const Def = Rule(at.type);
+      if (Def && CustomAttr.upgrade(at, Def))
+        this.#ref.delete(ref);
+    }
   }
 }
 
@@ -194,31 +211,13 @@ class AttributeRegistry extends DefinitionRegistry {
     unknownAttributes.tryAgainstTriggerRule(Function);
   }
 
-  tryToUpgrade(at) {
-    const Def = this.getDefinition(at.type)
-    return Def && (AttributeRegistry.#upgradeAttribute(at, Def), true);
-  }
-
   upgrade(...attrs) {
     for (let at of attrs) {
-      Object.setPrototypeOf(at, CustomAttr.prototype);      //todo getDefinitions for both attribute and reactions
-      this.tryToUpgrade(at) || unknownAttributes.addTriggerless(at);
+      Object.setPrototypeOf(at, CustomAttr.prototype);
+      const Def = this.getDefinition(at.type)
+      Def ? CustomAttr.upgrade(at, Def) :                      //todo find the Def from inside the CustomAttr??
+        unknownAttributes.addTriggerless(at);
       at.name[0] === "_" && globalTriggers.put(at.type, at);
-    }
-  }
-
-  //todo this process is under the CustomAttr class..
-  // So this can be a this method. The problem is that it should be hidden.
-  static #upgradeAttribute(at, Definition) {
-    Object.setPrototypeOf(at, Definition.prototype);
-    try {
-      at.upgrade?.();
-      at.changeCallback?.();
-    } catch (error) {
-      // Object.setPrototypeOf(at, CustomAttr.prototype);
-      // todo do we want this?? No.. don't think so. Should we flag the attribute as broken?? yes, maybe.
-      //todo should we catch the error here? or should we do that elsewhere?
-      eventLoop.dispatch(new ErrorEvent("error", {error}), at.ownerElement);  //todo Rename to AttributeError?
     }
   }
 }
