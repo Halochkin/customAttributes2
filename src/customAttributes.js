@@ -183,8 +183,9 @@ class AttributeRegistry extends DefinitionRegistry {
   }
 
   defineRule(Function) {
-    super.defineRule(Function);
-    // for (let unknownAt of this.#unknownEvents.all()) { //todo .all() doesn't exist
+    super.defineRule(Function);   //todo tryToUpgrade returns the at if ok, undefined otherwise
+    // this.#unknownEvents.testDefinition(at=>CustomAttr.tryToUpgrade(at,Function));// todo iterate the list and test the function, if it fits, then remove from the list.
+    // for (let unknownAt of this.#unknownEvents.copy()) { //todo
     //   const match = Function(unknownAt);
     //   if(match){
     //     this.#unknownEvents.remove(unknownAt); //todo doesn't exists
@@ -199,7 +200,7 @@ class AttributeRegistry extends DefinitionRegistry {
       Object.setPrototypeOf(at, CustomAttr.prototype);
       const Definition = this.getDefinition(at.type);
       Definition ?
-        AttributeRegistry.#upgradeAttribute(at, Definition) :             //upgrade to a defined CustomAttribute
+        AttributeRegistry.#upgradeAttribute(at, Definition) ://upgrade to a defined CustomAttribute
         this.#unknownEvents.push(at.type, at);               //or register as unknown
       at.name[0] === "_" && this.#globals.push(at.type, at); //and then register globals
     }
@@ -209,12 +210,16 @@ class AttributeRegistry extends DefinitionRegistry {
     return this.#globals.values(type);
   }
 
+  //todo this process is under the CustomAttr class..
+  // So this can be a this method. The problem is that it should be hidden.
   static #upgradeAttribute(at, Definition) {
     Object.setPrototypeOf(at, Definition.prototype);
     try {
       at.upgrade?.();
       at.changeCallback?.();
     } catch (error) {
+      // Object.setPrototypeOf(at, CustomAttr.prototype); //todo do we want this?? No.. don't think so. Should we flag the attribute as broken??
+      //todo should we catch the error here? or should we do that elsewhere?
       eventLoop.dispatch(new ErrorEvent("error", {error}), at.ownerElement);  //todo Rename to AttributeError?
     }
   }
