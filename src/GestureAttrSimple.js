@@ -65,6 +65,9 @@ class GestureAttr extends CustomAttr {
   }
 
   destructor() {
+    // for (let at of this.ownerElement.attributes)   //todo alternative structure for removing owned attributes.
+    //   if(at.owner === this)
+    //     this.ownerElement.removeAttribute(at.name);
     for (let attr of this._transitions[this.value])
       this.ownerElement.removeAttribute(attr);
     super.destructor?.();
