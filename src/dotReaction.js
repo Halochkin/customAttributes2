@@ -3,7 +3,7 @@ function eGetter(props) {
     for (let prop of props) {
       e = e[prop]
       if (e === undefined)
-        return e;
+        return;
     }
     return e;
   };
@@ -15,7 +15,7 @@ function thisGetter(props) {
     for (let prop of props) {
       e = e[prop]
       if (e === undefined)
-        return e;
+        return;
     }
     return e;
   };
@@ -27,7 +27,7 @@ function windowGetter(props) {
     for (let prop of props) {
       e = e[prop]
       if (e === undefined)
-        return e;
+        return;
     }
     return e;
   };
@@ -40,16 +40,17 @@ function normalizePath(props) {
 
 function makeCaller(root, props) {
   return function (e, _, ...args) {
-    let p = root === "e" ? e : root === "this" ? this : window;
-    for (let i = 0; i < props.length - 1; i++) {
-      p = p[props[i]];
+    e = root === "e" ? e : root === "this" ? this : window;
+    let p, prop;
+    for (prop of props) {
+      p = e;
       if (p === undefined)
         return;
+      e = p[prop];
     }
-    e = p[props[props.length - 1]];
     return e instanceof Function ? e.call(p, ...args) :
-      args.length > 0 ? (p[props[props.length - 1]] = args.length === 1 ? args[0] : args) : //setter
-        e;
+      !args.length ? e :
+        p[prop] = args.length === 1 ? args[0] : args; //setter
   };
 }
 
