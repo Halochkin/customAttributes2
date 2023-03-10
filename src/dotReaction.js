@@ -77,22 +77,22 @@ customTypes.defineAll({
   },
 });
 customTypes.defineRule(part => isNaN(part) ? undefined : Number(part));
-customTypes.defineRule(function (part) {
-  let parts = part.split(".");
-  if (parts.length < 2)
-    return;
-  const {root, props} = normalizePath(parts);
-  return root === "e" ? eGetter(props) :
-    root === "this" ? thisGetter(props) :
-      windowGetter(props);
-});
+// customTypes.defineRule(function (part) {
+//   let parts = part.split(".");
+//   if (parts.length < 2)
+//     return;
+//   const {root, props} = normalizePath(parts);
+//   return root === "e" ? eGetter(props) :
+//     root === "this" ? thisGetter(props) :
+//       windowGetter(props);
+// });
 // customTypes.defineRule(part => part.indexOf(".") >0 ?
 //   windowGetter(part.split(".").map(ReactionRegistry.toCamelCase)) : undefined);
 // customTypes.defineRule(part => part.startsWith(".") ?
 //   windowGetter(part.substring(1).split(".").map(ReactionRegistry.toCamelCase)) : undefined);
-// customTypes.defineRule(part => part.startsWith("e.") ?
-//   eGetter(part.substring(2).split(".").map(ReactionRegistry.toCamelCase)) : undefined);
-// customTypes.defineRule(part => part.startsWith("this.") ?
-//   thisGetter(part.substring(5).split(".").map(ReactionRegistry.toCamelCase)) : undefined);
-// customTypes.defineRule(part => part.startsWith("window.") ?
-//   windowGetter(part.substring(7).split(".").map(ReactionRegistry.toCamelCase)) : undefined);
+customTypes.defineRule(part => part.startsWith("e.") ?
+  eGetter(part.substring(2).split(".").map(ReactionRegistry.toCamelCase)) : undefined);
+customTypes.defineRule(part => part.startsWith("this.") ?
+  thisGetter(part.substring(5).split(".").map(ReactionRegistry.toCamelCase)) : undefined);
+customTypes.defineRule(part => part.startsWith("window.") ?
+  windowGetter(part.substring(7).split(".").map(ReactionRegistry.toCamelCase)) : undefined);
