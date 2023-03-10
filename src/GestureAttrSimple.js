@@ -24,10 +24,6 @@ customReactions.defineRule(function (reaction) {                   //g..swipeabl
   };
 });
 
-customReactions.define("value", function (e, _, state) {  //todo rename?
-  return this.value = state;
-});
-
 class GestureAttr extends CustomAttr {
   //1. the GestureAttr produce events.
   //2. the GestureAttr cannot have any reactions, nor be _global
@@ -48,7 +44,7 @@ class GestureAttr extends CustomAttr {
     for (let state in this._transitions)
       this._transitions[state] = this._transitions[state].map(([chain, next]) => {
         if (next)
-          chain += `:await:g.value_${next}`;
+          chain += `:await:g.this.value_${next}`;
         chain = chain.split(":");
         chain.splice(1, 0, `g..${this.type}`);
         return chain.join(":");
