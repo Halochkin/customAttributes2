@@ -1,27 +1,26 @@
-customReactions.defineRule(function (fullReaction) {                   //o.value_observe
-  const reaction = fullReaction.match(/^o\.(.+)/)?.[1];
-  if (!reaction)
+customReactions.defineRule(function (reaction) {                   //g.value_observe
+  if (!reaction.startsWith("g."))
     return;
-  const reactionImpl = customReactions.getDefinition(reaction);
-  if (!reactionImpl)
-    return;
-  return function (...args) {
-    return reactionImpl.call(this.owner, ...args);
-  };
+  const reactionImpl = customReactions.getDefinition(reaction.substring(2));
+  if (reactionImpl)
+    return function (...args) {
+      return reactionImpl.call(this.gesture, ...args);
+    };
 });
 
-//todo rename to g.., g., g.state. and more??  or g_, g., g-state_ etc? have only one rule??
-customReactions.defineRule(function (fullReaction) {                   //o..swipeable
-  const type = fullReaction.match(/^o\.\.([a-zA-Z0-9]+)$/)?.[1];
-  if (!type)
+customReactions.defineRule(function (reaction) {                   //g..swipeable
+  if (!reaction.startsWith("g.."))
     return;
+  const type = reaction.substring(3);
+  if (!type)
+    throw new SyntaxError("g..ownerType reaction must add a type");
   return function (e) {
-    if (this.owner)                             //todo an efficiency bump can occur here..
+    if (this.gesture)                             //todo an efficiency bump can occur here..
       return e;
     for (let at of this.ownerElement.attributes)
       if (at.type === type)
-        return this.owner = at, e;
-    throw new Error(`${fullReaction}: can't find owner attribute: "${type}.`);
+        return this.gesture = at, e;
+    throw new Error(`${reaction}: can't find gesture attribute: "${type}.`);
   };
 });
 
@@ -49,12 +48,14 @@ class GestureAttr extends CustomAttr {
     for (let state in this._transitions)
       this._transitions[state] = this._transitions[state].map(([chain, next]) => {
         if (next)
-          chain += `:await:o.value_${next}`;
+          chain += `:await:g.value_${next}`;
         chain = chain.split(":");
-        chain.splice(1, 0, `o..${this.type}`);
+        chain.splice(1, 0, `g..${this.type}`);
         return chain.join(":");
       });
   }
+
+  //todo  g.state. and more??  or g_, g., g-state_ etc? have only one rule??
 
   changeCallback(oldState) {
     if (oldState !== undefined)
@@ -65,9 +66,6 @@ class GestureAttr extends CustomAttr {
   }
 
   destructor() {
-    // for (let at of this.ownerElement.attributes)   //todo alternative structure for removing owned attributes.
-    //   if(at.owner === this)
-    //     this.ownerElement.removeAttribute(at.name);
     for (let attr of this._transitions[this.value])
       this.ownerElement.removeAttribute(attr);
     super.destructor?.();

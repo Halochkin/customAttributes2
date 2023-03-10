@@ -14,7 +14,7 @@
     return e;
   }
 
-  customReactions.define("on-mouse-move", function (e, _, arg1, arg2) {
+  customReactions.define("log", function (e, _, arg1, arg2) {
     console.log(arg1, arg2);
   });
 
@@ -29,13 +29,13 @@
         ],
         observe: [
           ["_mousedown", ""],
-          ["_mousemove:on-mouse-move_mousemove_observe"],
+          ["_mousemove:log_mousemove_observe"],
           ["_mouseup", ""],
           [`timeout_${time}`, "active"],
         ],
         active: [
           ["_mousedown::longpress-reset", ""],
-          ["_mousemove:on-mouse-move_mousemove_active"],
+          ["_mousemove:log_mousemove_active"],
           ["_mouseup::longpress", ""]//todo how to get duration here?
         ]
       };
