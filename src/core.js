@@ -214,7 +214,7 @@ function processNumArrayMonad(num, reaction) {
     const reactionImpl = customReactions.getDefinition(input);
     if (reactionImpl)
       return function (e, _, ...args) {
-        if (prop && !(e instanceof Object))
+        if (!(e instanceof Object))
           throw new TypeError(`Reaction '${reaction}: is not getting an Object input. typeof e = ${typeof e}`);
         e[prop] = reactionImpl.call(this, e, input, ...args);
         return e;
