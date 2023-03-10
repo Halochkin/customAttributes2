@@ -1,42 +1,40 @@
+function getProp(e, props) {
+  for (let prop of props) {
+    e = e[prop]
+    if (e === undefined)
+      return;
+  }
+  return e;
+}
+
 function eGetter(props) {
-  return function (e) {
-    for (let prop of props) {
-      e = e[prop]
-      if (e === undefined)
-        return;
-    }
-    return e;
-  };
+  return e => getProp(e, props);
 }
 
 function thisGetter(props) {
   return function () {
-    let e = this;
-    for (let prop of props) {
-      e = e[prop]
-      if (e === undefined)
-        return;
-    }
-    return e;
+    return getProp(this, props);
   };
 }
 
 function windowGetter(props) {
-  return function () {
-    let e = window;
-    for (let prop of props) {
-      e = e[prop]
-      if (e === undefined)
-        return;
-    }
-    return e;
-  };
+  return () => getProp(window, props);
 }
 
 function normalizePath(props) {
   const getter = props[props.length - 1] === "" ? !props.pop() : false;
   return {props: props.map(ReactionRegistry.toCamelCase), getter};
 }
+//
+// function getProp2(props, e, p, prop) {
+//   for (prop of props) {
+//     p = e;
+//     if (p === undefined)
+//       break;
+//     e = p[prop];
+//   }
+//   return {p, e, prop};
+// }
 
 function makeCaller(root, props) {
   return function (e, _, ...args) {
@@ -44,12 +42,14 @@ function makeCaller(root, props) {
     let p, prop;
     for (prop of props) {
       p = e;
-      if (p === undefined)
+      if (!p)
         return;
       e = p[prop];
     }
+    // let {p, e, prop} = getProp2(props, root === "e" ? e : root === "this" ? this : window);
+    // return !p ? undefined :
     return e instanceof Function ? e.call(p, ...args) :
-      !args.length ? e :
+      !args.length ? e :                              //getter
         p[prop] = args.length === 1 ? args[0] : args; //setter
   };
 }
