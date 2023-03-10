@@ -42,20 +42,22 @@ class GestureAttr extends CustomAttr {
     if (!this._transitions[""])    //todo this error should come at define time, not upgrade time
       throw new SyntaxError(`${this.constructor.name}.stateMachine(..) must return an object with a default, empty-string state.`);
     for (let state in this._transitions)
-      this._transitions[state] = this._transitions[state].map(([chain, next]) => {
-        if (next)
-          chain += `:await:g.this.value_${next}`;
-        chain = chain.split(":");
-        chain.splice(1, 0, `g..${this.type}`);
-        return chain.join(":");
-      });
+      this._transitions[state] = this._transitions[state].map(t => this.prepTransitions(t));
+  }
+
+  prepTransitions([chain, next]) {
+    if (next)
+      chain += `:await:g.this.value_${next}`;
+    chain = chain.split(":");
+    chain.splice(1, 0, `g..${this.type}`);
+    return chain.join(":");
   }
 
   //todo  g.state. and more??  or g_, g., g-state_ etc? have only one rule??
 
   changeCallback(oldState) {
     for (let at of this.ownerElement.attributes)
-      if(at.gesture === this)
+      if (at.gesture === this)
         this.ownerElement.removeAttribute(at.name);
     // if (oldState !== undefined)
     //   for (let attr of this._transitions[oldState])
@@ -66,7 +68,7 @@ class GestureAttr extends CustomAttr {
 
   destructor() {
     for (let at of this.ownerElement.attributes)
-      if(at.gesture === this)
+      if (at.gesture === this)
         this.ownerElement.removeAttribute(at.name);
     // for (let attr of this._transitions[this.value])
     //   this.ownerElement.removeAttribute(attr);
