@@ -34,7 +34,6 @@ function windowGetter(props) {
 }
 
 function normalizePath(props) {
-  if (props[0] === "") props[0] = "window";
   if (props[0] !== "e" && props[0] !== "this" && props[0] !== "window")
     props.unshift("window");
   const root = props.shift();
@@ -43,7 +42,7 @@ function normalizePath(props) {
 }
 
 customReactions.defineRule(function (reaction) {
-  let parts = reaction.split(".");
+  const parts = reaction.split(".");//todo this is too wide, I think that e., this., window., should be required.
   if (parts.length < 2)
     return;
   let {props, root, getter} = normalizePath(parts);
