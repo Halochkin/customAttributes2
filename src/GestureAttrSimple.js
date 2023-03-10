@@ -1,11 +1,11 @@
-customReactions.defineRule(function (reaction) {                   //g.value_observe
-  if (!reaction.startsWith("g."))
-    return;
-  const reactionImpl = customReactions.getDefinition(reaction.substring(2));
-  if (reactionImpl)
-    return function (...args) {
-      return reactionImpl.call(this.gesture, ...args);
-    };
+customReactions.defineRule(function (reaction) {                   //g.push
+  if (reaction.startsWith("g."))
+    return customReactions.getDefinition("this.gesture" + reaction.substring(1));
+});
+
+customTypes.defineRule(function (type) {                   //g.data
+  if (type.startsWith("g."))
+    return customReactions.getDefinition("this.gesture" + type.substring(1));
 });
 
 customReactions.defineRule(function (reaction) {                   //g..swipeable
@@ -43,35 +43,74 @@ class GestureAttr extends CustomAttr {
       throw new SyntaxError(`${this.constructor.name}.stateMachine(..) must return an object with a default, empty-string state.`);
     for (let state in this._transitions)
       this._transitions[state] = this._transitions[state].map(t => this.prepTransitions(t));
+
+    //initializing state and data
+    const [state, ...data] = this.value.split(" ");
+    this._data = data;
+    this._state = state;
+    this.changeState();
   }
 
   prepTransitions([chain, next]) {
-    if (next)
-      chain += `:await:g.this.value_${next}`;
+    if (next !== undefined)
+      chain += `:await:g.state_${next}`;
     chain = chain.split(":");
     chain.splice(1, 0, `g..${this.type}`);
     return chain.join(":");
   }
 
-  //todo  g.state. and more??  or g_, g., g-state_ etc? have only one rule??
+  //Blocks locks .value from being set directly.
+  // todo test this with a test of el.setAttribute("gesture", "some start value").
+  set value(_) {
+    throw new SyntaxError(`GestureAttr ${this.type} doesn't allow for setting the value via script`);
+    //or can these GestureAttr only be added as empty to begin with? That they can only be instantiated from blank?
+    //todo we can have different structures here.. Not sure.. It will not be testable.
+  }
 
-  changeCallback(oldState) {
+  get value() {
+    return super.value;
+  }
+
+  render() {
+    Object.getOwnPropertyDescriptor(Attr.prototype, "value").set.call(this, [this._state, ...this._data].join(" "));
+  }
+
+  set state(state) {
+    if (Object.keys(this._transitions).indexOf(state) < 0)
+      throw new SyntaxError(`The '${state}' state is unknown for GestureAttr '${this.type}'.`);
+    this._previousState = this.state;
+    this._state = state;
+    this.render();
+    this.changeState();
+  }
+
+  get state() {
+    return this._state;
+  }
+
+  pushData(data) {
+    this._data.push(data);
+  }
+
+  setData(...data) {
+    this._data = data;
+    this.render();
+  }
+
+  get data() {
+    return this._data;
+  }
+
+  changeState() {
     for (let at of this.ownerElement.attributes)
-      if (at.gesture === this)
-        this.ownerElement.removeAttribute(at.name);
-    // if (oldState !== undefined)
-    //   for (let attr of this._transitions[oldState])
-    //     this.ownerElement.removeAttribute(attr);
-    for (let attr of this._transitions[this.value])
-      this.ownerElement.setAttribute(attr, "");
+      at.gesture === this && this.ownerElement.removeAttribute(at.name);
+    for (let at of this._transitions[this.state])
+      this.ownerElement.setAttribute(at, "");
   }
 
   destructor() {
     for (let at of this.ownerElement.attributes)
-      if (at.gesture === this)
-        this.ownerElement.removeAttribute(at.name);
-    // for (let attr of this._transitions[this.value])
-    //   this.ownerElement.removeAttribute(attr);
+      at.gesture === this && this.ownerElement.removeAttribute(at.name);
     super.destructor?.();
   }
 }

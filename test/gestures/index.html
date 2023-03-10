@@ -20,5 +20,13 @@
     ["left",350]
   ]</script>
 </test-html>
+<test-html test="swipeable.html">
+  <script expected>[
+    ["swipe-start","right",0],
+    ["swipe","right",345],
+    ["swipe-start","right",0],
+    ["swipe","left",355]
+  ]</script>
+</test-html>
 <!-- Note!! You must load the test-html component at the end -->
 <script src="https://cdn.jsdelivr.net/gh/orstavik/TestHTML@v1.1.2/TestHTML.js"></script>

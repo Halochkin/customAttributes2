@@ -149,7 +149,7 @@ class DefinitionRegistry {
 
   tryRules(type) {
     for (let Def of this.#rules)
-      if (Def = Def(type))
+      if ((Def = Def(type)) !== undefined)
         return Def;
   }
 
@@ -388,6 +388,8 @@ function deprecated() {
   Element_proto.setAttribute = function (name, value) {
     if (this.hasAttribute(name))
       getAttrNodeOG.call(this, name).value = value;
+      //todo this is likely to fail for Gestures.
+    // We might need to do this via Object.getOwnPropertyDescriptor(Attr.prototype, "value").get.call(attr, value)
     else {
       value === undefined ?
         setAttributeNodeOG.call(this, documentCreateAttributeOG.call(document, name)) :
