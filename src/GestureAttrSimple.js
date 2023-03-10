@@ -54,16 +54,22 @@ class GestureAttr extends CustomAttr {
   //todo  g.state. and more??  or g_, g., g-state_ etc? have only one rule??
 
   changeCallback(oldState) {
-    if (oldState !== undefined)
-      for (let attr of this._transitions[oldState])
-        this.ownerElement.removeAttribute(attr);
+    for (let at of this.ownerElement.attributes)
+      if(at.gesture === this)
+        this.ownerElement.removeAttribute(at.name);
+    // if (oldState !== undefined)
+    //   for (let attr of this._transitions[oldState])
+    //     this.ownerElement.removeAttribute(attr);
     for (let attr of this._transitions[this.value])
       this.ownerElement.setAttribute(attr, "");
   }
 
   destructor() {
-    for (let attr of this._transitions[this.value])
-      this.ownerElement.removeAttribute(attr);
+    for (let at of this.ownerElement.attributes)
+      if(at.gesture === this)
+        this.ownerElement.removeAttribute(at.name);
+    // for (let attr of this._transitions[this.value])
+    //   this.ownerElement.removeAttribute(attr);
     super.destructor?.();
   }
 }
