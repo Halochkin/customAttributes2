@@ -17,9 +17,10 @@
     [123, "number"],
     ["click", "string"],
     ["BODY", "string"],
+    ["bob.", "string"],
+    [".bob", "string"],
     [null, "function"],
-    [null, "function"],
-    [null, "function"]
+    [null, "undefined"]
   ]</script>
 </test-html>
 <test-html test="dotGetComputedStyle.html">
@@ -28,11 +29,8 @@
 <test-html test="endsWithDot.html">
   <script expected>["aFunction", "bFunction", "getComputedStyle"]</script>
 </test-html>
-<test-html test="spread.html">
-  <script expected>[[1, 2]]</script>
-</test-html>
 <test-html test="dotNotation.html">
-  <script expected>["bob", ["expecttrue", true], ["click", 1, 2]]</script>
+  <script expected>["bob", ["expecttrue", true]]</script>
 </test-html>
 <test-html test="monadDots.html">
   <script expected>[["click", "click"], ["click", 1, 2]]</script>

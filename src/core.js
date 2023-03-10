@@ -120,6 +120,12 @@
   customAttributes.define("device-pixel-content-box", ResizeAttr);
 })();
 
+function processNumArrayMonad(num, reaction) {
+  if (Number.isInteger(num))
+    return Number(num);
+  throw new SyntaxError(`${num} is not an Integer or "" empty string.\n The array monad HO reaction has the following signature: "a.Integer.reaction"/"a..reaction": ${reaction}`);
+}
+
 (function () {
   const throttleRegister = new WeakMap();
   //labels=>this=>e
@@ -203,18 +209,43 @@
   customReactions.defineRule(function (reaction) {
     if (!reaction.startsWith("m."))
       return;
-    let [m, prop, ...original] = reaction.split(".");
-    original = original.join(".");
+    const [m, prop, ...original] = reaction.split(".");
+    const input = original.join(".");
+    const reactionImpl = customReactions.getDefinition(input);
+    if (reactionImpl)
+      return function (e, _, ...args) {
+        if (prop && !(e instanceof Object))
+          throw new TypeError(`Reaction '${reaction}: is not getting an Object input. typeof e = ${typeof e}`);
+        e[prop] = reactionImpl.call(this, e, input, ...args);
+        return e;
+      }
+  });
+  customReactions.defineRule(function (reaction) {
+    if (!reaction.startsWith("a."))
+      return;
+    const [a, num, ...rest] = reaction.split(".");
+    const original = rest.join(".");
+    const int = num === "" ? num : processNumArrayMonad(num, reaction);
     const reactionImpl = customReactions.getDefinition(original);
-    return function (e, prefix,...args) {
-      const value = reactionImpl.call(this, e, original, ...args);
-      if (e instanceof Array && !prop)
-        e.push(value);
-      else if (e instanceof Array && Number.isInteger(+prop))
-        e.splice(prop < 0 ? Math.max(e.length + 1 + prop, 0) : Math.min(prop, e.length), 0, value);
-      else if (prop)
-        e[prop] = value;
-      return e;
-    }
+    if (reactionImpl)
+      return function (e, prefix, ...args) {
+        if (!(e instanceof Array))
+          throw new TypeError(`Reaction '${reaction}: is not getting an Array input. typeof e = ${typeof e}`);
+        const val = reactionImpl.call(this, e, original, ...args);
+        num === "" ? e.push(val) :
+          e.splice(int < 0 ? e.length + int : int, 0, val);
+        return e;
+      };
+  });
+  customReactions.defineRule(function (reaction) {
+    if (!reaction.startsWith("."))
+      return;
+    const original = reaction.substring(1);
+    const reactionImpl = customReactions.getDefinition(original);
+    if (reactionImpl)
+      return function (e, _, ...args) {
+        reactionImpl.call(this, e, original, ...args);
+        return e;
+      };
   });
 })();
