@@ -135,11 +135,11 @@ function processNumArrayMonad(num, reaction) {
     new: function _new(e, _, constructor, ...args) {
       return new window[ReactionRegistry.toCamelCase(constructor)](...args, e);
     },
-    await: async (e, prefix, num) => {
+    await: async function Await(e, prefix, num) {
       if (num && isNaN(num))    //todo detect error at upgradeTime?? if so, how best to do it..
         throw new SyntaxError(`${prefix}_${num} is illegal, the _${num} is not a number.`);
       await (num ? new Promise(r => setTimeout(r, num)) : Promise.resolve());
-      return e;
+      return this.ownerElement ? e : undefined;
     },
     prevent: e => (e.preventDefault(), e),
     dispatch: function dispatch(e) {
@@ -244,8 +244,8 @@ function processNumArrayMonad(num, reaction) {
     const reactionImpl = customReactions.getDefinition(original);
     if (reactionImpl)
       return function (e, _, ...args) {
-        reactionImpl.call(this, e, original, ...args);
-        return e;
+        const val = reactionImpl.call(this, e, original, ...args);
+        return val instanceof Promise ? val.then(() => e) : e;
       };
   });
 })();
