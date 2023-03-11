@@ -158,8 +158,14 @@ class DefinitionRegistry {
   }
 }
 
-window.customTypes = new DefinitionRegistry();
-customTypes.defineRule(part => part);
+class TypeRegistry extends DefinitionRegistry {
+  getDefinition(type) {
+    const Def = super.getDefinition(type);
+    return Def === undefined ? type : Def;
+  }
+}
+
+window.customTypes = new TypeRegistry();
 
 class ReactionRegistry extends DefinitionRegistry {
 
@@ -424,6 +430,52 @@ observeElementCreation(els => els.forEach(el => window.customAttributes.upgrade(
     get passive() {
       return !(this.chain.indexOf("prevent") || this.chain.indexOf("e.prevent-default"));
     }
+
+    static* domEvents() {
+      yield "touchstart";
+      yield "touchmove";
+      yield "touchend";
+      yield "touchcancel";
+      for (let prop in HTMLElement.prototype)
+        if (prop.startsWith("on"))
+          yield prop.substring(2);
+      for (let prop in Element.prototype)
+        if (prop.startsWith("on"))
+          if (!(prop in HTMLElement.prototype))
+            yield prop.substring(2);
+    }
+
+    static* windowEvents() {
+      for (let prop in window)
+        if (prop.startsWith("on"))
+          if (!(prop in HTMLElement.prototype))
+            if (!(prop in Element.prototype))
+              yield prop.substring(2);
+    }
+
+    static* documentEvents() {
+      for (let prop in Document.prototype)
+        if (prop.startsWith("on"))
+          if (!(prop in HTMLElement.prototype))
+            if (!(prop in Element.prototype))
+              if (!(prop in window))
+                yield prop.substring(2);
+    }
+
+    //note! This map can be generated declaratively, on the server.
+    static allNativeEvents() {
+      const res = {};
+      for (let type of NativeAttr.domEvents()) {
+        res[type] = NativeBubblingEvent;
+        res["_" + type] = ShadowRootEvent;
+      }
+      for (let type of NativeAttr.documentEvents())
+        res["_" + type] = NativeDocumentEvent;
+      for (let type of NativeAttr.windowEvents())
+        res["_" + type] = NativeWindowEvent;
+      res["_domcontentloaded"] = NativeDCLEvent;
+      return res;
+    }
   }
 
   class NativeBubblingEvent extends NativeAttr {
@@ -499,24 +551,7 @@ observeElementCreation(els => els.forEach(el => window.customAttributes.upgrade(
     }
   }
 
-  function isDomEvent(type) {
-    return `on${type}` in HTMLElement.prototype || /^touch(start|move|end|cancel)$/.exec(type);
-  }
-
-  customAttributes.defineRule(t => {
-    if (isDomEvent(t))
-      return NativeBubblingEvent;
-    if (t[0] === "_" && isDomEvent(t.substring(1)))
-      return ShadowRootEvent;
-    if (t === "_domcontentloaded")
-      return NativeDCLEvent;
-    if (t[0] === "_" && `on${t.substring(1)}` in window)
-      return NativeWindowEvent;
-    if (t[0] === "_" && `on${t.substring(1)}` in Document.prototype)
-      return NativeDocumentEvent;
-    if (`on${t}` in window || `on${t}` in Document.prototype || t === "domcontentloaded")
-      throw new SyntaxError("_global must have _");
-  });
+  customAttributes.defineAll(NativeAttr.allNativeEvents());
 })(addEventListener, removeEventListener);
 
 //** default error event handling
