@@ -41,7 +41,7 @@
   customAttributes.define("swipeable", class SwipeAttr extends GestureAttr {
     static stateMachine(prefix, length = 50) {
       return {
-        "": [["mousedown:.g.set-data_e.x:swipe-start:dispatch", "start"]],
+        "": [["mousedown:.g.set_e.x:swipe-start:dispatch", "start"]],
         start: [
           [`_mouseup:.min-distance_${length}_e.x_g.data:then_${prefix}::swipe_e_g.data:dispatch`, ""],
           [`_mouseup:else_${prefix}:swipe-cancel:dispatch`, ""],

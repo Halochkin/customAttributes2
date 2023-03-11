@@ -1,4 +1,4 @@
-customReactions.defineRule(function (reaction) {                   //g.push
+customReactions.defineRule(function (reaction) {           //g.push
   if (reaction.startsWith("g."))
     return customReactions.getDefinition("this.gesture" + reaction.substring(1));
 });
@@ -8,7 +8,7 @@ customTypes.defineRule(function (type) {                   //g.data
     return customReactions.getDefinition("this.gesture" + type.substring(1));
 });
 
-customReactions.defineRule(function (reaction) {                   //g..swipeable
+customReactions.defineRule(function (reaction) {           //g..swipeable
   if (!reaction.startsWith("g.."))
     return;
   const type = reaction.substring(3);
@@ -20,7 +20,7 @@ customReactions.defineRule(function (reaction) {                   //g..swipeabl
     for (let at of this.ownerElement.attributes)
       if (at.type === type)
         return this.gesture = at, e;
-    throw new Error(`${reaction}: can't find gesture attribute: "${type}.`);
+    throw new Error(`${reaction}: can't find owner .gesture attribute: "${type}.`);
   };
 });
 
@@ -53,8 +53,8 @@ class GestureAttr extends CustomAttr {
 
   prepTransitions([chain, next]) {
     chain = chain.split(":");
-    next !== undefined && chain.push(`g.state_${next}`)
     chain.splice(1, 0, `g..${this.type}`);
+    next !== undefined && chain.push(`g.state_${next}`);
     return chain.join(":");
   }
 
@@ -87,11 +87,11 @@ class GestureAttr extends CustomAttr {
     return this._state;
   }
 
-  pushData(data) {
+  push(data) {
     this._data.push(data);
   }
 
-  setData(...data) {
+  set(...data) {
     this._data = data;
     this.render();
   }
