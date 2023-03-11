@@ -283,16 +283,17 @@ class ReactionErrorEvent extends ErrorEvent {
     for (let el = target; el; el = el.parentElement || !slotMode && el.parentNode?.host) {
       let one, two;                                                       //efficiency
       for (let at of el.attributes)
-          if (at.type === event.type)
-            if (at.reactions?.length)
-              if (!at.defaultAction || !event.defaultAction && !event.defaultPrevented)
-                one ? one = at: !two ? two = [at] : two.push(at);        //efficiency
-      if(one)                                                            //efficiency
-        globalTarget = target, yield one;    //add [path] here?          //efficiency
-      if(two)                                                            //efficiency
-        for (let at of two)                                              //efficiency
-          if (at.ownerElement)//if at removed by previous at in same loop//efficiency
-            globalTarget = target, yield at;//and add [path] here?       //efficiency
+        if (at.type === event.type)
+          if (at.reactions?.length)
+            if (!at.defaultAction || !event.defaultAction && !event.defaultPrevented)
+              one ? one = at : !two ? two = [at] : two.push(at);          //efficiency
+      if (one)                                                            //efficiency
+        globalTarget = target, yield one;    //add [path] here?           //efficiency
+      if (two)                                                            //efficiency
+        for (let at of two)                                               //efficiency
+          if (at.ownerElement)//if at removed by previous at in same loop //efficiency
+            if (!at.defaultAction || !event.defaultAction && !event.defaultPrevented)  //efficiency
+              globalTarget = target, yield at;//and add [path] here?      //efficiency
       if (el.assignedSlot)
         yield* bubbleAttr(el.assignedSlot, event, true);
     }
