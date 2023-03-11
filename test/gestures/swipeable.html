@@ -30,8 +30,8 @@
     }
   }
 
-  function copyEvent(e, prefix) {
-    return new SwipeEvent(prefix, e, this.gesture.value.split(" ")[1]);
+  function copyEvent(e, prefix, start) {
+    return new SwipeEvent(prefix, e, start[0]);
   }
 
   customReactions.define("swipe", copyEvent);
@@ -41,11 +41,11 @@
   customAttributes.define("swipeable", class SwipeAttr extends GestureAttr {
     static stateMachine(prefix, length = 50) {
       return {
-        "": [["mousedown:.g.set_e.x:swipe-start:dispatch", "start"]],
+        "": [["mousedown:.g.set_e.x:swipe-start_g.data:dispatch", "start"]],
         start: [
-          [`_mouseup:.min-distance_${length}_e.x_g.data:then_${prefix}::swipe_e_g.data:dispatch`, ""],
-          [`_mouseup:else_${prefix}:swipe-cancel:dispatch`, ""],
-          ["_blur:swipe-cancel:dispatch", ""],
+          [`_mouseup:.min-distance_${length}_e.x_g.data:then_${prefix}::swipe_g.data:dispatch`, ""],
+          [`_mouseup:else_${prefix}:swipe-cancel_g.data:dispatch`, ""],
+          ["_blur:swipe-cancel_g.data:dispatch", ""],
           ["_selectstart:prevent", ""]
         ]
       };
@@ -56,15 +56,12 @@
   (function () {
     const div = document.querySelector("div");
     setTimeout(_ => div.dispatchEvent(new MouseEvent("mousedown", {clientX: 5})), 50);
-    setTimeout(_ => document.body.dispatchEvent(new MouseEvent("mouseup", {bubbles: true, clientX: 350})), 300);
+    setTimeout(_ => document.body.dispatchEvent(new MouseEvent("mouseup", {bubbles: true, clientX: 350})), 100);
   })();
   setTimeout(function () {
     const div = document.querySelector("div");
-    setTimeout(_ => {
-      const event = new MouseEvent("mousedown", {clientX: 505});
-      return div.dispatchEvent(event);
-    }, 50);
-    setTimeout(_ => document.body.dispatchEvent(new MouseEvent("mouseup", {bubbles: true, clientX: 150})), 300);
-  }, 1000);
+    setTimeout(_ => div.dispatchEvent(new MouseEvent("mousedown", {clientX: 505})), 50);
+    setTimeout(_ => document.body.dispatchEvent(new MouseEvent("mouseup", {bubbles: true, clientX: 150})), 100);
+  }, 300);
 
 </script>
