@@ -52,9 +52,8 @@ class GestureAttr extends CustomAttr {
   }
 
   prepTransitions([chain, next]) {
-    if (next !== undefined)
-      chain += `:await:g.state_${next}`;
     chain = chain.split(":");
+    next !== undefined && chain.push(`g.state_${next}`)
     chain.splice(1, 0, `g..${this.type}`);
     return chain.join(":");
   }
@@ -102,15 +101,16 @@ class GestureAttr extends CustomAttr {
   }
 
   changeState() {
-    for (let at of this.ownerElement.attributes)
-      at.gesture === this && this.ownerElement.removeAttribute(at.name);
+    if (this._previousState !== undefined)
+      for (let at of this._transitions[this._previousState])
+        this.ownerElement.removeAttribute(at);
     for (let at of this._transitions[this.state])
       this.ownerElement.setAttribute(at, "");
   }
 
   destructor() {
-    for (let at of this.ownerElement.attributes)
-      at.gesture === this && this.ownerElement.removeAttribute(at.name);
+    for (let at of this._transitions[this._previousState])
+      this.ownerElement.removeAttribute(at);
     super.destructor?.();
   }
 }
