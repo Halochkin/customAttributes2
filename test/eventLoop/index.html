@@ -13,8 +13,11 @@
 <test-html test="no-submit-native.html">
   <script expected>["submit", "only sunshine"]</script>
 </test-html>
+<test-html test="addAttributeDuringLoop.html">
+  <script expected>[1, 2]</script>
+</test-html>
 <test-html test="removeAttributeDuringLoop.html">
-  <script expected>[1, 2, 3]</script>
+  <script expected>[1, 2]</script>
 </test-html>
 <test-html test="stop-click_strong.html">
   <script expected>[

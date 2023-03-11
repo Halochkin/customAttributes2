@@ -4,16 +4,12 @@
 <script src="../../src/core.js"></script>
 
 <body click:console.log_1
-      click:remove
+      click:add-attr="click:console.log_3"
       click:console.log_2
-      click:console.log_3
-
 ></body>
 <script>
-  customReactions.define("remove", function () {
-    const el = this.ownerElement;
-    el.removeAttribute(this.name);
-    el.removeAttribute("click:console.log_3");
+  customReactions.define("add", function () {
+    this.ownerElement.setAttribute(this.value);
   });
   document.body.click();
 </script>
