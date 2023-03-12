@@ -148,7 +148,7 @@ class DefinitionRegistry {
   }
 
   getDefinition(type, bits = type.split(".")) {
-    return this.#cache[type] ??= bits.length === 1 ? this.#register[type] : this.#rules[bits[0]]?.(bits.slice(1));
+    return this.#cache[type] ??= bits.length === 1 ? this.#register[type] : this.#rules[bits[0]]?.(...bits);
   }
 }
 

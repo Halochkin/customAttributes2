@@ -18,7 +18,7 @@ function thisGetter(props) {
 }
 
 function windowGetter(props) {
-  return () => getProp(window, props);
+  return _ => getProp(window, props);
 }
 
 function normalizePath(props) {
@@ -54,20 +54,19 @@ function makeCaller(root, props) {
   };
 }
 
-customReactions.defineRule("window", function (more) {
+function getSetOrCall(root, ...more) {
   const {props, getter} = normalizePath(more);
-  return getter ? windowGetter(props) : makeCaller("window", props);
-});
-customReactions.defineRule("this", function (more) {
-  const {props, getter} = normalizePath(more);
-  return getter ? thisGetter(props) : makeCaller("this", props);
-});
-customReactions.defineRule("e", function (more) {
-  const {props, getter} = normalizePath(more);
-  return getter ? eGetter(props) : makeCaller("e", props);
-});
-customReactions.defineRule("console", function (more){
-  return customReactions.getDefinition("window.console." + more.join("."));
+  return !getter ? makeCaller(root, props) :
+    root === "e" ? eGetter(props) :
+      root === "this" ? thisGetter(props) :
+        windowGetter(props);
+}
+
+customReactions.defineRule("window", getSetOrCall);
+customReactions.defineRule("this", getSetOrCall);
+customReactions.defineRule("e", getSetOrCall);
+customReactions.defineRule("console", function (...more) {
+  return customReactions.getDefinition("window." + more.join("."));
 });
 
 customTypes.defineAll({
@@ -82,6 +81,6 @@ customTypes.defineAll({
     return this;
   },
 });
-customTypes.defineRule("e", part => eGetter(part.map(ReactionRegistry.toCamelCase)));
-customTypes.defineRule("this", part => thisGetter(part.map(ReactionRegistry.toCamelCase)));
-customTypes.defineRule("window", part => windowGetter(part.map(ReactionRegistry.toCamelCase)));
+customTypes.defineRule("e", (e, ...part) => eGetter(part.map(ReactionRegistry.toCamelCase)));
+customTypes.defineRule("this", (t, ...part) => thisGetter(part.map(ReactionRegistry.toCamelCase)));
+customTypes.defineRule("window", (w, ...part) => windowGetter(part.map(ReactionRegistry.toCamelCase)));

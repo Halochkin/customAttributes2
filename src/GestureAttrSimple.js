@@ -1,8 +1,8 @@
-customReactions.defineRule("g", function (more) {           //g.push
+customReactions.defineRule("g", function (g, ...more) {           //g.push
   return customReactions.getDefinition("this.gesture." + more.join("."));
 });
 
-customTypes.defineRule("g", function (more) {                   //g.data
+customTypes.defineRule("g", function (g, ...more) {                   //g.data
   return customReactions.getDefinition("this.gesture." + more.join("."));
 });
 

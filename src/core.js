@@ -206,20 +206,18 @@ function processNumArrayMonad(num, reaction) {
     }
   });
 
-  customReactions.defineRule("m", function (more) {
-    const [prop, ...original] = more;
+  customReactions.defineRule("m", function (m, prop, ...original) {
     const input = original.join(".");
     const reactionImpl = customReactions.getDefinition(input);
     if (reactionImpl)
       return function (e, _, ...args) {
         if (!(e instanceof Object))
-          throw new TypeError(`Reaction '${reaction}: is not getting an Object input. typeof e = ${typeof e}`);
+          throw new TypeError(`Reaction '${[m, prop, input].join(".")}: is not getting an Object input. typeof e = ${typeof e}`);
         e[prop] = reactionImpl.call(this, e, input, ...args);
         return e;
       }
   });
-  customReactions.defineRule("a", function (more) {
-    const [num, ...rest] = more;
+  customReactions.defineRule("a", function (a, num, ...rest) {
     const original = rest.join(".");
     const reaction = "a." + num + "." + original;
     const int = num === "" ? num : processNumArrayMonad(num, reaction);
@@ -234,7 +232,7 @@ function processNumArrayMonad(num, reaction) {
         return e;
       };
   });
-  customReactions.defineRule("", function (more) {
+  customReactions.defineRule("", function (_, ...more) {
     const original = more.join(".");
     const reactionImpl = customReactions.getDefinition(original);
     if (reactionImpl)
