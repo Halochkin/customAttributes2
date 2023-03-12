@@ -147,25 +147,26 @@ class DefinitionRegistry {
     this.#rules[prefix] = Function;
   }
 
-  tryRules(type) {
-    const [one, ...more] = type.split(".");
+  tryRules(one, ...more) {
     return this.#rules[one]?.(more);
   }
 
   getDefinition(type) {
-    return this.#cache[type] ??= this.#register[type] ?? this.tryRules(type);
+    return this.#cache[type] ??= this.#register[type] ?? this.tryRules(...type.split("."));
   }
 }
 
 class TypeRegistry extends DefinitionRegistry {
 
-  tryRules(type) {
-    //todo here we should have some builtin types such as true/false and null??
+  tryRules(...bits) {
+    const type = bits.join(".");
     if (!(isNaN(type) || type === "")) return Number(type);
-    const Def = super.tryRules(type);
+    const Def = super.tryRules(...bits);
     if (Def !== undefined) return Def;
     return type;
   }
+  //todo here we should have some builtin types such as true/false and null??
+  //todo or should we say that true/false is only 1/0. I like this. This would require the reaction function to convert true to 1 and false to 0.
 }
 
 window.customTypes = new TypeRegistry();
