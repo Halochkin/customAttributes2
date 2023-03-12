@@ -147,25 +147,20 @@ class DefinitionRegistry {
     this.#rules[prefix] = Function;
   }
 
-  tryRules(one, ...more) {
-    return this.#rules[one]?.(more);
-  }
-
   getDefinition(type, bits = type.split(".")) {
-    return this.#cache[type] ??= this.#register[type] ?? this.tryRules(...bits);
+    return this.#cache[type] ??= bits.length === 1 ? this.#register[type] : this.#rules[bits[0]]?.(bits.slice(1));
   }
 }
 
 class TypeRegistry extends DefinitionRegistry {
 
-  tryRules(...bits) {
-    const type = bits.join(".");
-    if (type && !isNaN(type)) return Number(type);
-    const Def = super.tryRules(...bits);
-    if (Def !== undefined) return Def;
-    return type;
+  getDefinition(type, bits = type.split(".")) {  //numbers and strings are not cached..
+    if (type && !isNaN(type))
+      return Number(type);
+    const Def = super.getDefinition(type, bits);
+    return (Def !== undefined ? Def : type);
   }
-  //todo here we should have some builtin types such as true/false and null??
+  //todo this essentially functions as builtin types for Numbers and strings. Should we add the other builtin types here too? such as true/false and null??
   //todo or should we say that true/false is only 1/0. I like this. This would require the reaction function to convert true to 1 and false to 0.
 }
 
