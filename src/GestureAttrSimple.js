@@ -8,12 +8,12 @@ customTypes.defineRule(function (type) {                   //g.data
     return customReactions.getDefinition("this.gesture" + type.substring(1));
 });
 
-customReactions.defineRule(function (reaction) {           //g..swipeable
-  if (!reaction.startsWith("g.."))
+customReactions.defineRule(function (reaction) {           //gg.swipeable
+  if (!reaction.startsWith("gg."))
     return;
   const type = reaction.substring(3);
   if (!type)
-    throw new SyntaxError("g..ownerType reaction must add a type");
+    throw new SyntaxError("gg.ownerType reaction must add a type");
   return function (e) {
     if (this.gesture)                             //todo an efficiency bump can occur here..
       return e;
@@ -53,7 +53,7 @@ class GestureAttr extends CustomAttr {
 
   prepTransitions([chain, next]) {
     chain = chain.split(":");
-    chain.splice(1, 0, `g..${this.type}`);
+    chain.splice(1, 0, `gg.${this.type}`);
     next !== undefined && chain.push(`g.state_${next}`);
     return chain.join(":");
   }
