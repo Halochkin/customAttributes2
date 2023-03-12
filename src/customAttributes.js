@@ -151,8 +151,8 @@ class DefinitionRegistry {
     return this.#rules[one]?.(more);
   }
 
-  getDefinition(type) {
-    return this.#cache[type] ??= this.#register[type] ?? this.tryRules(...type.split("."));
+  getDefinition(type, bits = type.split(".")) {
+    return this.#cache[type] ??= this.#register[type] ?? this.tryRules(...bits);
   }
 }
 
@@ -160,7 +160,7 @@ class TypeRegistry extends DefinitionRegistry {
 
   tryRules(...bits) {
     const type = bits.join(".");
-    if (!(isNaN(type) || type === "")) return Number(type);
+    if (type && !isNaN(type)) return Number(type);
     const Def = super.tryRules(...bits);
     if (Def !== undefined) return Def;
     return type;
