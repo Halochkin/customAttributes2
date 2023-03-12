@@ -206,10 +206,8 @@ function processNumArrayMonad(num, reaction) {
     }
   });
 
-  customReactions.defineRule("m", function (reaction) {
-    // if (!reaction.startsWith("m."))
-    //   return;
-    const [m, prop, ...original] = reaction.split(".");
+  customReactions.defineRule("m", function (more) {
+    const [prop, ...original] = more;
     const input = original.join(".");
     const reactionImpl = customReactions.getDefinition(input);
     if (reactionImpl)
@@ -220,11 +218,10 @@ function processNumArrayMonad(num, reaction) {
         return e;
       }
   });
-  customReactions.defineRule("a", function (reaction) {
-    // if (!reaction.startsWith("a."))
-    //   return;
-    const [a, num, ...rest] = reaction.split(".");
+  customReactions.defineRule("a", function (more) {
+    const [num, ...rest] = more;
     const original = rest.join(".");
+    const reaction = "a." + num + "." + original;
     const int = num === "" ? num : processNumArrayMonad(num, reaction);
     const reactionImpl = customReactions.getDefinition(original);
     if (reactionImpl)
@@ -237,10 +234,8 @@ function processNumArrayMonad(num, reaction) {
         return e;
       };
   });
-  customReactions.defineRule("", function (reaction) {
-    // if (!reaction.startsWith("."))
-    //   return;
-    const original = reaction.substring(1);
+  customReactions.defineRule("", function (more) {
+    const original = more.join(".");
     const reactionImpl = customReactions.getDefinition(original);
     if (reactionImpl)
       return function (e, _, ...args) {

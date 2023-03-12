@@ -54,25 +54,21 @@ function makeCaller(root, props) {
   };
 }
 
-customReactions.defineRule("window", function (reaction) {
-  // if (!reaction.startsWith("window."))
-  //   return;
-  const {props, getter} = normalizePath(reaction.substring(7).split("."));
+customReactions.defineRule("window", function (more) {
+  const {props, getter} = normalizePath(more);
   return getter ? windowGetter(props) : makeCaller("window", props);
 });
-customReactions.defineRule("this", function (reaction) {
-  // if (!reaction.startsWith("this."))
-  //   return;
-  const {props, getter} = normalizePath(reaction.substring(5).split("."));
+customReactions.defineRule("this", function (more) {
+  const {props, getter} = normalizePath(more);
   return getter ? thisGetter(props) : makeCaller("this", props);
 });
-customReactions.defineRule("e", function (reaction) {
-  // if (!reaction.startsWith("e."))
-  //   return;
-  const {props, getter} = normalizePath(reaction.substring(2).split("."));
+customReactions.defineRule("e", function (more) {
+  const {props, getter} = normalizePath(more);
   return getter ? eGetter(props) : makeCaller("e", props);
 });
-customReactions.define("console.log", (e, _, ...args) => console.log(...args));
+customReactions.defineRule("console", function (more){
+  return customReactions.getDefinition("window.console." + more.join("."));
+});
 
 customTypes.defineAll({
   true: true,
@@ -86,13 +82,6 @@ customTypes.defineAll({
     return this;
   },
 });
-// customTypes.defineRule("e", part => part.startsWith("e.") ?
-//   eGetter(part.substring(2).split(".").map(ReactionRegistry.toCamelCase)) : undefined);
-// customTypes.defineRule("this", part => part.startsWith("this.") ?
-//   thisGetter(part.substring(5).split(".").map(ReactionRegistry.toCamelCase)) : undefined);
-// customTypes.defineRule("window", part => part.startsWith("window.") ?
-//   windowGetter(part.substring(7).split(".").map(ReactionRegistry.toCamelCase)) : undefined);
-
-customTypes.defineRule("e", part => eGetter(part.substring(2).split(".").map(ReactionRegistry.toCamelCase)));
-customTypes.defineRule("this", part => thisGetter(part.substring(5).split(".").map(ReactionRegistry.toCamelCase)));
-customTypes.defineRule("window", part => windowGetter(part.substring(7).split(".").map(ReactionRegistry.toCamelCase)));
+customTypes.defineRule("e", part => eGetter(part.map(ReactionRegistry.toCamelCase)));
+customTypes.defineRule("this", part => thisGetter(part.map(ReactionRegistry.toCamelCase)));
+customTypes.defineRule("window", part => windowGetter(part.map(ReactionRegistry.toCamelCase)));

@@ -1,28 +1,21 @@
-customReactions.defineRule("g", function (reaction) {           //g.push
-  // if (reaction.startsWith("g."))
-    return customReactions.getDefinition("this.gesture" + reaction.substring(1));
+customReactions.defineRule("g", function (more) {           //g.push
+  return customReactions.getDefinition("this.gesture." + more.join("."));
 });
 
-customTypes.defineRule("g", function (type) {                   //g.data
-  // if (type.startsWith("g."))
-    return customReactions.getDefinition("this.gesture" + type.substring(1));
+customTypes.defineRule("g", function (more) {                   //g.data
+  return customReactions.getDefinition("this.gesture." + more.join("."));
 });
 
-//todo this is just a reaction??
-customReactions.defineRule("gg", function (reaction) {           //gg.swipeable
-  // if (!reaction.startsWith("gg."))
-  //   return;
-  const type = reaction.substring(3);
-  if (!type)
-    throw new SyntaxError("gg.ownerType reaction must add a type");
-  return function (e) {
-    if (this.gesture)                             //todo an efficiency bump can occur here..
-      return e;
-    for (let at of this.ownerElement.attributes)
-      if (at.type === type)
-        return this.gesture = at, e;
-    throw new Error(`${reaction}: can't find owner .gesture attribute: "${type}.`);
-  };
+//todo efficiency bump can occur here..
+customReactions.define("g", function (e, g, type) {           //g_swipeable
+  // if (!type)//todo syntax check for valid reaction type name.
+  //   throw new SyntaxError("The g_gestureName reaction must have an argument");
+  if (this.gesture)
+    return e;
+  for (let at of this.ownerElement.attributes)
+    if (at.type === type)
+      return this.gesture = at, e;
+  throw new Error(`g_${type}: can't find .gesture attribute named: "${type}.`);
 });
 
 class GestureAttr extends CustomAttr {
@@ -54,7 +47,7 @@ class GestureAttr extends CustomAttr {
 
   prepTransitions([chain, next]) {
     chain = chain.split(":");
-    chain.splice(1, 0, `gg.${this.type}`);
+    chain.splice(1, 0, `g_${this.type}`);
     next !== undefined && chain.push(`g.state_${next}`);
     return chain.join(":");
   }

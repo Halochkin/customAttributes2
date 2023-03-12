@@ -148,12 +148,8 @@ class DefinitionRegistry {
   }
 
   tryRules(type) {
-    return this.#rules[type.split(".")[0]]?.(type);
-    // for (let [prefix, Def] of Object.entries(this.#rules))
-    //   if ((Def = Def(type)) !== undefined){
-    //     console.info(prefix, type);
-    //     return Def;
-    //   }
+    const [one, ...more] = type.split(".");
+    return this.#rules[one]?.(more);
   }
 
   getDefinition(type) {
