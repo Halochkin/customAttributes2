@@ -159,9 +159,13 @@ class DefinitionRegistry {
 }
 
 class TypeRegistry extends DefinitionRegistry {
-  getDefinition(type) {
-    const Def = super.getDefinition(type);
-    return Def === undefined ? type : Def;
+
+  tryRules(type) {
+    //todo here we should have some builtin types such as true/false and null??
+    if (!(isNaN(type) || type === "")) return Number(type);
+    const Def = super.tryRules(type);
+    if (Def !== undefined) return Def;
+    return type;
   }
 }
 

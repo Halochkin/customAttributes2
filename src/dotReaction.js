@@ -86,7 +86,6 @@ customTypes.defineAll({
     return this;
   },
 });
-customTypes.defineRule(part => isNaN(part) || part === "" ? undefined : Number(part));
 customTypes.defineRule(part => part.startsWith("e.") ?
   eGetter(part.substring(2).split(".").map(ReactionRegistry.toCamelCase)) : undefined);
 customTypes.defineRule(part => part.startsWith("this.") ?
