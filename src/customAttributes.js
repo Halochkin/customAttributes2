@@ -129,7 +129,7 @@ window.globalTriggers = new GlobalTriggers();
 
 class DefinitionRegistry {
   #register = {};
-  #rules = [];
+  #rules = {};
   #cache = {};
 
   define(prefix, Definition) {
@@ -143,14 +143,17 @@ class DefinitionRegistry {
       this.define(type, Function);
   }
 
-  defineRule(Function) {
-    this.#rules.unshift(Function);
+  defineRule(prefix, Function) {
+    this.#rules[prefix] = Function;
   }
 
   tryRules(type) {
-    for (let Def of this.#rules)
-      if ((Def = Def(type)) !== undefined)
-        return Def;
+    return this.#rules[type.split(".")[0]]?.(type);
+    // for (let [prefix, Def] of Object.entries(this.#rules))
+    //   if ((Def = Def(type)) !== undefined){
+    //     console.info(prefix, type);
+    //     return Def;
+    //   }
   }
 
   getDefinition(type) {
@@ -216,8 +219,8 @@ class AttributeRegistry extends DefinitionRegistry {
     unknownAttributes.tryAgainstTriggerDef(prefix, Definition);
   }
 
-  defineRule(Function) {
-    super.defineRule(Function);
+  defineRule(prefix, Function) {
+    super.defineRule(prefix, Function);
     unknownAttributes.tryAgainstTriggerRule(Function);
   }
 

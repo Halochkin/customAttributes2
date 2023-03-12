@@ -1,16 +1,17 @@
-customReactions.defineRule(function (reaction) {           //g.push
-  if (reaction.startsWith("g."))
+customReactions.defineRule("g", function (reaction) {           //g.push
+  // if (reaction.startsWith("g."))
     return customReactions.getDefinition("this.gesture" + reaction.substring(1));
 });
 
-customTypes.defineRule(function (type) {                   //g.data
-  if (type.startsWith("g."))
+customTypes.defineRule("g", function (type) {                   //g.data
+  // if (type.startsWith("g."))
     return customReactions.getDefinition("this.gesture" + type.substring(1));
 });
 
-customReactions.defineRule(function (reaction) {           //gg.swipeable
-  if (!reaction.startsWith("gg."))
-    return;
+//todo this is just a reaction??
+customReactions.defineRule("gg", function (reaction) {           //gg.swipeable
+  // if (!reaction.startsWith("gg."))
+  //   return;
   const type = reaction.substring(3);
   if (!type)
     throw new SyntaxError("gg.ownerType reaction must add a type");

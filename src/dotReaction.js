@@ -54,21 +54,21 @@ function makeCaller(root, props) {
   };
 }
 
-customReactions.defineRule(function (reaction) {
-  if (!reaction.startsWith("window."))
-    return;
+customReactions.defineRule("window", function (reaction) {
+  // if (!reaction.startsWith("window."))
+  //   return;
   const {props, getter} = normalizePath(reaction.substring(7).split("."));
   return getter ? windowGetter(props) : makeCaller("window", props);
 });
-customReactions.defineRule(function (reaction) {
-  if (!reaction.startsWith("this."))
-    return;
+customReactions.defineRule("this", function (reaction) {
+  // if (!reaction.startsWith("this."))
+  //   return;
   const {props, getter} = normalizePath(reaction.substring(5).split("."));
   return getter ? thisGetter(props) : makeCaller("this", props);
 });
-customReactions.defineRule(function (reaction) {
-  if (!reaction.startsWith("e."))
-    return;
+customReactions.defineRule("e", function (reaction) {
+  // if (!reaction.startsWith("e."))
+  //   return;
   const {props, getter} = normalizePath(reaction.substring(2).split("."));
   return getter ? eGetter(props) : makeCaller("e", props);
 });
@@ -86,9 +86,13 @@ customTypes.defineAll({
     return this;
   },
 });
-customTypes.defineRule(part => part.startsWith("e.") ?
-  eGetter(part.substring(2).split(".").map(ReactionRegistry.toCamelCase)) : undefined);
-customTypes.defineRule(part => part.startsWith("this.") ?
-  thisGetter(part.substring(5).split(".").map(ReactionRegistry.toCamelCase)) : undefined);
-customTypes.defineRule(part => part.startsWith("window.") ?
-  windowGetter(part.substring(7).split(".").map(ReactionRegistry.toCamelCase)) : undefined);
+// customTypes.defineRule("e", part => part.startsWith("e.") ?
+//   eGetter(part.substring(2).split(".").map(ReactionRegistry.toCamelCase)) : undefined);
+// customTypes.defineRule("this", part => part.startsWith("this.") ?
+//   thisGetter(part.substring(5).split(".").map(ReactionRegistry.toCamelCase)) : undefined);
+// customTypes.defineRule("window", part => part.startsWith("window.") ?
+//   windowGetter(part.substring(7).split(".").map(ReactionRegistry.toCamelCase)) : undefined);
+
+customTypes.defineRule("e", part => eGetter(part.substring(2).split(".").map(ReactionRegistry.toCamelCase)));
+customTypes.defineRule("this", part => thisGetter(part.substring(5).split(".").map(ReactionRegistry.toCamelCase)));
+customTypes.defineRule("window", part => windowGetter(part.substring(7).split(".").map(ReactionRegistry.toCamelCase)));
