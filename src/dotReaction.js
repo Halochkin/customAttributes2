@@ -77,9 +77,9 @@ customReactions.define("console.log", (e, _, ...args) => console.log(...args));
 customTypes.defineAll({
   true: true,
   false: false,
-  null: null,
   window: window,
   document: document,
+  null: _ => null,
   undefined: _ => undefined,
   e: e => e,
   this: function () {
