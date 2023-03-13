@@ -1,23 +1,14 @@
-customReactions.defineRule("g", function (g, ...more) {           //g.push
-  return customReactions.getDefinition("this.gesture." + more.join("."));
+customReactions.defineRule("g", function (g, prop, ...more) {
+  if (more.length)
+    throw new SyntaxError("The g. can only have a single property.");
+  prop = ReactionRegistry.toCamelCase(prop);
+  return function (e, _, ...args) {
+    return this.gesture[prop].call(this.gesture, e, ...args);
+  }
 });
 
-customTypes.defineRule("g", function (g, ...more) {                   //g.data
-  return customReactions.getDefinition("this.gesture." + more.join("."));
-});
-
-//todo efficiency bump can occur here..
-customReactions.define("g", function (e, g, type) {           //g_swipeable
-  // if (!type)//todo syntax check for valid reaction type name.
-  //   throw new SyntaxError("The g_gestureName reaction must have an argument");
-  if (this.gesture)
-    return e;
-  for (let at of this.ownerElement.attributes)
-    if (at.type === type)
-      return this.gesture = at, e;
-  throw new Error(`g_${type}: can't find .gesture attribute named: "${type}.`);
-});
-
+//todo add syntactic rule that the GestureAttr must end with -able??
+//todo change the data to be a string again.. I think it is better.
 class GestureAttr extends CustomAttr {
   //1. the GestureAttr produce events.
   //2. the GestureAttr cannot have any reactions, nor be _global
@@ -35,24 +26,21 @@ class GestureAttr extends CustomAttr {
     this._transitions = this.constructor.stateMachine(this.type, ...this.suffix);
     if (!this._transitions[""])    //todo this error should come at define time, not upgrade time
       throw new SyntaxError(`${this.constructor.name}.stateMachine(..) must return an object with a default, empty-string state.`);
-    for (let state in this._transitions)
-      this._transitions[state] = this._transitions[state].map(t => this.prepTransitions(t));
+    for (let s in this._transitions)
+      this._transitions[s] = this._transitions[s].map(([c, n]) => c + (n === undefined ? "" : `:g.go_${n}`));
+    this.initFromAttrValue();
+  }
 
-    //initializing state and data
+  initFromAttrValue() {
     const [state, ...data] = this.value.split(" ");
     this._data = data;
+    //todo this is a hack that enables restart mid-session to first cleanup already added attributes
+    this._previousState = state;
     this._state = state;
     this.changeState();
   }
 
-  prepTransitions([chain, next]) {
-    chain = chain.split(":");
-    chain.splice(1, 0, `g_${this.type}`);
-    next !== undefined && chain.push(`g.state_${next}`);
-    return chain.join(":");
-  }
-
-  //Blocks locks .value from being set directly.
+//Blocks locks .value from being set directly.
   // todo test this with a test of el.setAttribute("gesture", "some start value").
   set value(_) {
     throw new SyntaxError(`GestureAttr ${this.type} doesn't allow for setting the value via script`);
@@ -66,6 +54,10 @@ class GestureAttr extends CustomAttr {
 
   render() {
     Object.getOwnPropertyDescriptor(Attr.prototype, "value").set.call(this, [this._state, ...this._data].join(" "));
+  }
+
+  go(_, state) {
+    this.state = state;
   }
 
   set state(state) {
@@ -98,8 +90,11 @@ class GestureAttr extends CustomAttr {
     if (this._previousState !== undefined)
       for (let at of this._transitions[this._previousState])
         this.ownerElement.removeAttribute(at);
+    const atCount = this.ownerElement.attributes.length;
     for (let at of this._transitions[this.state])
       this.ownerElement.setAttribute(at, "");
+    for (let i = atCount; i < this.ownerElement.attributes.length; i++)
+      this.ownerElement.attributes[i].gesture = this;
   }
 
   destructor() {
