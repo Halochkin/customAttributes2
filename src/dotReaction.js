@@ -92,3 +92,37 @@ customTypes.defineRule("this", (t, ...part) => thisGetter(part.map(ReactionRegis
 customTypes.defineRule("window", (w, ...part) => windowGetter(part.map(ReactionRegistry.toCamelCase)));
 customTypes.defineRule("el", (el, ...part) => thisGetter(["ownerElement", part.map(ReactionRegistry.toCamelCase)]));
 customTypes.defineRule("p", (el, ...part) => thisGetter(["ownerElement", "parentElement", part.map(ReactionRegistry.toCamelCase)]));
+
+//style
+customTypes.defineRule("style", function (_, prop, ...args) {
+  if (args.length)
+    throw new SyntaxError("style. rule is a simple getter and can only have a single value.");
+  return function () {
+    return getComputedStyle(this.ownerElement)[prop];
+  };
+});
+// customReactions.defineRule("style", function (_, prop, ...args) {
+//   if (args.length)
+//     throw new SyntaxError("style. rule is a monad setter and can only have a single value.");
+//   return function (e, _, ...args) {
+//     this.ownerElement.style[prop] = args.join(" ");
+//     return e;
+//   };
+// });
+// //class
+// customReactions.defineRule("class", function (_, prop, ...args) {
+//   if (args.length)
+//     throw new SyntaxError("class. rule is a monad setter and can only have a single value.");
+//   return function (e, _, ...args) {
+//     this.ownerElement.style[prop] = args.join(" ");
+//     return e;
+//   };
+// });
+// customTypes.define("class", function (_, prop, ...args) {
+//   if (args.length)
+//     throw new SyntaxError("class. rule is a monad getter and can only have a single value.");
+//   return function () {
+//     return getComputedStyle(this.ownerElement)[prop];
+//   };
+// });
+//todo class and attr
