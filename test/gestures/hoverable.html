@@ -17,22 +17,23 @@
 </body>
 
 <script type="module">
-  customReactions.define("hover", function(e, prefix){
-    eventLoop.dispatch(new Event(prefix, e), this.ownerElement);
-    return e;
-  });
-  customReactions.define("current-target", function(e){
-    if(e.target === this.ownerElement)
-      return e;
-  });
   customAttributes.define("hoverable", class HoverAttr extends GestureAttr {
-    static stateMachine(){
+
+    hover(e) {
+      eventLoop.dispatch(new Event(this.type.slice(0, -4), e), this.ownerElement);
+    }
+
+    currentTarget(e) {
+      return e.target === this.ownerElement ? e : undefined;
+    }
+
+    static stateMachine() {
       return {
         "": [
-          ["mouseenter:hover", "on"]
+          ["mouseenter:.g.hover", "on"]
         ],
         "on": [
-          ["mouseleave:current-target", ""]
+          ["mouseleave:.g.current-target", ""]
         ]
       };
     }
@@ -40,7 +41,5 @@
 
   const span = document.querySelector("span");
   span.dispatchEvent(new MouseEvent("mouseenter"));
-  setTimeout(_ => {
-    span.dispatchEvent(new MouseEvent("mouseleave"));
-  }, 60);
+  setTimeout(_ => span.dispatchEvent(new MouseEvent("mouseleave")), 60);
 </script>

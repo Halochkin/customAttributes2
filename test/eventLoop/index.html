@@ -13,6 +13,12 @@
 <test-html test="no-submit-native.html">
   <script expected>["submit", "only sunshine"]</script>
 </test-html>
+<test-html test="addAttributeDuringLoop.html">
+  <script expected>[1, 2]</script>
+</test-html>
+<test-html test="removeAttributeDuringLoop.html">
+  <script expected>[1, 2]</script>
+</test-html>
 <test-html test="stop-click_strong.html">
   <script expected>[
     "stopa",
@@ -57,34 +63,34 @@
 </test-html>
 <test-html test="targetPath.html">
   <script expected>[
-    ["DIV","#document-fragment",null],
+    ["DIV", "#document-fragment", null],
     [],
-    ["SPAN","#document",null],
+    ["SPAN", "#document", null],
     [],
-    ["SPAN","#document","SPAN"],
-    ["SPAN","H1","WEB-COMP","BODY","HTML"],
-    ["H1","#document","SPAN"],
-    ["SPAN","H1","WEB-COMP","BODY","HTML"],
-    ["SLOT","#document-fragment","SLOT"],
-    ["SLOT","DIV"],
-    ["DIV","#document-fragment","SLOT"],
-    ["SLOT","DIV"],
-    ["WEB-COMP","#document","SPAN"],
-    ["SPAN","H1","WEB-COMP","BODY","HTML"],
-    ["BODY","#document","SPAN"],
-    ["SPAN","H1","WEB-COMP","BODY","HTML"],
-    ["SPAN","#document","SPAN"],
-    ["SPAN","H1","WEB-COMP","BODY","HTML"]
+    ["SPAN", "#document", "SPAN"],
+    ["SPAN", "H1", "WEB-COMP", "BODY", "HTML"],
+    ["H1", "#document", "SPAN"],
+    ["SPAN", "H1", "WEB-COMP", "BODY", "HTML"],
+    ["SLOT", "#document-fragment", "SLOT"],
+    ["SLOT", "DIV"],
+    ["DIV", "#document-fragment", "SLOT"],
+    ["SLOT", "DIV"],
+    ["WEB-COMP", "#document", "SPAN"],
+    ["SPAN", "H1", "WEB-COMP", "BODY", "HTML"],
+    ["BODY", "#document", "SPAN"],
+    ["SPAN", "H1", "WEB-COMP", "BODY", "HTML"],
+    ["SPAN", "#document", "SPAN"],
+    ["SPAN", "H1", "WEB-COMP", "BODY", "HTML"]
   ]</script>
 </test-html>
 <test-html test="bubble.html">
   <script expected>[
-    ["SPAN","SPAN"],
-    ["H1","SPAN"],
-    ["SLOT","SLOT"],
-    ["DIV","SLOT"],
-    ["WEB-COMP","SPAN"],
-    ["BODY","SPAN"]
+    ["SPAN", "SPAN"],
+    ["H1", "SPAN"],
+    ["SLOT", "SLOT"],
+    ["DIV", "SLOT"],
+    ["WEB-COMP", "SPAN"],
+    ["BODY", "SPAN"]
   ]</script>
 </test-html>
 

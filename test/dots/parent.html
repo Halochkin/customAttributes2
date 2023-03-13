@@ -1,0 +1,12 @@
+<script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.2/observeElementCreation.js"></script>
+<script src="../../src/customAttributes.js"></script>
+<script src="../../src/dotReaction.js"></script>
+
+<div id="parent">
+  <h1 click:p.log_p.id>hello sunshine</h1>
+</div>
+
+<script>
+  document.querySelector("div").log = console.log;
+  document.querySelector("h1").click();
+</script>

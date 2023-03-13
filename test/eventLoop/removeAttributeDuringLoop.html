@@ -1,0 +1,19 @@
+<script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.2/observeElementCreation.js"></script>
+<script src="../../src/customAttributes.js"></script>
+<script src="../../src/dotReaction.js"></script>
+<script src="../../src/core.js"></script>
+
+<body click:console.log_1
+      click:remove
+      click:console.log_2
+      click:console.log_3
+
+></body>
+<script>
+  customReactions.define("remove", function () {
+    const el = this.ownerElement;
+    el.removeAttribute(this.name);
+    el.removeAttribute("click:console.log_3");
+  });
+  document.body.click();
+</script>

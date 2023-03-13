@@ -129,7 +129,7 @@ window.globalTriggers = new GlobalTriggers();
 
 class DefinitionRegistry {
   #register = {};
-  #rules = [];
+  #rules = {};
   #cache = {};
 
   define(prefix, Definition) {
@@ -143,23 +143,28 @@ class DefinitionRegistry {
       this.define(type, Function);
   }
 
-  defineRule(Function) {
-    this.#rules.unshift(Function);
+  defineRule(prefix, Function) {
+    this.#rules[prefix] = Function;
   }
 
-  tryRules(type) {
-    for (let Def of this.#rules)
-      if (Def = Def(type))
-        return Def;
-  }
-
-  getDefinition(type) {
-    return this.#cache[type] ??= this.#register[type] ?? this.tryRules(type);
+  getDefinition(type, bits = type.split(".")) {
+    return this.#cache[type] ??= bits.length === 1 ? this.#register[type] : this.#rules[bits[0]]?.(...bits);
   }
 }
 
-window.customTypes = new DefinitionRegistry();
-customTypes.defineRule(part => part);
+class TypeRegistry extends DefinitionRegistry {
+
+  getDefinition(type, bits = type.split(".")) {  //numbers and strings are not cached..
+    if (type && !isNaN(type))
+      return Number(type);
+    const Def = super.getDefinition(type, bits);
+    return (Def !== undefined ? Def : type);
+  }
+  //todo this essentially functions as builtin types for Numbers and strings. Should we add the other builtin types here too? such as true/false and null??
+  //todo or should we say that true/false is only 1/0. I like this. This would require the reaction function to convert true to 1 and false to 0.
+}
+
+window.customTypes = new TypeRegistry();
 
 class ReactionRegistry extends DefinitionRegistry {
 
@@ -206,8 +211,8 @@ class AttributeRegistry extends DefinitionRegistry {
     unknownAttributes.tryAgainstTriggerDef(prefix, Definition);
   }
 
-  defineRule(Function) {
-    super.defineRule(Function);
+  defineRule(prefix, Function) {
+    super.defineRule(prefix, Function);
     unknownAttributes.tryAgainstTriggerRule(Function);
   }
 
@@ -281,11 +286,19 @@ class ReactionErrorEvent extends ErrorEvent {
 
   function* bubbleAttr(target, event, slotMode) {
     for (let el = target; el; el = el.parentElement || !slotMode && el.parentNode?.host) {
+      let one, two;                                                       //efficiency
       for (let at of el.attributes)
         if (at.type === event.type)
           if (at.reactions?.length)
             if (!at.defaultAction || !event.defaultAction && !event.defaultPrevented)
-              globalTarget = target, yield at;      //todo build path here too?
+              one ? one = at : !two ? two = [at] : two.push(at);          //efficiency
+      if (one)                                                            //efficiency
+        globalTarget = target, yield one;    //add [path] here?           //efficiency
+      if (two)                                                            //efficiency
+        for (let at of two)                                               //efficiency
+          if (at.ownerElement)//if at removed by previous at in same loop //efficiency
+            if (!at.defaultAction || !event.defaultAction && !event.defaultPrevented)  //efficiency
+              globalTarget = target, yield at;//and add [path] here?      //efficiency
       if (el.assignedSlot)
         yield* bubbleAttr(el.assignedSlot, event, true);
     }
@@ -388,6 +401,8 @@ function deprecated() {
   Element_proto.setAttribute = function (name, value) {
     if (this.hasAttribute(name))
       getAttrNodeOG.call(this, name).value = value;
+      //todo this is likely to fail for Gestures.
+    // We might need to do this via Object.getOwnPropertyDescriptor(Attr.prototype, "value").get.call(attr, value)
     else {
       value === undefined ?
         setAttributeNodeOG.call(this, documentCreateAttributeOG.call(document, name)) :
@@ -413,6 +428,52 @@ observeElementCreation(els => els.forEach(el => window.customAttributes.upgrade(
     //todo restrict e.preventDefault() to the "prevent" reaction only
     get passive() {
       return !(this.chain.indexOf("prevent") || this.chain.indexOf("e.prevent-default"));
+    }
+
+    static* domEvents() {
+      yield "touchstart";
+      yield "touchmove";
+      yield "touchend";
+      yield "touchcancel";
+      for (let prop in HTMLElement.prototype)
+        if (prop.startsWith("on"))
+          yield prop.substring(2);
+      for (let prop in Element.prototype)
+        if (prop.startsWith("on"))
+          if (!(prop in HTMLElement.prototype))
+            yield prop.substring(2);
+    }
+
+    static* windowEvents() {
+      for (let prop in window)
+        if (prop.startsWith("on"))
+          if (!(prop in HTMLElement.prototype))
+            if (!(prop in Element.prototype))
+              yield prop.substring(2);
+    }
+
+    static* documentEvents() {
+      for (let prop in Document.prototype)
+        if (prop.startsWith("on"))
+          if (!(prop in HTMLElement.prototype))
+            if (!(prop in Element.prototype))
+              if (!(prop in window))
+                yield prop.substring(2);
+    }
+
+    //note! This map can be generated declaratively, on the server.
+    static allNativeEvents() {
+      const res = {};
+      for (let type of NativeAttr.domEvents()) {
+        res[type] = NativeBubblingEvent;
+        res["_" + type] = ShadowRootEvent;
+      }
+      for (let type of NativeAttr.documentEvents())
+        res["_" + type] = NativeDocumentEvent;
+      for (let type of NativeAttr.windowEvents())
+        res["_" + type] = NativeWindowEvent;
+      res["_domcontentloaded"] = NativeDCLEvent;
+      return res;
     }
   }
 
@@ -489,24 +550,7 @@ observeElementCreation(els => els.forEach(el => window.customAttributes.upgrade(
     }
   }
 
-  function isDomEvent(type) {
-    return `on${type}` in HTMLElement.prototype || /^touch(start|move|end|cancel)$/.exec(type);
-  }
-
-  customAttributes.defineRule(t => {
-    if (isDomEvent(t))
-      return NativeBubblingEvent;
-    if (t[0] === "_" && isDomEvent(t.substring(1)))
-      return ShadowRootEvent;
-    if (t === "_domcontentloaded")
-      return NativeDCLEvent;
-    if (t[0] === "_" && `on${t.substring(1)}` in window)
-      return NativeWindowEvent;
-    if (t[0] === "_" && `on${t.substring(1)}` in Document.prototype)
-      return NativeDocumentEvent;
-    if (`on${t}` in window || `on${t}` in Document.prototype || t === "domcontentloaded")
-      throw new SyntaxError("_global must have _");
-  });
+  customAttributes.defineAll(NativeAttr.allNativeEvents());
 })(addEventListener, removeEventListener);
 
 //** default error event handling

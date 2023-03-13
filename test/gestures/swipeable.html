@@ -1,0 +1,28 @@
+<script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.2/observeElementCreation.js"></script>
+<script src="../../src/customAttributes.js"></script>
+<script src="../../src/dotReaction.js"></script>
+<script src="../../src/core.js"></script>
+<script src="../../src/GestureAttrSimple.js"></script>
+<script src="Swipeable.js"></script>
+
+<body
+    swipe:console.log_e.type_e.direction_e.length
+    swipe-start:console.log_e.type
+    swipe-cancel:console.log_e.type
+>
+<div swipeable_100></div>
+</body>
+
+<script>
+  (function () {
+    const div = document.querySelector("div");
+    setTimeout(_ => div.dispatchEvent(new MouseEvent("mousedown", {clientX: 5})), 50);
+    setTimeout(_ => document.body.dispatchEvent(new MouseEvent("mouseup", {bubbles: true, clientX: 350})), 100);
+  })();
+  setTimeout(function () {
+    const div = document.querySelector("div");
+    setTimeout(_ => div.dispatchEvent(new MouseEvent("mousedown", {clientX: 505})), 50);
+    setTimeout(_ => document.body.dispatchEvent(new MouseEvent("mouseup", {bubbles: true, clientX: 150})), 100);
+  }, 300);
+
+</script>

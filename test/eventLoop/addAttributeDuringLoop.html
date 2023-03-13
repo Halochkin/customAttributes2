@@ -1,0 +1,16 @@
+<script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.2/observeElementCreation.js"></script>
+<script src="../../src/customAttributes.js"></script>
+<script src="../../src/dotReaction.js"></script>
+<script src="../../src/core.js"></script>
+
+<body click:console.log_1
+      click:add-attr="click:console.log_4"
+      click::console.log_2
+      click::console.log_3
+></body>
+<script>
+  customReactions.define("add", function () {
+    this.ownerElement.setAttribute(this.value);
+  });
+  document.body.click();
+</script>

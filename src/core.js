@@ -135,11 +135,11 @@ function processNumArrayMonad(num, reaction) {
     new: function _new(e, _, constructor, ...args) {
       return new window[ReactionRegistry.toCamelCase(constructor)](...args, e);
     },
-    await: async (e, prefix, num) => {
+    await: async function Await(e, prefix, num) {
       if (num && isNaN(num))    //todo detect error at upgradeTime?? if so, how best to do it..
         throw new SyntaxError(`${prefix}_${num} is illegal, the _${num} is not a number.`);
       await (num ? new Promise(r => setTimeout(r, num)) : Promise.resolve());
-      return e;
+      return this.ownerElement ? e : undefined;
     },
     prevent: e => (e.preventDefault(), e),
     dispatch: function dispatch(e) {
@@ -206,25 +206,20 @@ function processNumArrayMonad(num, reaction) {
     }
   });
 
-  customReactions.defineRule(function (reaction) {
-    if (!reaction.startsWith("m."))
-      return;
-    const [m, prop, ...original] = reaction.split(".");
+  customReactions.defineRule("m", function (m, prop, ...original) {
     const input = original.join(".");
     const reactionImpl = customReactions.getDefinition(input);
     if (reactionImpl)
       return function (e, _, ...args) {
-        if (prop && !(e instanceof Object))
-          throw new TypeError(`Reaction '${reaction}: is not getting an Object input. typeof e = ${typeof e}`);
+        if (!(e instanceof Object))
+          throw new TypeError(`Reaction '${[m, prop, input].join(".")}: is not getting an Object input. typeof e = ${typeof e}`);
         e[prop] = reactionImpl.call(this, e, input, ...args);
         return e;
       }
   });
-  customReactions.defineRule(function (reaction) {
-    if (!reaction.startsWith("a."))
-      return;
-    const [a, num, ...rest] = reaction.split(".");
+  customReactions.defineRule("a", function (a, num, ...rest) {
     const original = rest.join(".");
+    const reaction = "a." + num + "." + original;
     const int = num === "" ? num : processNumArrayMonad(num, reaction);
     const reactionImpl = customReactions.getDefinition(original);
     if (reactionImpl)
@@ -237,15 +232,13 @@ function processNumArrayMonad(num, reaction) {
         return e;
       };
   });
-  customReactions.defineRule(function (reaction) {
-    if (!reaction.startsWith("."))
-      return;
-    const original = reaction.substring(1);
+  customReactions.defineRule("", function (_, ...more) {
+    const original = more.join(".");
     const reactionImpl = customReactions.getDefinition(original);
     if (reactionImpl)
       return function (e, _, ...args) {
-        reactionImpl.call(this, e, original, ...args);
-        return e;
+        const val = reactionImpl.call(this, e, original, ...args);
+        return val instanceof Promise ? val.then(() => e) : e;
       };
   });
 })();

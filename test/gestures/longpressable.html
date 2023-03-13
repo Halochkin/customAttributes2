@@ -9,18 +9,19 @@
 </div>
 
 <script>
-  function newEvent(e, prefix) {
-    eventLoop.dispatch(new Event(prefix), this.ownerElement);
-    return e;
-  }
-
-  customReactions.define("on-mouse-move", function (e, _, arg1, arg2) {
-    console.log(arg1, arg2);
-  });
-
-  customReactions.define("longpress", newEvent);
-  customReactions.define("longpress-reset", newEvent);
   customAttributes.define("longpressable", class LongPress extends GestureAttr {
+
+    reset(e) {
+      eventLoop.dispatch(new Event(this.type.slice(0, -4) + "-reset", e), this.ownerElement);
+    }
+
+    longpress(e) {
+      eventLoop.dispatch(new e.constructor(this.type.slice(0, -4), e), this.ownerElement);
+    }
+
+    log(e, ...args) {
+      console.log(...args);
+    }
 
     static stateMachine(prefix, time = 200) {
       return {
@@ -29,14 +30,14 @@
         ],
         observe: [
           ["_mousedown", ""],
-          ["_mousemove:on-mouse-move_mousemove_observe"],
+          ["_mousemove:g.log_mousemove_observe"],
           ["_mouseup", ""],
           [`timeout_${time}`, "active"],
         ],
         active: [
-          ["_mousedown::longpress-reset", ""],
-          ["_mousemove:on-mouse-move_mousemove_active"],
-          ["_mouseup::longpress", ""]//todo how to get duration here?
+          ["_mousedown::.g.reset", ""],
+          ["_mousemove:g.log_mousemove_active"],
+          ["_mouseup::.g.longpress", ""]
         ]
       };
     }
@@ -45,6 +46,6 @@
   const h1 = document.querySelector("h1");
   h1.dispatchEvent(new MouseEvent("mousedown"));
   setTimeout(_ => h1.dispatchEvent(new MouseEvent("mousemove")), 0);
-  setTimeout(_ => h1.dispatchEvent(new MouseEvent("mousemove", {bubbles: true})), 250);
-  setTimeout(_ => h1.dispatchEvent(new MouseEvent("mouseup", {bubbles: true})), 300);
+  setTimeout(_ => h1.dispatchEvent(new MouseEvent("mousemove")), 250);
+  setTimeout(_ => h1.dispatchEvent(new MouseEvent("mouseup")), 300);
 </script>

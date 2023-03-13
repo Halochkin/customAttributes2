@@ -1,0 +1,30 @@
+<script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.2/observeElementCreation.js"></script>
+<script src="../../src/customAttributes.js"></script>
+<script src="../../src/dotReaction.js"></script>
+<script src="../../src/core.js"></script>
+
+<style>
+  * {
+    padding: 0;
+    margin: 0;
+    box-sizing: border-box;
+  }
+  div {
+    width: 100px;
+    height: 100px;
+  }
+</style>
+
+<div
+    click:console.log_style.height_style.width
+    click:style_height_200px
+    timeout_10:console.log_style.height
+
+>Hello width and height</div>
+
+<script>
+  customReactions.define("style", function(e, _, prop, value){
+    this.ownerElement.style[prop] = value;
+  });
+  document.querySelector("div").click();
+</script>

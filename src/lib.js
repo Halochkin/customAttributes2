@@ -21,7 +21,6 @@
   }
 
   function cloneEvent(e, prefix) {
-    //todo the targeting here is broken, because we don't update the target and path properties on the event during in our eventLoop so far.
     return new e.constructor(prefix, e);
   }
 

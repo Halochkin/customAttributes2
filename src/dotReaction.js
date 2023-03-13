@@ -1,98 +1,144 @@
+function getProp(e, props) {
+  for (let prop of props) {
+    e = e[prop]
+    if (e === undefined)
+      return;
+  }
+  return e;
+}
+
 function eGetter(props) {
-  return function (e) {
-    for (let prop of props) {
-      e = e[prop]
-      if (e === undefined)
-        return e;
-    }
-    return e;
-  };
+  return e => getProp(e, props);
 }
 
 function thisGetter(props) {
   return function () {
-    let e = this;
-    for (let prop of props) {
-      e = e[prop]
-      if (e === undefined)
-        return e;
-    }
-    return e;
+    return getProp(this, props);
   };
 }
 
 function windowGetter(props) {
-  return function () {
-    let e = window;
-    for (let prop of props) {
-      e = e[prop]
-      if (e === undefined)
-        return e;
-    }
-    return e;
-  };
+  return _ => getProp(window, props);
 }
 
 function normalizePath(props) {
-  if (props[0] !== "e" && props[0] !== "this" && props[0] !== "window")
-    props.unshift("window");
-  const root = props.shift();
   const getter = props[props.length - 1] === "" ? !props.pop() : false;
-  return {root, props: props.map(ReactionRegistry.toCamelCase), getter};
+  return {props: props.map(ReactionRegistry.toCamelCase), getter};
 }
 
-customReactions.defineRule(function (reaction) {
-  const parts = reaction.split(".");//todo this is too wide, I think that e., this., window., should be required.
-  if (parts.length < 2)
-    return;
-  let {props, root, getter} = normalizePath(parts);
-  if (getter)
-    return root === "e" ? eGetter(props) :
+// function getProp2(props, e, p, prop) {
+//   for (prop of props) {
+//     p = e;
+//     if (p === undefined)
+//       break;
+//     e = p[prop];
+//   }
+//   return {p, e, prop};
+// }
+
+function makeCaller(root, props) {
+  return function (e, _, ...args) {
+    e = root === "e" ? e : root === "this" ? this : window;
+    let p, prop;
+    for (prop of props) {
+      p = e;
+      if (!p)
+        return;
+      e = p[prop];
+    }
+    // let {p, e, prop} = getProp2(props, root === "e" ? e : root === "this" ? this : window);
+    // return !p ? undefined :
+    return e instanceof Function ? e.call(p, ...args) :
+      !args.length ? e :                              //getter
+        p[prop] = args.length === 1 ? args[0] : args; //setter
+  };
+}
+
+function getSetOrCall(root, ...more) {
+  const {props, getter} = normalizePath(more);
+  return !getter ? makeCaller(root, props) :
+    root === "e" ? eGetter(props) :
       root === "this" ? thisGetter(props) :
         windowGetter(props);
-  return function (e, _, ...args) {
-    let p = root === "e" ? e : root === "this" ? this : window;
-    for (let i = 0; i < props.length - 1; i++) {
-      p = p[props[i]];
-      if (p === undefined)
-        return;
-    }
-    e = p[props[props.length - 1]];
-    return e instanceof Function ? e.call(p, ...args) :
-      args.length > 0 ? (p[props[props.length - 1]] = args.length === 1 ? args[0] : args) : //setter
-        e;
-  };
+}
+
+customReactions.defineRule("window", getSetOrCall);
+customReactions.defineRule("this", getSetOrCall);
+customReactions.defineRule("e", getSetOrCall);
+customReactions.defineRule("console", function (...more) {
+  return customReactions.getDefinition("window." + more.join("."));
 });
 
 customTypes.defineAll({
   true: true,
   false: false,
-  null: null,
   window: window,
   document: document,
+  null: _ => null,
   undefined: _ => undefined,
   e: e => e,
   this: function () {
     return this;
   },
 });
-customTypes.defineRule(part => isNaN(part) ? undefined : Number(part));
-// customTypes.defineRule(function (part) {
-//   let parts = part.split(".");
-//   if (parts.length < 2)
-//     return;
-//   const {root, props} = normalizePath(parts);
-//   return root === "e" ? eGetter(props) :
-//     root === "this" ? thisGetter(props) :
-//       windowGetter(props);
+customTypes.defineRule("e", (e, ...part) => eGetter(part.map(ReactionRegistry.toCamelCase)));
+customTypes.defineRule("this", (t, ...part) => thisGetter(part.map(ReactionRegistry.toCamelCase)));
+customTypes.defineRule("window", (w, ...part) => windowGetter(part.map(ReactionRegistry.toCamelCase)));
+
+//el and p
+customReactions.defineRule("el", function (el, ...more) {
+  return customReactions.getDefinition("this.ownerElement." + more.join("."));
+});
+customReactions.defineRule("p", function (el, ...more) {
+  return customReactions.getDefinition("this.ownerElement.parentElement." + more.join("."));
+});
+customTypes.defineAll({
+  el: function () {
+    return this.ownerElement;
+  },
+  p: function () {
+    return this.ownerElement.parentElement;
+  }
+});
+customTypes.defineRule("el", (el, ...part) => thisGetter(["ownerElement", part.map(ReactionRegistry.toCamelCase)]));
+customTypes.defineRule("p", (el, ...part) => thisGetter(["ownerElement", "parentElement", part.map(ReactionRegistry.toCamelCase)]));
+
+//style
+customTypes.defineRule("style", function (_, one, prop) {
+  if(prop === undefined){
+    prop = ReactionRegistry.toCamelCase(one)
+    return function(){
+      return getComputedStyle(this.ownerElement)[prop];
+    }
+  }
+  prop = ReactionRegistry.toCamelCase(prop)
+  const getter = customTypes.getDefinition(one);
+  return function () {
+    return getComputedStyle(getter.call(this))[prop];
+  };
+});
+// customReactions.defineRule("style", function (_, prop, ...args) {
+//   if (args.length)
+//     throw new SyntaxError("style. rule is a monad setter and can only have a single value.");
+//   return function (e, _, ...args) {
+//     this.ownerElement.style[prop] = args.join(" ");
+//     return e;
+//   };
 // });
-// customTypes.defineRule(part => part.indexOf(".") >0 ?
-//   windowGetter(part.split(".").map(ReactionRegistry.toCamelCase)) : undefined);
-// customTypes.defineRule(part => part.startsWith(".") ?
-//   windowGetter(part.substring(1).split(".").map(ReactionRegistry.toCamelCase)) : undefined);
-customTypes.defineRule(part => part.startsWith("e.") ?
-  eGetter(part.substring(2).split(".").map(ReactionRegistry.toCamelCase)) : undefined);
-customTypes.defineRule(part => part.startsWith("this.") ?
-  thisGetter(part.substring(5).split(".").map(ReactionRegistry.toCamelCase)) : undefined);
-customTypes.defineRule(part => part.startsWith("window.") ?
-  windowGetter(part.substring(7).split(".").map(ReactionRegistry.toCamelCase)) : undefined);
+// //class
+// customReactions.defineRule("class", function (_, prop, ...args) {
+//   if (args.length)
+//     throw new SyntaxError("class. rule is a monad setter and can only have a single value.");
+//   return function (e, _, ...args) {
+//     this.ownerElement.style[prop] = args.join(" ");
+//     return e;
+//   };
+// });
+// customTypes.define("class", function (_, prop, ...args) {
+//   if (args.length)
+//     throw new SyntaxError("class. rule is a monad getter and can only have a single value.");
+//   return function () {
+//     return getComputedStyle(this.ownerElement)[prop];
+//   };
+// });
+//todo class and attr
