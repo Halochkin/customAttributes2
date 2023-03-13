@@ -31,13 +31,19 @@
   <script expected>["110px"]</script>
 </test-html>
 <test-html test="endsWithDot.html">
-  <script expected>["aFunction", "bFunction", "getComputedStyle"]</script>
+  <script expected>["aFunction", "aFunction", "bFunction", "getComputedStyle"]</script>
 </test-html>
 <test-html test="dotNotation.html">
   <script expected>["bob", ["expecttrue", true]]</script>
 </test-html>
 <test-html test="monadDots.html">
   <script expected>[["click", "click"], ["click", 1, 2]]</script>
+</test-html>
+<test-html test="el.html">
+  <script expected>["alice"]</script>
+</test-html>
+<test-html test="parent.html">
+  <script expected>["parent"]</script>
 </test-html>
 
 

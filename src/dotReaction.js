@@ -65,6 +65,12 @@ function getSetOrCall(root, ...more) {
 customReactions.defineRule("window", getSetOrCall);
 customReactions.defineRule("this", getSetOrCall);
 customReactions.defineRule("e", getSetOrCall);
+customReactions.defineRule("el", function (el, ...more) {
+  return customReactions.getDefinition("this.ownerElement." + more.join("."));
+});
+customReactions.defineRule("p", function (el, ...more) {
+  return customReactions.getDefinition("this.ownerElement.parentElement." + more.join("."));
+});
 customReactions.defineRule("console", function (...more) {
   return customReactions.getDefinition("window." + more.join("."));
 });
@@ -84,3 +90,5 @@ customTypes.defineAll({
 customTypes.defineRule("e", (e, ...part) => eGetter(part.map(ReactionRegistry.toCamelCase)));
 customTypes.defineRule("this", (t, ...part) => thisGetter(part.map(ReactionRegistry.toCamelCase)));
 customTypes.defineRule("window", (w, ...part) => windowGetter(part.map(ReactionRegistry.toCamelCase)));
+customTypes.defineRule("el", (el, ...part) => thisGetter(["ownerElement", part.map(ReactionRegistry.toCamelCase)]));
+customTypes.defineRule("p", (el, ...part) => thisGetter(["ownerElement", "parentElement", part.map(ReactionRegistry.toCamelCase)]));

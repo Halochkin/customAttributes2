@@ -30,7 +30,7 @@
 <div
     swipeable_100
     swipe:swipe-longer-than_200:.left-right
-    swipe:swipe-longer-than_200:await_800:this.owner-element.remove
+    swipe:swipe-longer-than_200:await_800:el.remove
     ready:random-color:this.owner-element.style.background-color_e
 ></div>
 </body>
@@ -45,7 +45,7 @@
       `<div
     swipeable_100
     swipe:swipe-longer-than_200:.left-right
-    swipe:swipe-longer-than_200:await_800:this.owner-element.remove
+    swipe:swipe-longer-than_200:await_800:el.remove
     ready:random-color:this.owner-element.style.background-color_e
 ></div>`);
   });
