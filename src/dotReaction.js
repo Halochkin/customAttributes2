@@ -98,7 +98,7 @@ customTypes.defineRule("style", function (_, prop, ...args) {
   if (args.length)
     throw new SyntaxError("style. rule is a simple getter and can only have a single value.");
   return function () {
-    return getComputedStyle(this.ownerElement)[prop];
+    return getComputedStyle(this.ownerElement)[ReactionRegistry.toCamelCase(prop)];
   };
 });
 // customReactions.defineRule("style", function (_, prop, ...args) {
