@@ -65,12 +65,6 @@ function getSetOrCall(root, ...more) {
 customReactions.defineRule("window", getSetOrCall);
 customReactions.defineRule("this", getSetOrCall);
 customReactions.defineRule("e", getSetOrCall);
-customReactions.defineRule("el", function (el, ...more) {
-  return customReactions.getDefinition("this.ownerElement." + more.join("."));
-});
-customReactions.defineRule("p", function (el, ...more) {
-  return customReactions.getDefinition("this.ownerElement.parentElement." + more.join("."));
-});
 customReactions.defineRule("console", function (...more) {
   return customReactions.getDefinition("window." + more.join("."));
 });
@@ -90,15 +84,37 @@ customTypes.defineAll({
 customTypes.defineRule("e", (e, ...part) => eGetter(part.map(ReactionRegistry.toCamelCase)));
 customTypes.defineRule("this", (t, ...part) => thisGetter(part.map(ReactionRegistry.toCamelCase)));
 customTypes.defineRule("window", (w, ...part) => windowGetter(part.map(ReactionRegistry.toCamelCase)));
+
+//el and p
+customReactions.defineRule("el", function (el, ...more) {
+  return customReactions.getDefinition("this.ownerElement." + more.join("."));
+});
+customReactions.defineRule("p", function (el, ...more) {
+  return customReactions.getDefinition("this.ownerElement.parentElement." + more.join("."));
+});
+customTypes.defineAll({
+  el: function () {
+    return this.ownerElement;
+  },
+  p: function () {
+    return this.ownerElement.parentElement;
+  }
+});
 customTypes.defineRule("el", (el, ...part) => thisGetter(["ownerElement", part.map(ReactionRegistry.toCamelCase)]));
 customTypes.defineRule("p", (el, ...part) => thisGetter(["ownerElement", "parentElement", part.map(ReactionRegistry.toCamelCase)]));
 
 //style
-customTypes.defineRule("style", function (_, prop, ...args) {
-  if (args.length)
-    throw new SyntaxError("style. rule is a simple getter and can only have a single value.");
+customTypes.defineRule("style", function (_, one, prop) {
+  if(prop === undefined){
+    prop = ReactionRegistry.toCamelCase(one)
+    return function(){
+      return getComputedStyle(this.ownerElement)[prop];
+    }
+  }
+  prop = ReactionRegistry.toCamelCase(prop)
+  const getter = customTypes.getDefinition(one);
   return function () {
-    return getComputedStyle(this.ownerElement)[ReactionRegistry.toCamelCase(prop)];
+    return getComputedStyle(getter.call(this))[prop];
   };
 });
 // customReactions.defineRule("style", function (_, prop, ...args) {
