@@ -5,9 +5,9 @@
 <script src="../../src/GestureAttrSimple.js"></script>
 
 <body
-    swipe:log
-    swipe-start:log
-    swipe-cancel:log
+    swipe:console.log_e.type_e.direction_e.length
+    swipe-start:console.log_e.type
+    swipe-cancel:console.log_e.type
 >
 <div swipeable_100></div>
 </body>
@@ -30,29 +30,30 @@
     }
   }
 
-  function copyEvent(e, prefix, start) {
-    return new SwipeEvent(prefix, e, start[0]);
-  }
-
-  customReactions.define("swipe", copyEvent);
-  customReactions.define("swipe-start", copyEvent);
-  customReactions.define("swipe-cancel", copyEvent);
-
+  customReactions.define("event", (e, _, type) => new e.constructor(type, e));
   customAttributes.define("swipeable", class SwipeAttr extends GestureAttr {
-    static stateMachine(prefix, length = 50) {
+
+    swipe(e) {
+      return new SwipeEvent(this.type.slice(0, -4), e, this.data);
+    }
+
+    checkCancel(e) {
+      return Math.abs(e.x - this.data[0]) < this.suffix[0] ?
+        eventLoop.dispatch(new e.constructor("swipe-cancel", e), this.ownerElement) :
+        e;
+    }
+
+    static stateMachine() {
       return {
-        "": [["mousedown:.g.set_e.x:swipe-start_g.data:dispatch", "start"]],
+        "": [["mousedown:.g.set_e.x:event_swipe-start:dispatch", "start"]],
         start: [
-          [`_mouseup:.min-distance_${length}_e.x_g.data:then_${prefix}::swipe_g.data:dispatch`, ""],
-          [`_mouseup:else_${prefix}:swipe-cancel_g.data:dispatch`, ""],
-          ["_blur:swipe-cancel_g.data:dispatch", ""],
+          [`_mouseup:g.check-cancel_e::g.swipe_e:dispatch`, ""],
+          ["_blur:event_swipe-cancel:dispatch", ""],
           ["_selectstart:prevent", ""]
         ]
       };
     }
   });
-  customReactions.define("min-distance", (e, _, length, a, b) => Math.abs(a - b) >= length ? e : undefined)
-  customReactions.define("log", e => (console.log(e.type, e.direction, e.length), e));
   (function () {
     const div = document.querySelector("div");
     setTimeout(_ => div.dispatchEvent(new MouseEvent("mousedown", {clientX: 5})), 50);

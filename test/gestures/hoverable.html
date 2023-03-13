@@ -17,22 +17,32 @@
 </body>
 
 <script type="module">
-  customReactions.define("hover", function(e, prefix){
-    eventLoop.dispatch(new Event(prefix, e), this.ownerElement);
-    return e;
-  });
-  customReactions.define("current-target", function(e){
-    if(e.target === this.ownerElement)
-      return e;
-  });
+  // customReactions.define("hover", function(e, prefix){
+  //   eventLoop.dispatch(new Event(prefix, e), this.ownerElement);
+  //   return e;
+  // });
+  // customReactions.define("current-target", function(e){
+  //   if(e.target === this.ownerElement)
+  //     return e;
+  // });
   customAttributes.define("hoverable", class HoverAttr extends GestureAttr {
-    static stateMachine(){
+
+    hover(e) {
+      eventLoop.dispatch(new Event(this.type.slice(0, -4), e), this.ownerElement);
+    }
+
+    currentTarget(e) {
+
+      return e.target === this.ownerElement ? e : undefined;
+    }
+
+    static stateMachine() {
       return {
         "": [
-          ["mouseenter:hover", "on"]
+          ["mouseenter:.g.hover_e", "on"]
         ],
         "on": [
-          ["mouseleave:current-target", ""]
+          ["mouseleave:.g.current-target_e", ""]
         ]
       };
     }
