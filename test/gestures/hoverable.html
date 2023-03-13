@@ -17,14 +17,6 @@
 </body>
 
 <script type="module">
-  // customReactions.define("hover", function(e, prefix){
-  //   eventLoop.dispatch(new Event(prefix, e), this.ownerElement);
-  //   return e;
-  // });
-  // customReactions.define("current-target", function(e){
-  //   if(e.target === this.ownerElement)
-  //     return e;
-  // });
   customAttributes.define("hoverable", class HoverAttr extends GestureAttr {
 
     hover(e) {
@@ -32,7 +24,6 @@
     }
 
     currentTarget(e) {
-
       return e.target === this.ownerElement ? e : undefined;
     }
 
@@ -50,7 +41,5 @@
 
   const span = document.querySelector("span");
   span.dispatchEvent(new MouseEvent("mouseenter"));
-  setTimeout(_ => {
-    span.dispatchEvent(new MouseEvent("mouseleave"));
-  }, 60);
+  setTimeout(_ => span.dispatchEvent(new MouseEvent("mouseleave")), 60);
 </script>

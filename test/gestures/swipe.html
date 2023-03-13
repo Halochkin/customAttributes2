@@ -2,7 +2,8 @@
 <script src="../../src/customAttributes.js"></script>
 <script src="../../src/dotReaction.js"></script>
 <script src="../../src/core.js"></script>
-<script src="../../src/GestureAttr.js"></script>
+<script src="../../src/GestureAttrSimple.js"></script>
+<script src="Swipeable.js"></script>
 
 <style>
   div {
@@ -25,74 +26,16 @@
   }
 </style>
 
-<body swipe:swipe-longer-than_100:replace swipe:log>
+<body swipe:swipe-longer-than_100:replace swipe:console.log_e.direction_e.length>
 <div
     swipeable_100
-    swipe:swipe-longer-than_200:left-right
+    swipe:swipe-longer-than_200:.left-right
     swipe:swipe-longer-than_200:await_800:this.owner-element.remove
     ready:random-color:this.owner-element.style.background-color_e
 ></div>
 </body>
 
 <script>
-  class SwipeEvent extends MouseEvent {
-    constructor(type, dict, start) {
-      super(type, dict);
-      this.start = start;
-      this.end = dict.x;
-    }
-
-    get direction() {
-      //return ((Math.atan2(y, -x) * 180 / Math.PI) + 270) % 360;
-      return this.end >= this.start ? "right" : "left";
-    }
-
-    get length() {
-      return Math.abs(this.end - this.start);
-    }
-  }
-
-  function copyEvent(e, prefix) {
-    return new SwipeEvent(prefix, e, this.owner.value.split(" ")[1]);
-  }
-
-  customReactions.define("swipe", copyEvent);
-  customReactions.define("swipe-start", copyEvent);
-  customReactions.define("swipe-cancel", copyEvent);
-
-  customAttributes.define("swipeable", class SwipeAttr extends GestureAttr {
-    static stateMachine(prefix, length = 50) {
-      return {
-        "": [[`mousedown:owner-attr_${prefix}:swipestart:swipe-start:dispatch`, "start"]],
-        start: [
-          //todo add the start x,y, and have the swipe be a different class of event.
-          [`_mouseup:owner-attr_${prefix}:swipe-long-enough_${length}:then_${prefix}::swipe:dispatch`, ""],
-          [`_mouseup:else_${prefix}:owner-attr_${prefix}:swipe-cancel:dispatch`, ""],
-          [`_blur:owner-attr_${prefix}:swipe-cancel:dispatch`, ""],
-          [`_selectstart:owner-attr_${prefix}:prevent`, ""]
-        ]
-      };
-    }
-  });
-  customReactions.define("owner-attr", function (e, prefix, type) {
-    if (this.owner)  //todo the owner attribute should only run on the first pass, not all the time.
-      return e;
-    for (let at of this.ownerElement.attributes)
-      if (at.type === type)
-        return this.owner = at, e;
-    throw new Error(`${prefix}_${type} can't find owner attribute.`);
-  });
-
-  customReactions.define("swipestart", function (e) {
-    this.owner.value = " " + e.x;
-    return e;
-  });
-
-  customReactions.define("swipe-long-enough", function (e, _, length) {
-    if (Math.abs(this.owner.value.split(" ")[1] - e.x) >= length)
-      return e;
-  })
-
   customReactions.define("random-color", function randomColor() {
     return `#${Math.floor(Math.random() * 16777215).toString(16)}`;
   });
@@ -101,25 +44,14 @@
     this.ownerElement.insertAdjacentHTML("afterbegin",
       `<div
     swipeable_100
-    swipe:swipe-longer-than_200:left-right
+    swipe:swipe-longer-than_200:.left-right
     swipe:swipe-longer-than_200:await_800:this.owner-element.remove
     ready:random-color:this.owner-element.style.background-color_e
 ></div>`);
   });
-
-  //todo bugs. The swipe doesn't change states correctly. The GestureAttr is broken.
-
-  customReactions.define("swipe-longer-than", function (e, _, length) {
-    if (e.length >= length)
-      return e;
-  });
+  customReactions.define("swipe-longer-than", (e, _, length) => e.length >= length ? e : undefined);
   customReactions.define("left-right", function (e) {
-    this.ownerElement.classList.add(e.direction); //
-    return e;
-  });
-  customReactions.define("log", function (e) {
-    console.log(e.direction, e.length);
-    return e;
+    this.ownerElement.classList.add(e.direction);
   });
   (function () {
     const div = document.querySelector("div");
