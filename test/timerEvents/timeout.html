@@ -1,0 +1,21 @@
+<script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.2/observeElementCreation.js"></script>
+<script src="../../src/customAttributes.js"></script>
+<script src="../../src/dotReaction.js"></script>
+<script src="../../src/core.js"></script>
+
+<script>
+  customReactions.define("remove-attr", function (e, _, ...nums) {
+    for (let i = this.ownerElement.attributes.length - 1; i >= 0; i--)
+      if (nums.indexOf(i) >= 0)
+        this.ownerElement.removeAttribute(this.ownerElement.attributes[i].name);
+  });
+</script>
+
+<body
+    ready:console.log_e.type
+    ready:await_200:console.log_no-carry_this.ownerElement.tag-name
+    ready:.await_200:console.log_carry_this.ownerElement.tag-name
+    ready:remove-attr_1_2
+>
+hello consistency
+</body>
