@@ -105,7 +105,7 @@ class UnknownAttributes {
     }
   }
 
-  tryAgainstTriggerRule(Rule) {
+  tryAgainstTriggerRule(prefix, Rule) {
     for (let ref of this.#ref) {
       const at = ref.deref();
       if (!at?.ownerElement)
@@ -239,7 +239,7 @@ class AttributeRegistry extends DefinitionRegistry {
 
   defineRule(prefix, Function) {
     super.defineRule(prefix, Function);
-    unknownAttributes.tryAgainstTriggerRule(Function);
+    unknownAttributes.tryAgainstTriggerRule(prefix, Function);
   }
 
   upgrade(...attrs) {
