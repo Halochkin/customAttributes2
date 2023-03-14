@@ -100,8 +100,8 @@ customTypes.defineAll({
     return this.ownerElement.parentElement;
   }
 });
-customTypes.defineRule("el", (el, ...part) => thisGetter(["ownerElement", part.map(ReactionRegistry.toCamelCase)]));
-customTypes.defineRule("p", (el, ...part) => thisGetter(["ownerElement", "parentElement", part.map(ReactionRegistry.toCamelCase)]));
+customTypes.defineRule("el", (_, ...ps) => thisGetter(["ownerElement", ...ps.map(ReactionRegistry.toCamelCase)]));
+customTypes.defineRule("p", (_, ...ps) => thisGetter(["ownerElement", "parentElement", ...ps.map(ReactionRegistry.toCamelCase)]));
 
 //style
 customTypes.defineRule("style", function (_, one, prop) {
