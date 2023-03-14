@@ -1,0 +1,24 @@
+<script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.2/observeElementCreation.js"></script>
+<script src="../../src/customAttributes.js"></script>
+<script src="../../src/dotReaction.js"></script>
+<script src="../../src/core.js"></script>
+
+<body
+    import:await_1000:e.detail.reaction-a.:define_reaction-a="./comp-a_attr-b_reaction-c.js"
+    import:e.detail.reaction-b.:define_reaction-b="./comp-a_attr-b_reaction-c.js"
+
+    timeout_100:reaction-a
+    timeout_500:reaction-b
+>
+//reaction b
+//reaction a
+
+the problem is that the reaction-a is not ready when the timeout runs, so it waits.
+what we need is a different mechanism to queue the calls than a fixed number on the timeout_x.
+
+For example:
+schedule_1:reaction-a
+schedule_2:reaction-b
+
+where schedule_2 doesn't fire until schedule_1 is fired.
+</body>

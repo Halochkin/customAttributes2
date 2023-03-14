@@ -11,6 +11,14 @@ export class AttrB extends CustomAttr {
   }
 }
 
+export function reactionA(e, prefix, ...args){
+  console.log("reaction a");
+}
+
+export function reactionB(e, prefix, ...args){
+  console.log("reaction b");
+}
+
 export function reactionC(e, prefix, ...args){
   return prefix;
 }
