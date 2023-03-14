@@ -12,10 +12,10 @@
 </script>
 
 <body
-    ready:console.log_e.type
-    ready:await_200:console.log_no-carry_this.ownerElement.tag-name
-    ready:.await_200:console.log_carry_this.ownerElement.tag-name
-    ready:remove-attr_1_2
+    :console.log_ready
+    :await_200:console.log_no-carry_this.ownerElement.tag-name
+    :.await_200:console.log_carry_this.ownerElement.tag-name
+    :remove-attr_1_2
 >
 hello consistency
 </body>

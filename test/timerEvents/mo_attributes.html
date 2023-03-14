@@ -2,8 +2,8 @@
 <script src="../../src/customAttributes.js"></script>
 <script src="../../src/core.js"></script>
 
-<h1 a b attributes:log timeout_42:attr_a_one:attr_b_two>hello</h1>
-<div a="bob" b="bob" attributes_a_b:log timeout_42:attr_a_one:attr_b_two>sunshine</div>
+<h1 a b attributes:log :await_42:attr_a_one:attr_b_two>hello</h1>
+<div a="bob" b="bob" attributes_a_b:log :await_42:attr_a_one:attr_b_two>sunshine</div>
 
 <script>
   customAttributes.define("attributes", class Attributes extends CustomAttr {

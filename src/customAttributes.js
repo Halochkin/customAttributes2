@@ -134,12 +134,11 @@ class GlobalTriggers {
       const at = ref.deref();
       if (!at?.ownerElement)
         set.delete(at);
-      else {
+      else
         if (at.ownerElement.isConnected)
           if (at.reactions?.length) //todo this will be something that we can check before we add it!
             if (!(at.defaultAction && (event.defaultAction || event.defaultPrevented)))
               yield at;
-      }
     }
   }
 }
@@ -355,7 +354,7 @@ class ReactionErrorEvent extends ErrorEvent {
       while (this.#eventLoop.length) {
         const {target, event} = this.#eventLoop[0];
         if (target instanceof Attr)
-          EventLoop.#runReactions(event, target);
+          target.reactions?.length && EventLoop.#runReactions(event, target);
         else /*if (!target || target instanceof Element)*/
           EventLoop.bubble(target, event);
         this.#eventLoop.shift();

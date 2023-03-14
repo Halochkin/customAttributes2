@@ -1,4 +1,4 @@
-//import:, ready:, timeout:, raf:
+//<empty>:, import:, timeout:, raf:
 (function () {
   function dispatchWhenReactionReady(attr, event, delay = 4, i = 0) {
     attr.reactions ?
@@ -44,8 +44,6 @@
       let countDown = parseInt(this.suffix[1]) || Infinity;
       eventLoop.dispatch(new Event(this.type), this);
       this._interval = setInterval(_ => {
-        if (!this.reactions)
-          return;
         eventLoop.dispatch(new Event(this.type), this);
         //the countdown state is not reflected in the DOM. We could implement this by actually adding/removing the attribute with a new attribute. That would be ok.
         if (countDown-- === 1)
@@ -60,14 +58,7 @@
 
   class Timeout extends CustomAttr {
     upgrade() {
-      if (this.name !== this.type)
-        this._timer = setTimeout(_ => this._trigger(1, this.suffix[1]), this.suffix[0]);
-    }
-
-    _trigger(i, delay = 4) {
-      this.reactions ?
-        eventLoop.dispatch(new Event(this.type), this) :
-        this._timer = setTimeout(_ => this._trigger(++i, delay), delay ** i);
+      this._timer = setTimeout(_ => eventLoop.dispatch(new Event(this.type), this), this.suffix[0]);
     }
 
     destructor() {
@@ -84,8 +75,6 @@
     trigger() {
       if (!this._count)
         this.destructor();
-      if (!this.reactions)
-        return;
       this._count--;
       eventLoop.dispatch(new Event(this.type), this);
     }
@@ -95,7 +84,7 @@
     }
   }
 
-  customAttributes.define("ready", Ready);
+  customAttributes.define("", Ready);
   customAttributes.define("import", Import);
   customAttributes.define("timeout", Timeout);
   customAttributes.define("interval", Interval);
