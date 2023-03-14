@@ -70,12 +70,8 @@ customReactions.defineRule("console", function (...more) {
 });
 
 customTypes.defineAll({
-  true: true,
-  false: false,
   window: window,
   document: document,
-  null: _ => null,
-  undefined: _ => undefined,
   e: e => e,
   this: function () {
     return this;
@@ -104,18 +100,11 @@ customTypes.defineRule("el", (_, ...ps) => thisGetter(["ownerElement", ...ps.map
 customTypes.defineRule("p", (_, ...ps) => thisGetter(["ownerElement", "parentElement", ...ps.map(ReactionRegistry.toCamelCase)]));
 
 //style
-customTypes.defineRule("style", function (_, one, prop) {
-  if(prop === undefined){
-    prop = ReactionRegistry.toCamelCase(one)
-    return function(){
-      return getComputedStyle(this.ownerElement)[prop];
-    }
-  }
-  prop = ReactionRegistry.toCamelCase(prop)
-  const getter = customTypes.getDefinition(one);
+customTypes.defineRule("style", function (_, prop) {
+  prop = ReactionRegistry.toCamelCase(prop);
   return function () {
-    return getComputedStyle(getter.call(this))[prop];
-  };
+    return getComputedStyle(this.ownerElement)[prop];
+  }
 });
 // customReactions.defineRule("style", function (_, prop, ...args) {
 //   if (args.length)

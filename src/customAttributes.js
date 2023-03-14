@@ -1,3 +1,22 @@
+class LinkToBe {
+  constructor(str, i, at) {
+    this.at = at;
+    this.i = i;
+    this.str = str;
+    this.bits = str.split("_");
+    this.type = this.bits[0];
+    this.bitsBits = this.bits.map(str => str.split("."));
+    this.def = i ? customReactions.getDefinition(this.type) : customReactions.getDefinition(this.type);
+    this.ready = !(this.def instanceof Promise);
+    if (!this.ready)
+      this.def.then(def => {
+        this.def = def;
+        // this.at.checkUpgrade(this);
+      });
+    // debugger;
+  }
+}
+
 //todo replace CustomAttr with a monkeyPatch on Attr? will be more efficient.
 class CustomAttr extends Attr {
   get type() {
@@ -44,10 +63,10 @@ class CustomAttr extends Attr {
   get reactions() {
     const value = [];
     for (let [prefix, ...args] of this.chainBits.slice(1)) {
-      const r = customReactions.getDefinition(prefix);
-      if (r === undefined)
-        return r;
-      value.push([r, prefix, ...args.map(arg => customTypes.getDefinition(arg))]);
+      const rDef = customReactions.getDefinition(prefix);
+      if (rDef === undefined)
+        return rDef;
+      value.push([rDef, prefix, ...args.map(arg => customTypes.getDefinition(arg))]);
     }
     Object.defineProperty(this, "reactions", {value, writable: false, configurable: true});
     return value;
@@ -154,12 +173,21 @@ class DefinitionRegistry {
 
 class TypeRegistry extends DefinitionRegistry {
 
-  getDefinition(type, bits = type.split(".")) {  //numbers and strings are not cached..
+  getDefinition(type, bits = type.split(".")) {  //numbers and strings and builtIn are not cached..
+    const builtIn = {
+      true: true,
+      false: false,
+      null: null,
+      undefined: undefined,
+    };
+    if (type in builtIn)
+      return builtIn[type];
     if (type && !isNaN(type))
       return Number(type);
     const Def = super.getDefinition(type, bits);
     return (Def !== undefined ? Def : type);
   }
+
   //todo this essentially functions as builtin types for Numbers and strings. Should we add the other builtin types here too? such as true/false and null??
   //todo or should we say that true/false is only 1/0. I like this. This would require the reaction function to convert true to 1 and false to 0.
 }
@@ -218,11 +246,18 @@ class AttributeRegistry extends DefinitionRegistry {
 
   upgrade(...attrs) {
     for (let at of attrs) {
+      //todo the steps below should be CustomAttr.discover(at);//
+      //todo so there isn't a problem waiting with the attribute, we should wait with
+      //we can wait with the attribute upgrade, until everything is ready. So ready all the time.
       Object.setPrototypeOf(at, CustomAttr.prototype);
+      const links = at.name.split(":").map((s, i) => new LinkToBe(s, i, at));
       const Def = this.getDefinition(at.type)
       Def ? CustomAttr.upgrade(at, Def) :                      //todo find the Def from inside the CustomAttr??
         unknownAttributes.addTriggerless(at);
+      //todo adding to the globalTriggers should be done at the ReactionsReady time.
       at.name[0] === "_" && globalTriggers.put(at.type, at);
+      //todo here //todo there is no point in adding to global triggers if the Reactions are not ready.
+      //todo we have the Discover attribute, then Reactions ready =>
     }
   }
 }
@@ -546,7 +581,7 @@ observeElementCreation(els => els.forEach(el => window.customAttributes.upgrade(
     }
 
     get nativeTarget() {
-      return this.ownerElement.getRootNode();
+      return this.ownerElement.getRootNode();                 //todo this is broken for _click for example.
     }
   }
 
