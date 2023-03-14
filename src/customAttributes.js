@@ -134,11 +134,10 @@ class GlobalTriggers {
       const at = ref.deref();
       if (!at?.ownerElement)
         set.delete(at);
-      else
-        if (at.ownerElement.isConnected)
-          if (at.reactions?.length) //todo this will be something that we can check before we add it!
-            if (!(at.defaultAction && (event.defaultAction || event.defaultPrevented)))
-              yield at;
+      else if (at.ownerElement.isConnected)
+        if (at.reactions?.length) //todo this will be something that we can check before we add it!
+          if (!(at.defaultAction && (event.defaultAction || event.defaultPrevented)))
+            yield at;
     }
   }
 }
@@ -249,12 +248,11 @@ class AttributeRegistry extends DefinitionRegistry {
       //todo so there isn't a problem waiting with the attribute, we should wait with
       //we can wait with the attribute upgrade, until everything is ready. So ready all the time.
       Object.setPrototypeOf(at, CustomAttr.prototype);
-      const links = at.name.split(":").map((s, i) => new LinkToBe(s, i, at));
+      at.type[0] === "_" && globalTriggers.put(at.type, at);
       const Def = this.getDefinition(at.type)
-      Def ? CustomAttr.upgrade(at, Def) :                      //todo find the Def from inside the CustomAttr??
+      Def ? CustomAttr.upgrade(at, Def) :
         unknownAttributes.addTriggerless(at);
       //todo adding to the globalTriggers should be done at the ReactionsReady time.
-      at.name[0] === "_" && globalTriggers.put(at.type, at);
       //todo here //todo there is no point in adding to global triggers if the Reactions are not ready.
       //todo we have the Discover attribute, then Reactions ready =>
     }
@@ -564,8 +562,10 @@ observeElementCreation(els => els.forEach(el => window.customAttributes.upgrade(
   }
 
   class NativeDCLEvent extends NativeDocumentEvent {
-    get type() {
-      return "_DOMContentLoaded";
+    listener(e) {
+      e.stopImmediatePropagation();
+      Object.defineProperty(e, "type", {value: "domcontentloaded", writable: false, enumerable: true});
+      eventLoop.dispatch(e);
     }
 
     get eventType() {
