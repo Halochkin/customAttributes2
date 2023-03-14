@@ -1,22 +1,3 @@
-class LinkToBe {
-  constructor(str, i, at) {
-    this.at = at;
-    this.i = i;
-    this.str = str;
-    this.bits = str.split("_");
-    this.type = this.bits[0];
-    this.bitsBits = this.bits.map(str => str.split("."));
-    this.def = i ? customReactions.getDefinition(this.type) : customReactions.getDefinition(this.type);
-    this.ready = !(this.def instanceof Promise);
-    if (!this.ready)
-      this.def.then(def => {
-        this.def = def;
-        // this.at.checkUpgrade(this);
-      });
-    // debugger;
-  }
-}
-
 //todo replace CustomAttr with a monkeyPatch on Attr? will be more efficient.
 class CustomAttr extends Attr {
   get type() {
@@ -171,7 +152,7 @@ class DefinitionRegistry {
 
 class TypeRegistry extends DefinitionRegistry {
 
-  getDefinition(type, bits = type.split(".")) {  //numbers and strings and builtIn are not cached..
+  getDefinition(type) {  //numbers and strings and builtIn are not cached..
     const builtIn = {
       true: true,
       false: false,
@@ -182,7 +163,7 @@ class TypeRegistry extends DefinitionRegistry {
       return builtIn[type];
     if (type && !isNaN(type))
       return Number(type);
-    const Def = super.getDefinition(type, bits);
+    const Def = super.getDefinition(type);
     return (Def !== undefined ? Def : type);
   }
 
