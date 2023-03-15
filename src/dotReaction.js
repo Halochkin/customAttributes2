@@ -65,8 +65,11 @@ function getSetOrCall(root, ...more) {
 customReactions.defineRule("window", getSetOrCall);
 customReactions.defineRule("this", getSetOrCall);
 customReactions.defineRule("e", getSetOrCall);
-customReactions.defineRule("console", function (...more) {
-  return customReactions.getDefinition("window." + more.join("."), ["window", ...more]);
+
+customReactions.defineRule("console", function (_, fun) {
+  if (fun in console)
+    return (e, _, ...args) => console[fun](...args);
+  throw new SyntaxError(`console.${fun} is unknown.`);
 });
 
 customTypes.defineAll({
