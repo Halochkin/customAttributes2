@@ -43,11 +43,6 @@
     return eventLoop.dispatch(c, this.ownerElement), c;
   }
 
-  function hasKey(e, prefix) {
-    if (e[prefix + "Key"])
-      return e;
-  }
-
   function once(e) {
     return this.ownerElement.removeAttribute(this.name), e;
   }
@@ -84,14 +79,6 @@
     return await (await fetch(this.value, method.toUpperCase() === "POST" ? {method, body} : undefined))[type]();
   }
 
-  function elementProp(_, prop) {
-    return this.ownerElement[prop];
-  }
-
-  function eventProp(e, prop) {
-    return e[prop];
-  }
-
   window.lib = {
     toggleAttr,
     parentToggleAttr,
@@ -101,13 +88,11 @@
     dispatch,
     dispatchDetail,
     dispatchClone, //todo untested
-    hasKey,
+    hasKey: (e, prefix) => (e[prefix + "Key"]) ? e : undefined,
     once,
     ownerCallback,
     cssClass,
     toCamelCase,
     fetch: _fetch,  //todo untested
-    elementProp,    //todo untested
-    eventProp       //todo untested
   };
 })();
