@@ -66,7 +66,7 @@ customReactions.defineRule("window", getSetOrCall);
 customReactions.defineRule("this", getSetOrCall);
 customReactions.defineRule("e", getSetOrCall);
 customReactions.defineRule("console", function (...more) {
-  return customReactions.getDefinition("window." + more.join("."));
+  return customReactions.getDefinition("window." + more.join("."), ["window", ...more]);
 });
 
 customTypes.defineAll({
@@ -83,10 +83,10 @@ customTypes.defineRule("window", (w, ...part) => windowGetter(part.map(ReactionR
 
 //el and p
 customReactions.defineRule("el", function (el, ...more) {
-  return customReactions.getDefinition("this.ownerElement." + more.join("."));
+  return customReactions.getDefinition("this.ownerElement." + more.join("."), ["this", "ownerElement", ...more]);
 });
 customReactions.defineRule("p", function (el, ...more) {
-  return customReactions.getDefinition("this.ownerElement.parentElement." + more.join("."));
+  return customReactions.getDefinition("this.ownerElement.parentElement." + more.join("."), ["this", "ownerElement", "parentElement", ...more]);
 });
 customTypes.defineAll({
   el: function () {

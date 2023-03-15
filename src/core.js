@@ -202,7 +202,7 @@ function processNumArrayMonad(num, reaction) {
 
   customReactions.defineRule("m", function (m, prop, ...original) {
     const input = original.join(".");
-    const reactionImpl = customReactions.getDefinition(input);
+    const reactionImpl = customReactions.getDefinition(input, original);
     if (reactionImpl)
       return function (e, _, ...args) {
         if (!(e instanceof Object))
@@ -215,7 +215,7 @@ function processNumArrayMonad(num, reaction) {
     const original = rest.join(".");
     const reaction = "a." + num + "." + original;
     const int = num === "" ? num : processNumArrayMonad(num, reaction);
-    const reactionImpl = customReactions.getDefinition(original);
+    const reactionImpl = customReactions.getDefinition(original, rest);
     if (reactionImpl)
       return function (e, prefix, ...args) {
         if (!(e instanceof Array))
@@ -228,7 +228,7 @@ function processNumArrayMonad(num, reaction) {
   });
   customReactions.defineRule("", function (_, ...more) {
     const original = more.join(".");
-    const reactionImpl = customReactions.getDefinition(original);
+    const reactionImpl = customReactions.getDefinition(original, more);
     if (reactionImpl)
       return function (e, _, ...args) {
         const val = reactionImpl.call(this, e, original, ...args);

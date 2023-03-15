@@ -19,6 +19,11 @@ class CustomAttr extends Attr {
     Object.defineProperty(this, "chainBits", {value, writable: false, configurable: true});
     return value;
   }
+  get chainBitsDots() {
+    const value = this.chain.map(s => s.split(/(?<=.)_/).map(s=> s.split(".")));
+    Object.defineProperty(this, "chainBitsDots", {value, writable: false, configurable: true});
+    return value;
+  }
 
   static upgrade(at, Definition) {                    //discover time, => check all the definitions.
     Object.setPrototypeOf(at, Definition.prototype);  //then add to the unknown register what is needed
@@ -43,11 +48,13 @@ class CustomAttr extends Attr {
 
   get reactions() {
     const value = [];
-    for (let [prefix, ...args] of this.chainBits.slice(1)) {
-      const rDef = customReactions.getDefinition(prefix);
+    for (let i = 1; i < this.chain.length; i++) {
+      const [prefix, ...args] = this.chainBits[i];
+      const [prefixBits, ...argsBits] = this.chainBitsDots[i];
+      const rDef = customReactions.getDefinition(prefix, prefixBits);
       if (rDef === undefined)
         return rDef;
-      value.push([rDef, prefix, ...args.map(arg => customTypes.getDefinition(arg))]);
+      value.push([rDef, prefix, ...args.map((arg, i) => customTypes.getDefinition(arg, argsBits[i]))]);
     }
     Object.defineProperty(this, "reactions", {value, writable: false, configurable: true});
     return value;
@@ -145,14 +152,14 @@ class DefinitionRegistry {
     this.#rules[prefix] = Function;
   }
 
-  getDefinition(type, bits = type.split(".")) {
+  getDefinition(type, bits /*= type.split(".")*/) {
     return this.#cache[type] ??= bits.length === 1 ? this.#register[type] : this.#rules[bits[0]]?.(...bits);
   }
 }
 
 class TypeRegistry extends DefinitionRegistry {
 
-  getDefinition(type) {  //numbers and strings and builtIn are not cached..
+  getDefinition(type, bits) {  //numbers and strings and builtIn are not cached..
     const builtIn = {
       true: true,
       false: false,
@@ -163,7 +170,7 @@ class TypeRegistry extends DefinitionRegistry {
       return builtIn[type];
     if (type && !isNaN(type))
       return Number(type);
-    const Def = super.getDefinition(type);
+    const Def = super.getDefinition(type, bits);
     return (Def !== undefined ? Def : type);
   }
 
@@ -230,7 +237,7 @@ class AttributeRegistry extends DefinitionRegistry {
       //we can wait with the attribute upgrade, until everything is ready. So ready all the time.
       Object.setPrototypeOf(at, CustomAttr.prototype);
       at.type[0] === "_" && globalTriggers.put(at.type, at);
-      const Def = this.getDefinition(at.type)
+      const Def = this.getDefinition(at.type, at.chainBitsDots[0][0])
       Def ? CustomAttr.upgrade(at, Def) :
         unknownAttributes.addTriggerless(at);
       //todo adding to the globalTriggers should be done at the ReactionsReady time.
