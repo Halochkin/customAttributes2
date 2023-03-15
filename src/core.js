@@ -136,16 +136,16 @@ function processNumArrayMonad(num, reaction) {
       return this.ownerElement ? e : undefined;
     },
     prevent: e => (e.preventDefault(), e),
-    debugger: function (e) {
+    debugger: function (e) {                                   //todo combine with "." carry?
       debugger;
       return e;
     },
     once: function once(e) {
-      return this.ownerElement.removeAttribute(this.name), e;
+      return this.ownerElement.removeAttribute(this.name), e;  //todo combine with "."carry?
     },
     dispatch: function dispatch(e) {
       eventLoop.dispatch(e, this.ownerElement);
-      return e;
+      return e;                                                //todo combine with "." carry?
     },
 
     class: function (e, _, css, onOff) {
