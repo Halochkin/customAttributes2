@@ -1,12 +1,10 @@
 <script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.2/observeElementCreation.js"></script>
 <script src="../../src/customAttributes.js"></script>
-<script src="../../src/lib.js"></script>
+<script src="../../src/dotReaction.js"></script>
 
-<h1 click:on="sayHi">hello on-click_shift</h1>
+<h1 click:el.say-hi_e>hello on el method</h1>
 
 <script>
-  customReactions.define("on", lib.ownerCallback);
-
   const h1 = document.querySelector("h1");
   h1.sayHi = function (e) {
     console.log("Hello sunshine "+ e.type);

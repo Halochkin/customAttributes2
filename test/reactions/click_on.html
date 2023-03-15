@@ -1,14 +1,19 @@
 <script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.2/observeElementCreation.js"></script>
 <script src="../../src/customAttributes.js"></script>
 <script src="../../src/lib.js"></script>
+<script src="../../src/dotReaction.js"></script>
+<script src="../../src/core.js"></script>
 
-<h1 click:on="sayHi" auxclick:ctrl:on="sayGoodbye" contextmenu:alt:meta:on="sayHi sayGoodbye sayHi">hello
-  on-click_shift</h1>
+<h1
+    click:el.say-hi_e
+    auxclick:ctrl:el.say-goodbye_e
+    contextmenu:alt:meta:.el.say-hi_e:.el.say-goodbye_e:.el.say-hi_e
+>hello on-click_shift</h1>
 
 <script type="module">
 
   customReactions.defineAll({
-    "on": lib.ownerCallback,
+    // "on": lib.ownerCallback,
     "ctrl": lib.hasKey,
     "meta": lib.hasKey,
     "alt": lib.hasKey
