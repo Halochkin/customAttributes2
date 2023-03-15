@@ -14,7 +14,7 @@
 <script>
   customReactions.defineAll({
     "log": e => (console.log(getComputedStyle(document.querySelector("p")).display), e),
-    "p-attr-toggle": function (e, _, attr, suffix) {
+    "p-attr-toggle": function (e, attr, suffix) {
       suffix = suffix?.toUpperCase();
       let el = this.ownerElement.parentElement;
       while (el && suffix && el.tagName !== suffix)

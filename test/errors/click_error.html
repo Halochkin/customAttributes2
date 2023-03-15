@@ -8,7 +8,7 @@
 <h1 click:throw_oops>hello</h1>
 
 <script>
-  customReactions.define("throw", function (e, _, msg) {
+  customReactions.define("throw", function (e, msg) {
     throw msg;
   });
   document.querySelector("h1").click();

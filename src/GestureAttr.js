@@ -2,7 +2,7 @@ customReactions.defineRule("g", function (g, prop, ...more) {
   if (more.length)
     throw new SyntaxError("The g. can only have a single property.");
   prop = ReactionRegistry.toCamelCase(prop);
-  return function (e, _, ...args) {
+  return function (e, ...args) {
     return this.gesture[prop].call(this.gesture, e, ...args);
   }
 });

@@ -17,13 +17,13 @@
   import {FormData_GET, extractFormData, formDataToUri, fetchAndEvent} from "../src/FormData/FormData_GET.js";
 
   customReactions.defineAll({
-    "get": function (e, _, ...args) {
+    "get": function (e, ...args) {
       return FormData_GET.call(this, e, "get", ...args);
     },
     "log": e => (console.log(e.detail.substring(0, 100)), e),
     "formdata": extractFormData,
     "encodeuri": formDataToUri,
-    "text": function (e, _, ...args) {
+    "text": function (e, ...args) {
       return fetchAndEvent.call(this, e, "text", ...args);
     },
 

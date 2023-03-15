@@ -49,7 +49,7 @@
     :random-color:this.owner-element.style.background-color_e
 ></div>`);
   });
-  customReactions.define("swipe-longer-than", (e, _, length) => e.length >= length ? e : undefined);
+  customReactions.define("swipe-longer-than", (e, length) => e.length >= length ? e : undefined);
   customReactions.define("left-right", function (e) {
     this.ownerElement.classList.add(e.direction);
   });

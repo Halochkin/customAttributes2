@@ -18,11 +18,11 @@
 
   customReactions.defineAll({
     "formdata": DOM_FormData,
-    "get": function (e, _, ...args) {
+    "get": function (e,  ...args) {
       return FormData_GET.call(this, e, "get", ...args);
     },
     "encodeuri": formDataToUri,
-    "json": function (e, _, ...args) {
+    "json": function (e, ...args) {
       return fetchAndEvent.call(this, e, "json", ...args);
     },
     "log": e => (console.log(e.detail), e)

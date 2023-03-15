@@ -9,7 +9,7 @@ loop 5 times
 
 <script>
   const wm = new WeakMap();
-  customReactions.define("call-self", function (e, _, num) {
+  customReactions.define("call-self", function (e, num) {
     let count = wm.get(this);
     if (count === undefined)
       wm.set(this, count = num);

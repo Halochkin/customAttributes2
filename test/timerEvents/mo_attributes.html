@@ -22,7 +22,7 @@
       this._mo.disconnect();
     }
   });
-  customReactions.define("attr", function (e, _, name, value) {
+  customReactions.define("attr", function (e, name, value) {
     this.ownerElement.setAttribute(name, value);
     return e;
   });

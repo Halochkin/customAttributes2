@@ -9,17 +9,10 @@
 </div>
 
 <script>
-  function newEvent(e, prefix) {
-    eventLoop.dispatch(new Event(prefix), this.ownerElement);
-    return e;
-  }
-
-  customReactions.define("log", function (e, _, arg1, arg2) {
+  customReactions.define("log", function (e, arg1, arg2) {
     console.log(arg1, arg2);
   });
 
-  customReactions.define("longpress", newEvent);
-  customReactions.define("longpress-reset", newEvent);
   customAttributes.define("longpressable", class LongPress extends GestureAttr {
 
     static stateMachine(prefix, time = 200) {
@@ -34,9 +27,9 @@
           [`timeout_${time}`, "active"],
         ],
         active: [
-          ["_mousedown::longpress-reset", ""],
+          ["_mousedown::event_longpress-reset", ""],
           ["_mousemove:log_mousemove_active"],
-          ["_mouseup::longpress", ""]//todo how to get duration here?
+          ["_mouseup::event_longpress", ""]//todo how to get duration here?
         ]
       };
     }

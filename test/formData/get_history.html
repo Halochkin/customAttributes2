@@ -8,7 +8,7 @@
 <script type="module">
   import {FormData_GET, formDataToUri, popstate} from "../src/FormData/FormData_GET.js";
 
-  customReactions.define("get", function (e, _, ...args) {
+  customReactions.define("get", function (e, ...args) {
     return FormData_GET.call(this, e, "get", ...args)
   });
   customReactions.define("encodeuri", formDataToUri);

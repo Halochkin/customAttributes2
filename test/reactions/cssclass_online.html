@@ -11,7 +11,7 @@
 <script type="module">
 
   customReactions.defineAll({
-    "log": function logComputedStyle(e, _, suffix) {
+    "log": function logComputedStyle(e, suffix) {
       console.log(getComputedStyle(this.ownerElement)[ReactionRegistry.toCamelCase(suffix)]);
       return e;
     }

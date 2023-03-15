@@ -37,7 +37,7 @@ function normalizePath(props) {
 // }
 
 function makeCaller(root, props) {
-  return function (e, _, ...args) {
+  return function (e, ...args) {
     e = root === "e" ? e : root === "this" ? this : window;
     let p, prop;
     for (prop of props) {
@@ -68,7 +68,7 @@ customReactions.defineRule("e", getSetOrCall);
 
 customReactions.defineRule("console", function (_, fun) {
   if (fun in console)
-    return (e, _, ...args) => console[fun](...args);
+    return (e, ...args) => console[fun](...args);
   throw new SyntaxError(`console.${fun} is unknown.`);
 });
 

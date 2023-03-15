@@ -382,7 +382,7 @@ class ReactionErrorEvent extends ErrorEvent {
 
     static #runReaction([reaction, ...args], at, input, i, async, allowAsync) {
       try {
-        const output = reaction.call(at, input, "bobob", ...args.map(a => a instanceof Function ? a.call(at, input) : a).slice(1));
+        const output = reaction.call(at, input, ...args.map(a => a instanceof Function ? a.call(at, input) : a).slice(1));
         if (!(output instanceof Promise))
           return output;
         if (allowAsync)

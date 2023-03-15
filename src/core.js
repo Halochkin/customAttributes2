@@ -121,10 +121,10 @@ function processNumArrayMonad(num, reaction) {
   //{}=>WeakMap=>WeakSet
   const thenElseRegister = {};
   customReactions.defineAll({
-    new: function _new(e, _, constructor, ...args) {
+    new: function _new(e, constructor, ...args) {
       return new window[ReactionRegistry.toCamelCase(constructor)](...args, e);
     },
-    await: async function Await(e, _, num) {
+    await: async function Await(e, num) {
       if (!num)
         await Promise.resolve();
       else if (num === "raf")
@@ -143,18 +143,18 @@ function processNumArrayMonad(num, reaction) {
     once: function once(e) {
       return this.ownerElement.removeAttribute(this.name), e;  //todo combine with "."carry?
     },
-    dispatch: function dispatch(e, _, target = this.ownerElement) {
+    dispatch: function dispatch(e, target = this.ownerElement) {
       eventLoop.dispatch(e, target);
       return e;                                                //todo combine with "." carry?
     },
 
-    event: (e, _, input) =>
+    event: (e, input) =>
       e instanceof Event ? new e.constructor(input, e) :
         e instanceof String || typeof e === "string" ? new Event(e) :
           new CustomEvent(input, e)
     ,
 
-    class: function (e, _, css, onOff) {
+    class: function (e, css, onOff) {
       const classes = this.ownerElement.classList;
       if (onOff === undefined)
         classes.contains(css) ? classes.remove(css) : classes.add(css);
@@ -167,27 +167,27 @@ function processNumArrayMonad(num, reaction) {
 
 
     //todo untested.
-    plus: (s, _, ...as) => as.reduce((s, a) => s + a, s),
-    minus: (s, _, ...as) => as.reduce((s, a) => s - a, s),
-    times: (s, _, ...as) => as.reduce((s, a) => s * a, s),
-    divide: (s, _, ...as) => as.reduce((s, a) => s / a, s),
-    percent: (s, _, ...as) => as.reduce((s, a) => s % a, s),
-    factor: (s, _, ...as) => as.reduce((s, a) => s ** a, s),
-    and: (s, _, ...as) => as.reduce((s, a) => s && a, s),
-    or: (s, _, ...as) => as.reduce((s, a) => s || a, s),
+    plus: (s, ...as) => as.reduce((s, a) => s + a, s),
+    minus: (s, ...as) => as.reduce((s, a) => s - a, s),
+    times: (s, ...as) => as.reduce((s, a) => s * a, s),
+    divide: (s, ...as) => as.reduce((s, a) => s / a, s),
+    percent: (s, ...as) => as.reduce((s, a) => s % a, s),
+    factor: (s, ...as) => as.reduce((s, a) => s ** a, s),
+    and: (s, ...as) => as.reduce((s, a) => s && a, s),
+    or: (s, ...as) => as.reduce((s, a) => s || a, s),
     //todo double or triple equals??
-    equals: (s, _, ...as) => as.reduce((s, a) => s == a, s),
+    equals: (s, ...as) => as.reduce((s, a) => s == a, s),
     //todo the below comparisons should more likely be run as dot-expressions..
     //todo and should dot-expressions return the original 'e'? it feels like a more useful strategy..
     //todo if the dot-expressions use this strategy, then they become monadish too.. not bad.
-    //gt: (s, _, ...as) => as.reduce((s, a) => s > a, s),
-    //gte: (s, _, ...as) => as.reduce((s, a) => s >= a, s),
-    //lt: (s, _, ...as) => as.reduce((s, a) => s < a, s),
-    //lte: (s, _, ...as) => as.reduce((s, a) => s <= a, s),
+    //gt: (s, ...as) => as.reduce((s, a) => s > a, s),
+    //gte: (s, ...as) => as.reduce((s, a) => s >= a, s),
+    //lt: (s, ...as) => as.reduce((s, a) => s < a, s),
+    //lte: (s, ...as) => as.reduce((s, a) => s <= a, s),
     number: n => Number(n),  //this is the same as .-number_e. Do we want it?
     nan: n => isNaN(n),  //this is the same as .is-na-n_e. Do we want it?
 
-    then: function (e, _, ...labels) {
+    then: function (e, ...labels) {
       const key = labels.join(" ");
       const weakMap = thenElseRegister[key];
       weakMap ?
@@ -197,12 +197,12 @@ function processNumArrayMonad(num, reaction) {
         thenElseRegister[key] = new WeakMap([[this.ownerElement, new WeakSet([e])]]);
       return e;
     },
-    else: function (e, _, ...labels) {
+    else: function (e, ...labels) {
       if (!thenElseRegister[labels.join(" ")]?.get(this.ownerElement)?.has(e))
         return e;
     },
 
-    "toggle-attr": function (e, _, prefix) {
+    "toggle-attr": function (e, prefix) {
       const el = this.ownerElement;
       el.hasAttribute(prefix) ? el.removeAttribute(prefix) : el.setAttribute(prefix);
       return e;
@@ -214,7 +214,7 @@ function processNumArrayMonad(num, reaction) {
         return throttleRegister.set(this, primitive), value;
     },
 
-    define: function define(Def, _, tag) {
+    define: function define(Def, tag) {
       if (Def.prototype instanceof CustomAttr)
         customAttributes.define(tag, Def);
       else if (Def.prototype instanceof HTMLElement)
@@ -230,10 +230,10 @@ function processNumArrayMonad(num, reaction) {
     const input = original.join(".");
     const reactionImpl = customReactions.getDefinition(input, original);
     if (reactionImpl)
-      return function (e, _, ...args) {
+      return function (e, ...args) {
         if (!(e instanceof Object))
           throw new TypeError(`Reaction '${[m, prop, input].join(".")}: is not getting an Object input. typeof e = ${typeof e}`);
-        e[prop] = reactionImpl.call(this, e, input, ...args);
+        e[prop] = reactionImpl.call(this, e, ...args);
         return e;
       }
   });
@@ -243,10 +243,10 @@ function processNumArrayMonad(num, reaction) {
     const int = num === "" ? num : processNumArrayMonad(num, reaction);
     const reactionImpl = customReactions.getDefinition(original, rest);
     if (reactionImpl)
-      return function (e, prefix, ...args) {
+      return function (e, ...args) {
         if (!(e instanceof Array))
           throw new TypeError(`Reaction '${reaction}: is not getting an Array input. typeof e = ${typeof e}`);
-        const val = reactionImpl.call(this, e, original, ...args);
+        const val = reactionImpl.call(this, e, ...args);
         num === "" ? e.push(val) :
           e.splice(int < 0 ? e.length + int : int, 0, val);
         return e;
@@ -256,8 +256,8 @@ function processNumArrayMonad(num, reaction) {
     const original = more.join(".");
     const reactionImpl = customReactions.getDefinition(original, more);
     if (reactionImpl)
-      return function (e, _, ...args) {
-        const val = reactionImpl.call(this, e, original, ...args);
+      return function (e, ...args) {
+        const val = reactionImpl.call(this, e, ...args);
         return val instanceof Promise ? val.then(() => e) : e;
       };
   });

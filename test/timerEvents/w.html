@@ -49,7 +49,7 @@
     console.log(getComputedStyle(this.ownerElement).width);
     return e;
   });
-  customReactions.define("style", function style(e, _, prop, value = e) {
+  customReactions.define("style", function style(e, prop, value = e) {
     this.ownerElement.style.setProperty(prop, value);
     return e;
   });

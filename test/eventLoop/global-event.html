@@ -5,7 +5,7 @@
 <h2 _test:log_global>sunshine</h2>
 
 <script type="module">
-  customReactions.define("log", function (e, _, val) {
+  customReactions.define("log", function (e, val) {
     return console.log(val), e;
   });
   eventLoop.dispatch(new Event("test"), document.querySelector("h1"));

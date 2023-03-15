@@ -25,7 +25,7 @@
   //keys block later stops with same key, stop with no key blocks all subsequent stops.
   function makeStopStrong() {
     const eventKeys = new WeakMap();
-    return function (e, _, key) {
+    return function (e, key) {
       let keys = eventKeys.get(e);
       if (!key)                       //global stop
         return eventKeys.set(e, []), undefined;
@@ -42,7 +42,7 @@
   }
 
   customReactions.define("stop", makeStopStrong());
-  customReactions.define("log", function (e, prefix, value) {
+  customReactions.define("log", function (e, value) {
     return console.log(value), e;
   });
   document.getElementById("stopa").click();

@@ -95,20 +95,20 @@
 
   let globalSequence;
 
-  customReactions.define("onmousedown", function (e, prefix, type) {
+  customReactions.define("onmousedown", function (e,  type) {
     globalSequence = type === "start" ? startSequence(this.ownerElement, e) : stopSequence(globalSequence);
     eventLoop.dispatch(makeDraggingEvent(type, e), this.ownerElement);
     return e;
   });
 
-  customReactions.define("onmousemove", function (e, prefix, move, cancel) {
+  customReactions.define("onmousemove", function (e,  move, cancel) {
     const inside = !mouseOutOfBounds(e);
     globalSequence = inside ? updateSequence(globalSequence, e) : stopSequence(globalSequence);
     eventLoop.dispatch(makeDraggingEvent(inside ? move : cancel, e), this.ownerElement);
     return e;
   });
 
-  customReactions.define("onmouseup", function (e, prefix, stop, fling) {
+  customReactions.define("onmouseup", function (e,  stop, fling) {
     const flingEvent = makeFlingEvent(e, globalSequence, fling);
     globalSequence = stopSequence(globalSequence);
     eventLoop.dispatch(makeDraggingEvent(stop, e), this.ownerElement);
@@ -116,7 +116,7 @@
     return e;
   });
 
-  customReactions.define("onblur", function (e, _, name) {
+  customReactions.define("onblur", function (e, name) {
     eventLoop.dispatch(makeDraggingEvent(name, e), this.ownerElement);
     return e;
   });
