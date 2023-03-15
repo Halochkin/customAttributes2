@@ -14,7 +14,7 @@
     toggle:open
     toggle:window.get-computed-style_this.owner-element.children.1:console.log_e.display_2
 >
-  <h1 click:toggle>hello</h1>
+  <h1 click:toggle:dispatch>hello</h1>
   <p>sunshine</p>
   <p>world</p>
 </div>
@@ -22,7 +22,8 @@
 <script type="module">
   customReactions.defineAll({
     "open": lib.toggleAttr,
-    "toggle": lib.newEvent
+    dispatch: lib.dispatch,
+    "toggle": lib.event
   });
 
   document.querySelector("h1").click();

@@ -136,6 +136,10 @@ function processNumArrayMonad(num, reaction) {
       return this.ownerElement ? e : undefined;
     },
     prevent: e => (e.preventDefault(), e),
+    debugger: function (e) {
+      debugger;
+      return e;
+    },
     once: function once(e) {
       return this.ownerElement.removeAttribute(this.name), e;
     },
@@ -143,6 +147,18 @@ function processNumArrayMonad(num, reaction) {
       eventLoop.dispatch(e, this.ownerElement);
       return e;
     },
+
+    class: function (e, _, css, onOff) {
+      const classes = this.ownerElement.classList;
+      if (onOff === undefined)
+        classes.contains(css) ? classes.remove(css) : classes.add(css);
+      else if (onOff === "on")
+        classes.add(css);
+      else if (onOff === "off")
+        classes.remove(css);
+      return e;
+    },
+
 
     //todo untested.
     plus: (s, _, ...as) => as.reduce((s, a) => s + a, s),
@@ -180,10 +196,6 @@ function processNumArrayMonad(num, reaction) {
         return e;
     },
 
-    debugger: function (e) {
-      debugger;
-      return e;
-    },
 
     throttle: function throttle(value) {
       const primitive = value instanceof Object ? JSON.stringify(value) : value;

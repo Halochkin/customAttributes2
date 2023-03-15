@@ -22,7 +22,7 @@
   customElements.define("web-comp", WebComp);
 
   customReactions.defineAll({
-    "click": lib.cloneEvent,
+    "click": lib.event,
     "dispatch": lib.dispatch                //todo this is wrong, it is using the rerouting structure, it is bad
   });
 

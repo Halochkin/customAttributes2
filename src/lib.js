@@ -16,18 +16,6 @@
     return e;
   }
 
-  function newEvent(e, prefix) {
-    return eventLoop.dispatch(new Event(prefix), this.ownerElement), e;
-  }
-
-  function cloneEvent(e, prefix) {
-    return new e.constructor(prefix, e);
-  }
-
-  function customEvent(data, prefix) {
-    return new CustomEvent(prefix, data);
-  }
-
   function dispatch(e, _, querySelector) {
     const target = querySelector ? document.querySelector(querySelector) : this.ownerElement;
     eventLoop.dispatch(e, target);
@@ -35,24 +23,14 @@
   }
 
   function dispatchDetail(e, prefix, name = prefix) {
-    return dispatch.call(this, customEvent.call(this, e, name));
+    return dispatch.call(this, (function (data, prefix) {
+      return new CustomEvent(prefix, data);
+    }).call(this, e, name));
   }
 
   function dispatchClone(e, prefix, type = prefix) {
     const c = new e.constructor(type, e);
     return eventLoop.dispatch(c, this.ownerElement), c;
-  }
-
-  function toCamelCase(strWithDash) {
-    return strWithDash.replace(/-([a-z])/g, g => g[1].toUpperCase());
-  }
-
-  function cssClass(e, css, onOff) {
-    if (onOff === undefined || onOff === "on")
-      this.ownerElement.classList.add(css);
-    else if (onOff === "off")
-      this.ownerElement.classList.remove(css);
-    return e;
   }
 
   async function _fetch(body, _, type = "text", method = "GET") { //fetch_json and fetch_text_POST
@@ -62,14 +40,12 @@
   window.lib = {
     toggleAttr,
     parentToggleAttr,
-    newEvent,
-    cloneEvent,
-    customEvent,
+    event: (e, prefix) => e instanceof Event ? new e.constructor(prefix, e) :
+      e instanceof String || typeof e === "string" ? new Event(e) :
+        new CustomEvent(prefix, e),
     dispatch,
     dispatchDetail,
     dispatchClone, //todo untested
-    cssClass,
-    toCamelCase,
     fetch: _fetch,  //todo untested
   };
 })();
