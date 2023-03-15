@@ -136,6 +136,9 @@ function processNumArrayMonad(num, reaction) {
       return this.ownerElement ? e : undefined;
     },
     prevent: e => (e.preventDefault(), e),
+    once: function once(e) {
+      return this.ownerElement.removeAttribute(this.name), e;
+    },
     dispatch: function dispatch(e) {
       eventLoop.dispatch(e, this.ownerElement);
       return e;

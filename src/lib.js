@@ -43,10 +43,6 @@
     return eventLoop.dispatch(c, this.ownerElement), c;
   }
 
-  function once(e) {
-    return this.ownerElement.removeAttribute(this.name), e;
-  }
-
   function toCamelCase(strWithDash) {
     return strWithDash.replace(/-([a-z])/g, g => g[1].toUpperCase());
   }
@@ -72,7 +68,6 @@
     dispatch,
     dispatchDetail,
     dispatchClone, //todo untested
-    once,
     cssClass,
     toCamelCase,
     fetch: _fetch,  //todo untested
