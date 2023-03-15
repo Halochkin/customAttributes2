@@ -19,8 +19,9 @@ class CustomAttr extends Attr {
     Object.defineProperty(this, "chainBits", {value, writable: false, configurable: true});
     return value;
   }
+
   get chainBitsDots() {
-    const value = this.chain.map(s => s.split(/(?<=.)_/).map(s=> s.split(".")));
+    const value = this.chain.map(s => s.split(/(?<=.)_/).map(s => s.split(".")));
     Object.defineProperty(this, "chainBitsDots", {value, writable: false, configurable: true});
     return value;
   }
@@ -152,8 +153,8 @@ class DefinitionRegistry {
     this.#rules[prefix] = Function;
   }
 
-  getDefinition(type, bits /*= type.split(".")*/) {
-    return this.#cache[type] ??= bits.length === 1 ? this.#register[type] : this.#rules[bits[0]]?.(...bits);
+  getDefinition(type, bits) {
+    return this.#cache[type] ??= bits.length === 1 ? this.#register[bits[0]] : this.#rules[bits[0]]?.(...bits);
   }
 }
 
@@ -168,6 +169,7 @@ class TypeRegistry extends DefinitionRegistry {
     };
     if (type in builtIn)
       return builtIn[type];
+    // type = bits.join(".");  //todo two places where we need the type, its the cache and here for numbers with dot
     if (type && !isNaN(type))
       return Number(type);
     const Def = super.getDefinition(type, bits);
