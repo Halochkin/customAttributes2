@@ -8,8 +8,7 @@
 
 <script type="module">
   customReactions.defineAll({
-    // "on": lib.ownerCallback,
-    "shift": lib.hasKey,
+    "shift": e => e.shiftKey ? e : undefined,
     "once": lib.once       //todo this should be a default reaction
   });
 

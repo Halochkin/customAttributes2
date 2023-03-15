@@ -1,6 +1,5 @@
 <script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.2/observeElementCreation.js"></script>
 <script src="../../src/customAttributes.js"></script>
-<script src="../../src/lib.js"></script>
 <script src="../../src/dotReaction.js"></script>
 <script src="../../src/core.js"></script>
 
@@ -13,10 +12,9 @@
 <script type="module">
 
   customReactions.defineAll({
-    // "on": lib.ownerCallback,
-    "ctrl": lib.hasKey,
-    "meta": lib.hasKey,
-    "alt": lib.hasKey
+    "ctrl": e => e.ctrlKey ? e : undefined,
+    "meta": e => e.metaKey ? e : undefined,
+    "alt": e => e.altKey ? e : undefined
   });
 
   const h1 = document.querySelector("h1");

@@ -72,7 +72,6 @@
     dispatch,
     dispatchDetail,
     dispatchClone, //todo untested
-    hasKey: (e, prefix) => (e[prefix + "Key"]) ? e : undefined,
     once,
     cssClass,
     toCamelCase,
