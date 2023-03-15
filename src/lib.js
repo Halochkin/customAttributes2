@@ -1,10 +1,4 @@
 (function () {
-  function toggleAttr(e, prefix) {
-    const el = this.ownerElement;
-    el.hasAttribute(prefix) ? el.removeAttribute(prefix) : el.setAttribute(prefix);
-    return e;
-  }
-
   function parentToggleAttr(e, prefix, suffix) {
     suffix = suffix?.toUpperCase();
     let el = this.ownerElement.parentElement;
@@ -38,7 +32,6 @@
   }
 
   window.lib = {
-    toggleAttr,
     parentToggleAttr,
     event: (e, prefix) => e instanceof Event ? new e.constructor(prefix, e) :
       e instanceof String || typeof e === "string" ? new Event(e) :

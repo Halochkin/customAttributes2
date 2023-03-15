@@ -196,6 +196,11 @@ function processNumArrayMonad(num, reaction) {
         return e;
     },
 
+    "toggle-attr": function (e, _, prefix) {
+      const el = this.ownerElement;
+      el.hasAttribute(prefix) ? el.removeAttribute(prefix) : el.setAttribute(prefix);
+      return e;
+    },
 
     throttle: function throttle(value) {
       const primitive = value instanceof Object ? JSON.stringify(value) : value;
