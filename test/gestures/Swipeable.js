@@ -15,7 +15,6 @@ class SwipeEvent extends MouseEvent {
   }
 }
 
-customReactions.define("event", (e, _, type) => new e.constructor(type, e));
 customAttributes.define("swipeable", class SwipeAttr extends GestureAttr {
 
   swipe(e) {

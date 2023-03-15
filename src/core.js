@@ -143,10 +143,16 @@ function processNumArrayMonad(num, reaction) {
     once: function once(e) {
       return this.ownerElement.removeAttribute(this.name), e;  //todo combine with "."carry?
     },
-    dispatch: function dispatch(e) {
-      eventLoop.dispatch(e, this.ownerElement);
+    dispatch: function dispatch(e, _, target = this.ownerElement) {
+      eventLoop.dispatch(e, target);
       return e;                                                //todo combine with "." carry?
     },
+
+    event: (e, _, prefix) =>
+      e instanceof Event ? new e.constructor(prefix, e) :
+        e instanceof String || typeof e === "string" ? new Event(e) :
+          new CustomEvent(prefix, e)
+    ,
 
     class: function (e, _, css, onOff) {
       const classes = this.ownerElement.classList;

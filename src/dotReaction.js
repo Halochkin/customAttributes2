@@ -98,6 +98,7 @@ customTypes.defineAll({
 });
 customTypes.defineRule("el", (_, ...ps) => thisGetter(["ownerElement", ...ps.map(ReactionRegistry.toCamelCase)]));
 customTypes.defineRule("p", (_, ...ps) => thisGetter(["ownerElement", "parentElement", ...ps.map(ReactionRegistry.toCamelCase)]));
+customTypes.defineRule("q", (_, query) => () => document.querySelector(query));
 
 //style
 customTypes.defineRule("style", function (_, prop) {
