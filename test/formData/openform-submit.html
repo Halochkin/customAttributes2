@@ -11,7 +11,9 @@
   customReactions.define("value", function () {
     return this.value;
   });
-  customReactions.define("open", open);
+  customReactions.define("open", function (e, _, ...args) {
+    return open.call(this, e, "open", ...args);
+  });
   customReactions.define("log", e => (console.log(e), e));
 
   const formData = new FormData();

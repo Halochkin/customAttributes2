@@ -8,7 +8,9 @@
 <script type="module">
   import {FormData_GET, formDataToUri, popstate} from "../src/FormData/FormData_GET.js";
 
-  customReactions.define("get", FormData_GET);
+  customReactions.define("get", function (e, _, ...args) {
+    return FormData_GET.call(this, e, "get", ...args)
+  });
   customReactions.define("encodeuri", formDataToUri);
   customReactions.define("popstate", popstate);
   customReactions.define("log", _ => console.log(location.href.substring(location.href.length - 9)));

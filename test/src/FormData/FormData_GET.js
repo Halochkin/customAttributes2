@@ -29,18 +29,18 @@ export function encodeUriFromJson(ar) {
 }
 
 export async function fetchAndEvent(url, returnType, eventType) {
-  try {
+  // try {
     const response = await fetch(url, {method: "GET"});
     if (!(response.status >= 200 && response.status < 300))
       throw `Failed to fetch "${url.href}": ${response.status} ${response.statusText}.`
     //todo here it is possible to manage res.status 3xx. For example.
     const detail = await response[returnType]();
     eventLoop.dispatch(new CustomEvent(eventType, {detail}), this.ownerElement);
-  } catch (err) {
-    const target = this.ownerElement.isConnected ? this.ownerElement : document.documentElement;
+  // } catch (err) {
+  //   const target = this.ownerElement.isConnected ? this.ownerElement : document.documentElement;
     //todo move this logic to the propagation algorithm??
-    eventLoop.dispatch(new ErrorEvent("error", {error: `${this.name}: ${err}`}), target);
-  }
+    // eventLoop.dispatch(new ErrorEvent("error", {error: `${this.name}: ${err}`}), target);
+  // }
 }
 
 export function popstate(url) {

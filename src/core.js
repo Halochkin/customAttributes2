@@ -124,13 +124,13 @@ function processNumArrayMonad(num, reaction) {
     new: function _new(e, _, constructor, ...args) {
       return new window[ReactionRegistry.toCamelCase(constructor)](...args, e);
     },
-    await: async function Await(e, prefix, num) {
+    await: async function Await(e, _, num) {
       if (!num)
         await Promise.resolve();
       else if (num === "raf")
         await new Promise(r => requestAnimationFrame(r));
       else if (isNaN(num))    //todo detect error at upgradeTime?? if so, how best to do it..
-        throw new SyntaxError(`${prefix}_${num} is illegal, the '${num}' is not a number or 'raf'.`);
+        throw new SyntaxError(`await_${num} is illegal, the '${num}' is not a number or 'raf'.`);
       else
         await new Promise(r => setTimeout(r, num));
       return this.ownerElement ? e : undefined;
@@ -148,10 +148,10 @@ function processNumArrayMonad(num, reaction) {
       return e;                                                //todo combine with "." carry?
     },
 
-    event: (e, _, prefix) =>
-      e instanceof Event ? new e.constructor(prefix, e) :
+    event: (e, _, input) =>
+      e instanceof Event ? new e.constructor(input, e) :
         e instanceof String || typeof e === "string" ? new Event(e) :
-          new CustomEvent(prefix, e)
+          new CustomEvent(input, e)
     ,
 
     class: function (e, _, css, onOff) {

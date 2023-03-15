@@ -1,0 +1,50 @@
+<script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.2/observeElementCreation.js"></script>
+<script src="../../src/customAttributes.js"></script>
+<script src="../../src/dotReaction.js"></script>
+<script src="../../src/core.js"></script>
+<script src="../../src/GestureAttr.js"></script>
+
+<div longpress:console.log_e.type_e.target.tag-name>
+  <h1 longpressable_200>hello longpress</h1>
+</div>
+
+<script>
+  function newEvent(e, prefix) {
+    eventLoop.dispatch(new Event(prefix), this.ownerElement);
+    return e;
+  }
+
+  customReactions.define("log", function (e, _, arg1, arg2) {
+    console.log(arg1, arg2);
+  });
+
+  customReactions.define("longpress", newEvent);
+  customReactions.define("longpress-reset", newEvent);
+  customAttributes.define("longpressable", class LongPress extends GestureAttr {
+
+    static stateMachine(prefix, time = 200) {
+      return {
+        "": [
+          ["mousedown", "observe"]
+        ],
+        observe: [
+          ["_mousedown", ""],
+          ["_mousemove:log_mousemove_observe"],
+          ["_mouseup", ""],
+          [`timeout_${time}`, "active"],
+        ],
+        active: [
+          ["_mousedown::longpress-reset", ""],
+          ["_mousemove:log_mousemove_active"],
+          ["_mouseup::longpress", ""]//todo how to get duration here?
+        ]
+      };
+    }
+  });
+
+  const h1 = document.querySelector("h1");
+  h1.dispatchEvent(new MouseEvent("mousedown"));
+  setTimeout(_ => h1.dispatchEvent(new MouseEvent("mousemove")), 0);
+  setTimeout(_ => h1.dispatchEvent(new MouseEvent("mousemove", {bubbles: true})), 250);
+  setTimeout(_ => h1.removeAttribute("longpressable_200"), console.log(h1.outerHTML), 300);
+</script>

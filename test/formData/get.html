@@ -7,7 +7,9 @@
 <script type="module">
   import {FormData_GET, formDataToUri, open} from "../src/FormData/FormData_GET.js";
 
-  customReactions.define("getshortcut", FormData_GET);
+  customReactions.define("getshortcut", function (e, _, ...args) {
+    return FormData_GET.call(this, e, "getshortcut", ...args);
+  });
   customReactions.define("encodeuri", formDataToUri);
   customReactions.define("open", open);
 

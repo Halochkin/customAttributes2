@@ -7,21 +7,21 @@
 </style>
 
 <div id="bob">
-  <h1 click:log::open:log>hello</h1>
+  <h1 click:log::p-attr-toggle_open:log>hello</h1>
   <p>sunshine</p>
 </div>
 
 <script>
   customReactions.defineAll({
     "log": e => (console.log(getComputedStyle(document.querySelector("p")).display), e),
-    "open": function (e, prefix, suffix) {
+    "p-attr-toggle": function (e, _, attr, suffix) {
       suffix = suffix?.toUpperCase();
       let el = this.ownerElement.parentElement;
       while (el && suffix && el.tagName !== suffix)
         el = el.parentElement;
       if (!el)
         return;
-      el.hasAttribute(prefix) ? el.removeAttribute(prefix) : el.setAttribute(prefix);
+      el.hasAttribute(attr) ? el.removeAttribute(attr) : el.setAttribute(attr);
       return e;
     }
   });

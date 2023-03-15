@@ -2,14 +2,14 @@
 <script src="../../src/customAttributes.js"></script>
 <script src="../../src/core.js"></script>
 
-<div style="width:200px;" :await_200:width_500px>
+<div style="width:200px;" :await_200:style_width_500px>
   <div style="width:100%" border-box:log>
     hello sunshine
   </div>
 </div>
 
 <script>
-  customReactions.define("width", function styler(e, prop, value) {
+  customReactions.define("style", function styler(e,_, prop, value) {
     this.ownerElement.style.setProperty(prop, value);
   });
 

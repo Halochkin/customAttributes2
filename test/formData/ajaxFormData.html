@@ -7,8 +7,10 @@
 <script type="module">
   import {FormData_GET} from "../src/FormData/FormData_GET.js";
 
-  customReactions.define("load", FormData_GET);
-  customReactions.define("log", function(e){
+  customReactions.define("load", function (e, _, ...args) {
+    return FormData_GET.call(this, e, "load", ...args)
+  });
+  customReactions.define("log", function (e) {
     console.log(e.type, e.detail.args);
     return e;
   });

@@ -1,23 +1,20 @@
 <script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.2/observeElementCreation.js"></script>
 <script src="../../src/customAttributes.js"></script>
 
-<h1 click:hello:sunshine>hello sunshine</h1>
+<h1 click:reaction_hello:reaction_sunshine>hello sunshine</h1>
 <script>
   (async function () {
 
     let last = performance.now();
 
-    async function reaction(e, prefix) {
+    async function reaction(e, _, prefix) {
       await new Promise(r => setTimeout(r, 100));
       console.log(prefix, performance.now() - last > 100);
       last = performance.now();
       return e;
     }
 
-    customReactions.defineAll({
-      "hello": reaction,
-      "sunshine": reaction
-    });
+    customReactions.define("reaction", reaction);
     document.querySelector("h1").click();
   })();
 </script>
