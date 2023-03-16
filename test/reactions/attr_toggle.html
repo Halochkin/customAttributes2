@@ -1,53 +1,29 @@
 <script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.2/observeElementCreation.js"></script>
 <script src="../../src/customAttributes.js"></script>
-<script src="../../src/lib.js"></script>
+<script src="../../src/core.js"></script>
 
 <style>
   #bob:not([open]) > :not(h1) { display: none; }
 </style>
 
-<!--<div id="bob">-->
-<!--  <h1 click:log::open:log>hello</h1>-->
-<!--  <p>sunshine</p>-->
-<!--</div>-->
-
-<!--<script>-->
-<!--  customReactions.defineAll({-->
-<!--    "log": e => (console.log(getComputedStyle(document.querySelector("p")).display), e),-->
-<!--    "open": function (e, prefix, suffix){-->
-<!--      let el = this.ownerElement.parentElement;-->
-<!--      el.hasAttribute(prefix) ? el.removeAttribute(prefix) : el.setAttribute(prefix);-->
-<!--    }-->
-<!--  });-->
-<!--  document.querySelector("h1").click();-->
-<!--</script>-->
-
-<div click:filter:e.prevent-default>Hello
-    <h1 click::dispatch_toggle>sunshine</h1>
+<div id="bob">
+  <h1 click:log::p-attr-toggle_open:log>hello</h1>
+  <p>sunshine</p>
 </div>
 
 <script>
-  document.addEventListener("toggle", e=>{
-    console.log(e.type)
-  })
-
   customReactions.defineAll({
-    "filter": function(e, prefix, suffix){
-      if(e.target.tagName === "DIV")
-        return e;
-      debugger
-    },
-    "dispatch": function (e, prefix, suffix){
-      let event = new Event(suffix);
-      document.dispatchEvent(event);
+    "log": e => (console.log(getComputedStyle(document.querySelector("p")).display), e),
+    "p-attr-toggle": function (e, attr, suffix) {
+      suffix = suffix?.toUpperCase();
+      let el = this.ownerElement.parentElement;
+      while (el && suffix && el.tagName !== suffix)
+        el = el.parentElement;
+      if (!el)
+        return;
+      el.hasAttribute(attr) ? el.removeAttribute(attr) : el.setAttribute(attr);
+      return e;
     }
   });
   document.querySelector("h1").click();
-
-  window.preventDefault = function(e){
-    console.log(123)
-    debugger
-  }
-
-  // document.querySelector("div").click();
 </script>

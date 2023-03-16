@@ -1,14 +1,13 @@
 <script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.2/observeElementCreation.js"></script>
 <script src="../../src/customAttributes.js"></script>
-<script src="../../src/lib.js"></script>
+<script src="../../src/dotReaction.js"></script>
+<script src="../../src/core.js"></script>
 
-<h1 click:shift:on:once="sayHi">hello on-click_shift</h1>
+<h1 click:shift:.el.say-hi_e:once="sayHi">hello on-click_shift</h1>
 
 <script type="module">
   customReactions.defineAll({
-    "on": lib.ownerCallback,
-    "shift": lib.hasKey,
-    "once": lib.once
+    "shift": e => e.shiftKey ? e : undefined
   });
 
   const h1 = document.querySelector("h1");

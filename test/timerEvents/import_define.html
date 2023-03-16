@@ -4,14 +4,14 @@
 <script src="../../src/core.js"></script>
 
 <body
-    import:e.detail.-comp-a.:define_comp-a="./comp-a_attr-b_reaction-c.js"
-    import:e.detail.-attr-b.:define_attr-b="./comp-a_attr-b_reaction-c.js"
-    import:e.detail.reaction-c.:define_reaction-c="./comp-a_attr-b_reaction-c.js"
+    import:define_comp-a_e.detail.-comp-a="./comp-a_attr-b_reaction-c.js"
+    import:define_attr-b_e.detail.-attr-b="./comp-a_attr-b_reaction-c.js"
+    import:define_reaction-c_e.detail.reaction-c="./comp-a_attr-b_reaction-c.js"
 >
 <comp-a
     click:e.target.tag-name:log
     attr-b:e.type:log
-    ready:reaction-c:log
+    :reaction-c:log
 >hello sunshine
 </comp-a>
 

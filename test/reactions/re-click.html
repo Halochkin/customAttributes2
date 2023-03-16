@@ -1,9 +1,10 @@
 <script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.2/observeElementCreation.js"></script>
 <script src="../../src/customAttributes.js"></script>
-<script src="../../src/lib.js"></script>
+<script src="../../src/core.js"></script>
+<script src="../../src/dotReaction.js"></script>
 
 <web-comp></web-comp>
-<h2 click:on="sayHi">hello re-click</h2>
+<h2 click:el.say-hi_e>hello re-click</h2>
 
 <script type="module">
   class WebComp extends HTMLElement {
@@ -12,20 +13,13 @@
       const shadow = this.attachShadow({mode: "open"});
       //language=HTML
       shadow.innerHTML = `
-        <h1 click:click:dispatch_h2>hello</h1>
+        <h1 click:event_click:dispatch_q.h2>hello</h1>
         <h2>darkness</h2>
       `;
     }
   }
 
   customElements.define("web-comp", WebComp);
-
-  customReactions.defineAll({
-    "on": lib.ownerCallback,
-    "click": lib.cloneEvent,
-    "dispatch": lib.dispatch                //todo this is wrong, it is using the rerouting structure, it is bad
-  });
-
   const h2 = document.querySelector("h2");
   h2.sayHi = function (e) {
     console.log("hi " + e.type);

@@ -20,6 +20,12 @@ class CustomAttr extends Attr {
     return value;
   }
 
+  get chainBitsDots() {
+    const value = this.chain.map(s => s.split(/(?<=.)_/).map(s => s.split(".")));
+    Object.defineProperty(this, "chainBitsDots", {value, writable: false, configurable: true});
+    return value;
+  }
+
   static upgrade(at, Definition) {                    //discover time, => check all the definitions.
     Object.setPrototypeOf(at, Definition.prototype);  //then add to the unknown register what is needed
     try {                                             //then upgrade
@@ -43,11 +49,13 @@ class CustomAttr extends Attr {
 
   get reactions() {
     const value = [];
-    for (let [prefix, ...args] of this.chainBits.slice(1)) {
-      const r = customReactions.getDefinition(prefix);
-      if (r === undefined)
-        return r;
-      value.push([r, prefix, ...args.map(arg => customTypes.getDefinition(arg))]);
+    for (let i = 1; i < this.chain.length; i++) {
+      const [prefix, ...args] = this.chainBits[i];
+      const [prefixBits, ...argsBits] = this.chainBitsDots[i];
+      const rDef = customReactions.getDefinition(prefix, prefixBits);
+      if (rDef === undefined)
+        return rDef;
+      value.push([rDef, prefix, ...args.map((arg, i) => customTypes.getDefinition(arg, argsBits[i]))]);
     }
     Object.defineProperty(this, "reactions", {value, writable: false, configurable: true});
     return value;
@@ -86,7 +94,7 @@ class UnknownAttributes {
     }
   }
 
-  tryAgainstTriggerRule(Rule) {
+  tryAgainstTriggerRule(prefix, Rule) {
     for (let ref of this.#ref) {
       const at = ref.deref();
       if (!at?.ownerElement)
@@ -115,12 +123,10 @@ class GlobalTriggers {
       const at = ref.deref();
       if (!at?.ownerElement)
         set.delete(at);
-      else {
-        if (at.ownerElement.isConnected)
-          if (at.reactions?.length) //todo this will be something that we can check before we add it!
-            if (!(at.defaultAction && (event.defaultAction || event.defaultPrevented)))
-              yield at;
-      }
+      else if (at.ownerElement.isConnected)
+        if (at.reactions?.length) //todo this will be something that we can check before we add it!
+          if (!(at.defaultAction && (event.defaultAction || event.defaultPrevented)))
+            yield at;
     }
   }
 }
@@ -147,19 +153,29 @@ class DefinitionRegistry {
     this.#rules[prefix] = Function;
   }
 
-  getDefinition(type, bits = type.split(".")) {
-    return this.#cache[type] ??= bits.length === 1 ? this.#register[type] : this.#rules[bits[0]]?.(...bits);
+  getDefinition(type, bits) {
+    return this.#cache[type] ??= bits.length === 1 ? this.#register[bits[0]] : this.#rules[bits[0]]?.(...bits);
   }
 }
 
 class TypeRegistry extends DefinitionRegistry {
 
-  getDefinition(type, bits = type.split(".")) {  //numbers and strings are not cached..
+  getDefinition(type, bits) {  //numbers and strings and builtIn are not cached..
+    const builtIn = {
+      true: true,
+      false: false,
+      null: null,
+      undefined: undefined,
+    };
+    if (type in builtIn)
+      return builtIn[type];
+    // type = bits.join(".");  //todo two places where we need the type, its the cache and here for numbers with dot
     if (type && !isNaN(type))
       return Number(type);
     const Def = super.getDefinition(type, bits);
     return (Def !== undefined ? Def : type);
   }
+
   //todo this essentially functions as builtin types for Numbers and strings. Should we add the other builtin types here too? such as true/false and null??
   //todo or should we say that true/false is only 1/0. I like this. This would require the reaction function to convert true to 1 and false to 0.
 }
@@ -213,16 +229,22 @@ class AttributeRegistry extends DefinitionRegistry {
 
   defineRule(prefix, Function) {
     super.defineRule(prefix, Function);
-    unknownAttributes.tryAgainstTriggerRule(Function);
+    unknownAttributes.tryAgainstTriggerRule(prefix, Function);
   }
 
   upgrade(...attrs) {
     for (let at of attrs) {
+      //todo the steps below should be CustomAttr.discover(at);//
+      //todo so there isn't a problem waiting with the attribute, we should wait with
+      //we can wait with the attribute upgrade, until everything is ready. So ready all the time.
       Object.setPrototypeOf(at, CustomAttr.prototype);
-      const Def = this.getDefinition(at.type)
-      Def ? CustomAttr.upgrade(at, Def) :                      //todo find the Def from inside the CustomAttr??
+      at.type[0] === "_" && globalTriggers.put(at.type, at);
+      const Def = this.getDefinition(at.type, at.chainBitsDots[0][0])
+      Def ? CustomAttr.upgrade(at, Def) :
         unknownAttributes.addTriggerless(at);
-      at.name[0] === "_" && globalTriggers.put(at.type, at);
+      //todo adding to the globalTriggers should be done at the ReactionsReady time.
+      //todo here //todo there is no point in adding to global triggers if the Reactions are not ready.
+      //todo we have the Discover attribute, then Reactions ready =>
     }
   }
 }
@@ -320,7 +342,7 @@ class ReactionErrorEvent extends ErrorEvent {
       while (this.#eventLoop.length) {
         const {target, event} = this.#eventLoop[0];
         if (target instanceof Attr)
-          EventLoop.#runReactions(event, target);
+          target.reactions?.length && EventLoop.#runReactions(event, target);
         else /*if (!target || target instanceof Element)*/
           EventLoop.bubble(target, event);
         this.#eventLoop.shift();
@@ -360,7 +382,7 @@ class ReactionErrorEvent extends ErrorEvent {
 
     static #runReaction([reaction, ...args], at, input, i, async, allowAsync) {
       try {
-        const output = reaction.call(at, input, ...args.map(a => a instanceof Function ? a.call(at, input) : a));
+        const output = reaction.call(at, input, ...args.map(a => a instanceof Function ? a.call(at, input) : a).slice(1));
         if (!(output instanceof Promise))
           return output;
         if (allowAsync)
@@ -530,8 +552,10 @@ observeElementCreation(els => els.forEach(el => window.customAttributes.upgrade(
   }
 
   class NativeDCLEvent extends NativeDocumentEvent {
-    get type() {
-      return "_DOMContentLoaded";
+    listener(e) {
+      e.stopImmediatePropagation();
+      Object.defineProperty(e, "type", {value: "domcontentloaded", writable: false, enumerable: true});
+      eventLoop.dispatch(e);
     }
 
     get eventType() {
@@ -546,7 +570,7 @@ observeElementCreation(els => els.forEach(el => window.customAttributes.upgrade(
     }
 
     get nativeTarget() {
-      return this.ownerElement.getRootNode();
+      return this.ownerElement.getRootNode();                 //todo this is broken for _click for example.
     }
   }
 

@@ -1,7 +1,6 @@
 <script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.2/observeElementCreation.js"></script>
 <script src="../../src/customAttributes.js"></script>
 <script src="../../src/dotReaction.js"></script>
-<script src="../../src/lib.js"></script>
 <script src="../../src/core.js"></script>
 
 <style>
@@ -9,19 +8,16 @@
 </style>
 
 <div
-    ready:console.log_style.color
+    :console.log_style.color
 
-    mouseenter:bob_on
+    mouseenter:class_bob_on
     mouseenter:console.log_style.color
 
-    mouseleave:bob_off
+    mouseleave:class_bob_off
     mouseleave:console.log_style.color
 >world</div>
 
 <script type="module">
-
-  customReactions.define("bob", lib.cssClass);
-
   const div = document.querySelector("div");
   div.dispatchEvent(new MouseEvent("mouseenter"));
   div.dispatchEvent(new MouseEvent("mouseleave"));

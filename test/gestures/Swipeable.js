@@ -15,7 +15,6 @@ class SwipeEvent extends MouseEvent {
   }
 }
 
-customReactions.define("event", (e, _, type) => new e.constructor(type, e));
 customAttributes.define("swipeable", class SwipeAttr extends GestureAttr {
 
   swipe(e) {
@@ -34,9 +33,9 @@ customAttributes.define("swipeable", class SwipeAttr extends GestureAttr {
 
   static stateMachine() {
     return {
-      "": [["mousedown:.g.set:event_swipe-start:dispatch", "start"]],
+      "": [["mousedown:.g.set_e:event_swipe-start:dispatch", "start"]],
       start: [
-        [`_mouseup:g.check-cancel::g.swipe:dispatch`, ""],
+        [`_mouseup:g.check-cancel_e::g.swipe_e:dispatch`, ""],
         ["_blur:event_swipe-cancel:dispatch", ""],
         ["_selectstart:prevent", ""]
       ]

@@ -2,16 +2,14 @@
 <script src="../../src/customAttributes.js"></script>
 <script src="../../src/dotReaction.js"></script>
 <script src="../../src/core.js"></script>
-<script src="../../src/lib.js"></script>
 
 <style>
   [checked] {accent-color: yellow;}
 </style>
 
-<input id="a" type="checkbox" change:.console.log_style.accent-color:checked:console.log_style.accent-color/>
+<input id="a" type="checkbox" change:.console.log_style.accent-color:toggle-attr_checked:console.log_style.accent-color/>
 
 <script type="module">
-  customReactions.define("checked", lib.toggleAttr);
 
   const input = document.querySelector("input");
   input.click();

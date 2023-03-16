@@ -3,7 +3,7 @@
 <script src="../../src/dotReaction.js"></script>
 <script src="../../src/core.js"></script>
 
-<h1 child-list:e.detail:log timeout_42:remove-child-element_0:append_div_sunshine>
+<h1 child-list:e.detail:log :await_42:remove-child-element_0:append_div_sunshine>
   <span>world</span>
 </h1>
 
@@ -27,13 +27,13 @@
       this._mo.disconnect();
     }
   });
-  customReactions.define("append", function append(e, _, tag, innerText) {
+  customReactions.define("append", function append(e, tag, innerText) {
     const el = document.createElement(tag);
     el.innerText = innerText;
     this.ownerElement.append(el);
     return e;
   });
-  customReactions.define("remove-child-element", function removeChildElement(e, _, ...pos) {
+  customReactions.define("remove-child-element", function removeChildElement(e, ...pos) {
     for (let p of pos)
       this.ownerElement.removeChild(this.ownerElement.children[parseInt(p)]);
     return e;

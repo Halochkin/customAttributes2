@@ -2,7 +2,7 @@
 <script src="../../src/customAttributes.js"></script>
 <script src="../../src/dotReaction.js"></script>
 <script src="../../src/core.js"></script>
-<script src="../../src/GestureAttrSimple.js"></script>
+<script src="../../src/GestureAttr.js"></script>
 <script src="Swipeable.js"></script>
 
 <style>
@@ -31,7 +31,7 @@
     swipeable_100
     swipe:swipe-longer-than_200:.left-right
     swipe:swipe-longer-than_200:await_800:el.remove
-    ready:random-color:this.owner-element.style.background-color_e
+    :random-color:this.owner-element.style.background-color_e
 ></div>
 </body>
 
@@ -46,10 +46,10 @@
     swipeable_100
     swipe:swipe-longer-than_200:.left-right
     swipe:swipe-longer-than_200:await_800:el.remove
-    ready:random-color:this.owner-element.style.background-color_e
+    :random-color:this.owner-element.style.background-color_e
 ></div>`);
   });
-  customReactions.define("swipe-longer-than", (e, _, length) => e.length >= length ? e : undefined);
+  customReactions.define("swipe-longer-than", (e, length) => e.length >= length ? e : undefined);
   customReactions.define("left-right", function (e) {
     this.ownerElement.classList.add(e.direction);
   });

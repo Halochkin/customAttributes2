@@ -1,0 +1,22 @@
+<script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.2/observeElementCreation.js"></script>
+<script src="../../src/customAttributes.js"></script>
+<script src="../../src/dotReaction.js"></script>
+<script src="../../src/core.js"></script>
+
+<body click:.console.log_loop:call-self_4>
+loop 5 times
+</body>
+
+<script>
+  const wm = new WeakMap();
+  customReactions.define("call-self", function (e, num) {
+    let count = wm.get(this);
+    if (count === undefined)
+      wm.set(this, count = num);
+    if (!count)
+      return;
+    wm.set(this, --count);
+    eventLoop.dispatch(new e.constructor(this.type, e), this);
+  });
+  document.body.click();
+</script>

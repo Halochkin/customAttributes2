@@ -1,10 +1,10 @@
 <script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.2/observeElementCreation.js"></script>
 <script src="../../src/customAttributes.js"></script>
-<script src="../../src/lib.js"></script>
+<script src="../../src/core.js"></script>
 
 <div
-    click:formdata:submit:dispatch
-    auxclick:formdata:clone_submit
+    click:formdata:event_submit:dispatch
+    auxclick:formdata:event_submit:dispatch
     submit:log>
   <div name="one" value="hello sunshine"></div>
   <div name="two">2</div>
@@ -19,9 +19,6 @@
   import {DOM_FormData_Lazy} from "../src/FormData/DOM_FormData.js";
 
   customReactions.defineAll({
-    "submit": lib.customEvent,
-    "dispatch": lib.dispatch,
-    "clone": lib.dispatchDetail,
     "formdata": DOM_FormData_Lazy,
     "log": e => (console.log(...e.detail), e)
   });

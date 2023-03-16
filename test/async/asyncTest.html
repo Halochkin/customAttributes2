@@ -1,7 +1,7 @@
 <script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.2/observeElementCreation.js"></script>
 <script src="../../src/customAttributes.js"></script>
 
-<h1 click:hello:sunshine>hello sunshine</h1>
+<h1 click:reaction_hello:reaction_sunshine>hello sunshine</h1>
 <script>
   (async function () {
 
@@ -14,10 +14,7 @@
       return e;
     }
 
-    customReactions.defineAll({
-      "hello": reaction,
-      "sunshine": reaction
-    });
+    customReactions.define("reaction", reaction);
     document.querySelector("h1").click();
   })();
 </script>

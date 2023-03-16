@@ -1,4 +1,4 @@
-//import:, ready:, timeout:, raf:
+//<empty>:, import:, timeout:, raf:
 (function () {
   function dispatchWhenReactionReady(attr, event, delay = 4, i = 0) {
     attr.reactions ?
@@ -44,8 +44,6 @@
       let countDown = parseInt(this.suffix[1]) || Infinity;
       eventLoop.dispatch(new Event(this.type), this);
       this._interval = setInterval(_ => {
-        if (!this.reactions)
-          return;
         eventLoop.dispatch(new Event(this.type), this);
         //the countdown state is not reflected in the DOM. We could implement this by actually adding/removing the attribute with a new attribute. That would be ok.
         if (countDown-- === 1)
@@ -60,14 +58,7 @@
 
   class Timeout extends CustomAttr {
     upgrade() {
-      if (this.name !== this.type)
-        this._timer = setTimeout(_ => this._trigger(1, this.suffix[1]), this.suffix[0]);
-    }
-
-    _trigger(i, delay = 4) {
-      this.reactions ?
-        eventLoop.dispatch(new Event(this.type), this) :
-        this._timer = setTimeout(_ => this._trigger(++i, delay), delay ** i);
+      this._timer = setTimeout(_ => eventLoop.dispatch(new Event(this.type), this), this.suffix[0]);
     }
 
     destructor() {
@@ -84,8 +75,6 @@
     trigger() {
       if (!this._count)
         this.destructor();
-      if (!this.reactions)
-        return;
       this._count--;
       eventLoop.dispatch(new Event(this.type), this);
     }
@@ -95,7 +84,7 @@
     }
   }
 
-  customAttributes.define("ready", Ready);
+  customAttributes.define("", Ready);
   customAttributes.define("import", Import);
   customAttributes.define("timeout", Timeout);
   customAttributes.define("interval", Interval);
@@ -132,43 +121,57 @@ function processNumArrayMonad(num, reaction) {
   //{}=>WeakMap=>WeakSet
   const thenElseRegister = {};
   customReactions.defineAll({
-    new: function _new(e, _, constructor, ...args) {
+    new: function _new(e, constructor, ...args) {
       return new window[ReactionRegistry.toCamelCase(constructor)](...args, e);
     },
-    await: async function Await(e, prefix, num) {
-      if (num && isNaN(num))    //todo detect error at upgradeTime?? if so, how best to do it..
-        throw new SyntaxError(`${prefix}_${num} is illegal, the _${num} is not a number.`);
-      await (num ? new Promise(r => setTimeout(r, num)) : Promise.resolve());
+    await: async function Await(e, num) {
+      if (!num)
+        await Promise.resolve();
+      else if (num === "raf")
+        await new Promise(r => requestAnimationFrame(r));
+      else if (isNaN(num))    //todo detect error at upgradeTime?? if so, how best to do it..
+        throw new SyntaxError(`await_${num} is illegal, the '${num}' is not a number or 'raf'.`);
+      else
+        await new Promise(r => setTimeout(r, num));
       return this.ownerElement ? e : undefined;
     },
     prevent: e => (e.preventDefault(), e),
-    dispatch: function dispatch(e) {
-      eventLoop.dispatch(e, this.ownerElement);
+    debugger: function (e) {                                   //todo combine with "." carry?
+      debugger;
+      return e;
+    },
+    once: function once(e) {
+      return this.ownerElement.removeAttribute(this.name), e;  //todo combine with "."carry?
+    },
+    dispatch: function dispatch(e, target = this.ownerElement) {
+      eventLoop.dispatch(e, target);
+      return e;                                                //todo combine with "." carry?
+    },
+
+    event: (e, input) =>
+      e instanceof Event ? new e.constructor(input, e) :
+        e instanceof String || typeof e === "string" ? new Event(e) :
+          new CustomEvent(input, e)
+    ,
+
+    class: function (e, css, onOff) {
+      const classes = this.ownerElement.classList;
+      if (onOff === undefined)
+        classes.contains(css) ? classes.remove(css) : classes.add(css);
+      else if (onOff === "on")
+        classes.add(css);
+      else if (onOff === "off")
+        classes.remove(css);
       return e;
     },
 
-    //todo untested.
-    plus: (s, _, ...as) => as.reduce((s, a) => s + a, s),
-    minus: (s, _, ...as) => as.reduce((s, a) => s - a, s),
-    times: (s, _, ...as) => as.reduce((s, a) => s * a, s),
-    divide: (s, _, ...as) => as.reduce((s, a) => s / a, s),
-    percent: (s, _, ...as) => as.reduce((s, a) => s % a, s),
-    factor: (s, _, ...as) => as.reduce((s, a) => s ** a, s),
-    and: (s, _, ...as) => as.reduce((s, a) => s && a, s),
-    or: (s, _, ...as) => as.reduce((s, a) => s || a, s),
-    //todo double or triple equals??
-    equals: (s, _, ...as) => as.reduce((s, a) => s == a, s),
-    //todo the below comparisons should more likely be run as dot-expressions..
-    //todo and should dot-expressions return the original 'e'? it feels like a more useful strategy..
-    //todo if the dot-expressions use this strategy, then they become monadish too.. not bad.
-    //gt: (s, _, ...as) => as.reduce((s, a) => s > a, s),
-    //gte: (s, _, ...as) => as.reduce((s, a) => s >= a, s),
-    //lt: (s, _, ...as) => as.reduce((s, a) => s < a, s),
-    //lte: (s, _, ...as) => as.reduce((s, a) => s <= a, s),
-    number: n => Number(n),  //this is the same as .-number_e. Do we want it?
-    nan: n => isNaN(n),  //this is the same as .is-na-n_e. Do we want it?
+    plus: (_, s, ...as) => as.reduce((s, a) => s + a, s),
+    and: (_, ...as) => as.reduce((s, a) => s && a, true),
+    or: (_, ...as) => as.reduce((s, a) => s || a, false),
+    // equals: (_, s, ...as) => as.reduce((s, a) => s === a, s), //todo wrong implement correctly
+    // "double-equals": (_, s, ...as) => as.reduce((s, a) => s == a, s),//todo wrong implement correctly
 
-    then: function (e, _, ...labels) {
+    then: function (e, ...labels) {
       const key = labels.join(" ");
       const weakMap = thenElseRegister[key];
       weakMap ?
@@ -178,13 +181,14 @@ function processNumArrayMonad(num, reaction) {
         thenElseRegister[key] = new WeakMap([[this.ownerElement, new WeakSet([e])]]);
       return e;
     },
-    else: function (e, _, ...labels) {
+    else: function (e, ...labels) {
       if (!thenElseRegister[labels.join(" ")]?.get(this.ownerElement)?.has(e))
         return e;
     },
 
-    debugger: function (e) {
-      debugger;
+    "toggle-attr": function (e, prefix) {
+      const el = this.ownerElement;
+      el.hasAttribute(prefix) ? el.removeAttribute(prefix) : el.setAttribute(prefix);
       return e;
     },
 
@@ -194,7 +198,7 @@ function processNumArrayMonad(num, reaction) {
         return throttleRegister.set(this, primitive), value;
     },
 
-    define: function define(Def, _, tag) {
+    define: function define(_, tag, Def) {
       if (Def.prototype instanceof CustomAttr)
         customAttributes.define(tag, Def);
       else if (Def.prototype instanceof HTMLElement)
@@ -208,12 +212,12 @@ function processNumArrayMonad(num, reaction) {
 
   customReactions.defineRule("m", function (m, prop, ...original) {
     const input = original.join(".");
-    const reactionImpl = customReactions.getDefinition(input);
+    const reactionImpl = customReactions.getDefinition(input, original);
     if (reactionImpl)
-      return function (e, _, ...args) {
+      return function (e, ...args) {
         if (!(e instanceof Object))
           throw new TypeError(`Reaction '${[m, prop, input].join(".")}: is not getting an Object input. typeof e = ${typeof e}`);
-        e[prop] = reactionImpl.call(this, e, input, ...args);
+        e[prop] = reactionImpl.call(this, e, ...args);
         return e;
       }
   });
@@ -221,12 +225,12 @@ function processNumArrayMonad(num, reaction) {
     const original = rest.join(".");
     const reaction = "a." + num + "." + original;
     const int = num === "" ? num : processNumArrayMonad(num, reaction);
-    const reactionImpl = customReactions.getDefinition(original);
+    const reactionImpl = customReactions.getDefinition(original, rest);
     if (reactionImpl)
-      return function (e, prefix, ...args) {
+      return function (e, ...args) {
         if (!(e instanceof Array))
           throw new TypeError(`Reaction '${reaction}: is not getting an Array input. typeof e = ${typeof e}`);
-        const val = reactionImpl.call(this, e, original, ...args);
+        const val = reactionImpl.call(this, e, ...args);
         num === "" ? e.push(val) :
           e.splice(int < 0 ? e.length + int : int, 0, val);
         return e;
@@ -234,10 +238,10 @@ function processNumArrayMonad(num, reaction) {
   });
   customReactions.defineRule("", function (_, ...more) {
     const original = more.join(".");
-    const reactionImpl = customReactions.getDefinition(original);
+    const reactionImpl = customReactions.getDefinition(original, more);
     if (reactionImpl)
-      return function (e, _, ...args) {
-        const val = reactionImpl.call(this, e, original, ...args);
+      return function (e, ...args) {
+        const val = reactionImpl.call(this, e, ...args);
         return val instanceof Promise ? val.then(() => e) : e;
       };
   });

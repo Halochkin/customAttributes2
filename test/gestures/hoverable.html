@@ -2,7 +2,7 @@
 <script src="../../src/customAttributes.js"></script>
 <script src="../../src/dotReaction.js"></script>
 <script src="../../src/core.js"></script>
-<script src="../../src/GestureAttrSimple.js"></script>
+<script src="../../src/GestureAttr.js"></script>
 
 <style>
   [hoverable=""] { color: orange; }
@@ -30,10 +30,10 @@
     static stateMachine() {
       return {
         "": [
-          ["mouseenter:.g.hover", "on"]
+          ["mouseenter:.g.hover_e", "on"]
         ],
         "on": [
-          ["mouseleave:.g.current-target", ""]
+          ["mouseleave:.g.current-target_e", ""]
         ]
       };
     }

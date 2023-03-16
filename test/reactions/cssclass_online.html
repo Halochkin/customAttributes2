@@ -1,18 +1,17 @@
 <script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.2/observeElementCreation.js"></script>
 <script src="../../src/customAttributes.js"></script>
-<script src="../../src/lib.js"></script>
+<script src="../../src/core.js"></script>
 
 <style>
   .hasnet { color: green; }
 </style>
 
-<div _online:log_color:hasnet:log_color _offline:log_color:hasnet_off:log_color>Network status</div>
+<div _online:log_color:class_hasnet_on:log_color _offline:log_color:class_hasnet_off:log_color>Network status</div>
 
 <script type="module">
 
   customReactions.defineAll({
-    "hasnet": lib.cssClass,
-    "log": function logComputedStyle(e, _, suffix) {
+    "log": function logComputedStyle(e, suffix) {
       console.log(getComputedStyle(this.ownerElement)[ReactionRegistry.toCamelCase(suffix)]);
       return e;
     }

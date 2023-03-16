@@ -1,7 +1,7 @@
 <script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.2/observeElementCreation.js"></script>
 <script src="../../src/customAttributes.js"></script>
 <script src="../../src/dotReaction.js"></script>
-<script src="../../src/lib.js"></script>
+<script src="../../src/core.js"></script>
 
 <style>
   div:not([open]) > :not(h1) {
@@ -11,19 +11,14 @@
 
 <div
     toggle:window.get-computed-style_this.owner-element.children.1:console.log_e.display_1
-    toggle:open
+    toggle:toggle-attr_open
     toggle:window.get-computed-style_this.owner-element.children.1:console.log_e.display_2
 >
-  <h1 click:toggle>hello</h1>
+  <h1 click:event_toggle:dispatch>hello</h1>
   <p>sunshine</p>
   <p>world</p>
 </div>
 
 <script type="module">
-  customReactions.defineAll({
-    "open": lib.toggleAttr,
-    "toggle": lib.newEvent
-  });
-
   document.querySelector("h1").click();
 </script>

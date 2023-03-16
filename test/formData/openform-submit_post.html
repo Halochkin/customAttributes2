@@ -6,10 +6,13 @@
 <script type="module">
   import {openPost} from "../src/FormData/FormData_GET.js";
 
-  customReactions.define("open", openPost);
-  customReactions.define("href", function (e, prefix) {
+  customReactions.define("open", function open(e, ...args) {
+    return openPost.call(this, e, "open", ...args);
+  });
+
+  customReactions.define("href", function (e) {
     return {
-      [prefix]: this.value,
+      href: this.value,
       withEntries: e.detail
     };
   });
