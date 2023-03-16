@@ -23,12 +23,8 @@ function windowGetter(props) {
   return _ => getProp(window, props);
 }
 
-function normalizePath(props) {
-  const getter = props[props.length - 1] === "" ? !props.pop() : false;
-  return {props: props.map(ReactionRegistry.toCamelCase), getter};
-}
-
-function makeCaller(root, props) {
+function makeCaller(root, ...props) {
+  props = props.map(ReactionRegistry.toCamelCase);
   // if(props.length > 1)
   //   console.info(...props);
   return function (e, ...args) {
@@ -46,17 +42,9 @@ function makeCaller(root, props) {
   };
 }
 
-function getSetOrCall(root, ...more) {
-  const {props, getter} = normalizePath(more);
-  return !getter ? makeCaller(root, props) :
-    root === "e" ? eGetter(props) :
-      root === "this" ? thisGetter(props) :
-        windowGetter(props);
-}
-
-customReactions.defineRule("window", getSetOrCall);
-customReactions.defineRule("this", getSetOrCall);
-customReactions.defineRule("e", getSetOrCall);
+customReactions.defineRule("window", makeCaller);
+customReactions.defineRule("this", makeCaller);
+customReactions.defineRule("e", makeCaller);
 
 customReactions.defineRule("console", function (_, fun) {
   if (fun in console)
