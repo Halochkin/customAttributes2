@@ -165,27 +165,11 @@ function processNumArrayMonad(num, reaction) {
       return e;
     },
 
-
-    //todo untested.
-    plus: (s, ...as) => as.reduce((s, a) => s + a, s),
-    minus: (s, ...as) => as.reduce((s, a) => s - a, s),
-    times: (s, ...as) => as.reduce((s, a) => s * a, s),
-    divide: (s, ...as) => as.reduce((s, a) => s / a, s),
-    percent: (s, ...as) => as.reduce((s, a) => s % a, s),
-    factor: (s, ...as) => as.reduce((s, a) => s ** a, s),
-    and: (s, ...as) => as.reduce((s, a) => s && a, s),
-    or: (s, ...as) => as.reduce((s, a) => s || a, s),
-    //todo double or triple equals??
-    equals: (s, ...as) => as.reduce((s, a) => s == a, s),
-    //todo the below comparisons should more likely be run as dot-expressions..
-    //todo and should dot-expressions return the original 'e'? it feels like a more useful strategy..
-    //todo if the dot-expressions use this strategy, then they become monadish too.. not bad.
-    //gt: (s, ...as) => as.reduce((s, a) => s > a, s),
-    //gte: (s, ...as) => as.reduce((s, a) => s >= a, s),
-    //lt: (s, ...as) => as.reduce((s, a) => s < a, s),
-    //lte: (s, ...as) => as.reduce((s, a) => s <= a, s),
-    number: n => Number(n),  //this is the same as .-number_e. Do we want it?
-    nan: n => isNaN(n),  //this is the same as .is-na-n_e. Do we want it?
+    plus: (_, s, ...as) => as.reduce((s, a) => s + a, s),
+    and: (_, ...as) => as.reduce((s, a) => s && a, true),
+    or: (_, ...as) => as.reduce((s, a) => s || a, false),
+    // equals: (_, s, ...as) => as.reduce((s, a) => s === a, s), //todo wrong implement correctly
+    // "double-equals": (_, s, ...as) => as.reduce((s, a) => s == a, s),//todo wrong implement correctly
 
     then: function (e, ...labels) {
       const key = labels.join(" ");

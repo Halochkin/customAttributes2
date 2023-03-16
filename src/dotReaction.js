@@ -52,6 +52,22 @@ customReactions.defineRule("console", function (_, fun) {
   throw new SyntaxError(`console.${fun} is unknown.`);
 });
 
+//todo mathAddOns untested
+const mathAddOns = {
+  minus: (_, s, ...as) => as.reduce((s, a) => s - a, s),
+  times: (_, s, ...as) => as.reduce((s, a) => s * a, s),
+  divide: (_, s, ...as) => as.reduce((s, a) => s / a, s),
+  percent: (_, s, ...as) => as.reduce((s, a) => s % a, s),
+  factor: (_, s, ...as) => as.reduce((s, a) => s ** a, s),
+  gt: (_, s, ...as) => as.reduce((s, a) => s > a, s),
+  gte: (_, s, ...as) => as.reduce((s, a) => s >= a, s),
+  lt: (_, s, ...as) => as.reduce((s, a) => s < a, s),
+  lte: (_, s, ...as) => as.reduce((s, a) => s <= a, s),
+};
+customReactions.defineRule("math", function (_, fun) {
+  return mathAddOns[fun] ?? fun in Math ? (e, ...args) => Math[fun](...args) : undefined;
+});
+
 customTypes.defineAll({
   window: window,
   document: document,
