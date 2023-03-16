@@ -3,7 +3,7 @@ customReactions.defineRule("g", function (g, prop, ...more) {
     throw new SyntaxError("The g. can only have a single property.");
   prop = ReactionRegistry.toCamelCase(prop);
   return function (e, ...args) {
-    return this.gesture[prop].call(this.gesture, e, ...args);
+    return this.gesture[prop].call(this.gesture, ...args);
   }
 });
 
@@ -56,7 +56,7 @@ class GestureAttr extends CustomAttr {
     Object.getOwnPropertyDescriptor(Attr.prototype, "value").set.call(this, [this._state, ...this._data].join(" "));
   }
 
-  go(_, state) {
+  go(state) {
     this.state = state;
   }
 

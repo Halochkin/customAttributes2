@@ -19,7 +19,7 @@
       eventLoop.dispatch(new e.constructor(this.type.slice(0, -4), e), this.ownerElement);
     }
 
-    log(e, ...args) {
+    log(...args) {
       console.log(...args);
     }
 
@@ -35,9 +35,9 @@
           [`timeout_${time}`, "active"],
         ],
         active: [
-          ["_mousedown::.g.reset", ""],
+          ["_mousedown::.g.reset_e", ""],
           ["_mousemove:g.log_mousemove_active"],
-          ["_mouseup::.g.longpress", ""]
+          ["_mouseup::.g.longpress_e", ""]
         ]
       };
     }
