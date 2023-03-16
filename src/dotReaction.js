@@ -1,4 +1,6 @@
 function getProp(e, props) {
+  // if(props.length > 1)
+  //   console.info(...props);
   for (let prop of props) {
     e = e[prop]
     if (e === undefined)
@@ -26,17 +28,9 @@ function normalizePath(props) {
   return {props: props.map(ReactionRegistry.toCamelCase), getter};
 }
 
-// function getProp2(props, e, p, prop) {
-//   for (prop of props) {
-//     p = e;
-//     if (p === undefined)
-//       break;
-//     e = p[prop];
-//   }
-//   return {p, e, prop};
-// }
-
 function makeCaller(root, props) {
+  // if(props.length > 1)
+  //   console.info(...props);
   return function (e, ...args) {
     e = root === "e" ? e : root === "this" ? this : window;
     let p, prop;
@@ -46,8 +40,6 @@ function makeCaller(root, props) {
         return;
       e = p[prop];
     }
-    // let {p, e, prop} = getProp2(props, root === "e" ? e : root === "this" ? this : window);
-    // return !p ? undefined :
     return e instanceof Function ? e.call(p, ...args) :
       !args.length ? e :                              //getter
         p[prop] = args.length === 1 ? args[0] : args; //setter
@@ -101,37 +93,14 @@ customTypes.defineAll({
 });
 customTypes.defineRule("el", (_, ...ps) => thisGetter(["ownerElement", ...ps.map(ReactionRegistry.toCamelCase)]));
 customTypes.defineRule("p", (_, ...ps) => thisGetter(["ownerElement", "parentElement", ...ps.map(ReactionRegistry.toCamelCase)]));
-customTypes.defineRule("q", (_, query) => () => document.querySelector(query));
 
-//style
+//CSSOM style getComputedStyle
 customTypes.defineRule("style", function (_, prop) {
   prop = ReactionRegistry.toCamelCase(prop);
   return function () {
     return getComputedStyle(this.ownerElement)[prop];
   }
 });
-// customReactions.defineRule("style", function (_, prop, ...args) {
-//   if (args.length)
-//     throw new SyntaxError("style. rule is a monad setter and can only have a single value.");
-//   return function (e, _, ...args) {
-//     this.ownerElement.style[prop] = args.join(" ");
-//     return e;
-//   };
-// });
-// //class
-// customReactions.defineRule("class", function (_, prop, ...args) {
-//   if (args.length)
-//     throw new SyntaxError("class. rule is a monad setter and can only have a single value.");
-//   return function (e, _, ...args) {
-//     this.ownerElement.style[prop] = args.join(" ");
-//     return e;
-//   };
-// });
-// customTypes.define("class", function (_, prop, ...args) {
-//   if (args.length)
-//     throw new SyntaxError("class. rule is a monad getter and can only have a single value.");
-//   return function () {
-//     return getComputedStyle(this.ownerElement)[prop];
-//   };
-// });
-//todo class and attr
+
+//querySelector
+customTypes.defineRule("q", (_, query) => () => document.querySelector(query));
