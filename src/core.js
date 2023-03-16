@@ -214,7 +214,7 @@ function processNumArrayMonad(num, reaction) {
         return throttleRegister.set(this, primitive), value;
     },
 
-    define: function define(Def, tag) {
+    define: function define(_, tag, Def) {
       if (Def.prototype instanceof CustomAttr)
         customAttributes.define(tag, Def);
       else if (Def.prototype instanceof HTMLElement)
