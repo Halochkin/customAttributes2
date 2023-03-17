@@ -25,10 +25,8 @@ function windowGetter(props) {
 
 function makeCaller(root, ...props) {
   props = props.map(ReactionRegistry.toCamelCase);
-  // if(props.length > 1)
-  //   console.info(...props);
-  return function (e, ...args) {
-    e = root === "e" ? e : root === "this" ? this : window;
+  return function (_, ...args) {
+    let e = /*root === "e" ? e :*/ root === "this" ? this : window;
     let p, prop;
     for (prop of props) {
       p = e;
@@ -44,7 +42,7 @@ function makeCaller(root, ...props) {
 
 customReactions.defineRule("window", makeCaller);
 customReactions.defineRule("this", makeCaller);
-customReactions.defineRule("e", makeCaller);
+// customReactions.defineRule("e", makeCaller);
 
 customReactions.defineRule("console", function (_, fun) {
   if (fun in console)

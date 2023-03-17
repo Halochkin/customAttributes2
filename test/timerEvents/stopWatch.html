@@ -3,12 +3,12 @@
 <script src="../../src/dotReaction.js"></script>
 <script src="../../src/core.js"></script>
 
-<body test:e.time-stamp:stopwatch:math.min_e_25:console.log_e>
+<body test:stopwatch_e.time-stamp:math.min_e_25:console.log_e>
 
 <script>
   //a diff/aggregator of sorts. same as throttle. It joins the output of many different events across async time.
   const stopWatches = new WeakMap();
-  customReactions.define("stopwatch", function stopwatch(timeStamp) {
+  customReactions.define("stopwatch", function stopwatch(_, timeStamp) {
     const lastTime = stopWatches.get(this) || timeStamp;
     stopWatches.set(this, timeStamp);
     return timeStamp - lastTime;

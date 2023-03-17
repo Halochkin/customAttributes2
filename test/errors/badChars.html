@@ -1,0 +1,26 @@
+<script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.2/observeElementCreation.js"></script>
+<script src="../../src/customAttributes.js"></script>
+<script src="../../src/dotReaction.js"></script>
+<script src="../../src/core.js"></script>
+
+<body
+    click:and_$:console.log_this.value="$"
+    click_$:and_$:console.log_this.value="$$"
+    click:and_,:console.log_this.value=","
+    click_,:and_,:console.log_this.value=",,"
+    click:and_(:console.log_this.value="("
+    click_(:and_(:console.log_this.value="(("
+    click:and_):console.log_this.value=")"
+    click_):and_):console.log_this.value="))"
+    click:and_&:console.log_this.value="&"
+    click_&:and_&:console.log_this.value="&&"
+    click:and_!:console.log_this.value="!"
+    click_!:and_!:console.log_this.value="!!"
+    1&href="something"
+>
+<pre>New Chrome browsers seems to be willing to generate any attribute name as long as it doesn't contain `<` `>` and `=`.</pre>
+
+</body>
+<script>
+  document.body.click();
+</script>

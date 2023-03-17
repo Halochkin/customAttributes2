@@ -122,7 +122,7 @@ function processNumArrayMonad(num, reaction) {
   const thenElseRegister = {};
   customReactions.defineAll({
     new: function _new(e, constructor, ...args) {
-      return new window[ReactionRegistry.toCamelCase(constructor)](...args, e);
+      return new window[ReactionRegistry.toCamelCase(constructor)](...args);
     },
     await: async function Await(e, num) {
       if (!num)
@@ -135,7 +135,8 @@ function processNumArrayMonad(num, reaction) {
         await new Promise(r => setTimeout(r, num));
       return this.ownerElement ? e : undefined;
     },
-    prevent: e => (e.preventDefault(), e),
+    //todo restrict e.preventDefault() to the "prevent" reaction only
+    prevent: e => e.preventDefault(),
     debugger: function (e) {                                   //todo combine with "." carry?
       debugger;
       return e;
@@ -192,7 +193,7 @@ function processNumArrayMonad(num, reaction) {
       return e;
     },
 
-    throttle: function throttle(value) {
+    throttle: function throttle(_, value) {
       const primitive = value instanceof Object ? JSON.stringify(value) : value;
       if (throttleRegister.get(this) !== primitive)
         return throttleRegister.set(this, primitive), value;
