@@ -122,7 +122,7 @@ function processNumArrayMonad(num, reaction) {
   const thenElseRegister = {};
   customReactions.defineAll({
     new: function _new(e, constructor, ...args) {
-      return new window[ReactionRegistry.toCamelCase(constructor)](...args, e);
+      return new window[ReactionRegistry.toCamelCase(constructor)](...args);
     },
     await: async function Await(e, num) {
       if (!num)
