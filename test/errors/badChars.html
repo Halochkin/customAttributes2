@@ -6,6 +6,12 @@
 <body
     click:and_$:console.log_this.value="$"
     click_$:and_$:console.log_this.value="$$"
+    click:and_,:console.log_this.value=","
+    click_,:and_,:console.log_this.value=",,"
+    click:and_(:console.log_this.value="("
+    click_(:and_(:console.log_this.value="(("
+    click:and_):console.log_this.value=")"
+    click_):and_):console.log_this.value="))"
     click:and_&:console.log_this.value="&"
     click_&:and_&:console.log_this.value="&&"
     click:and_!:console.log_this.value="!"
