@@ -9,13 +9,10 @@
     import:define_reaction-c_e.detail.reaction-c="./comp-a_attr-b_reaction-c.js"
 >
 <comp-a
-    click:e.target.tag-name:log
-    attr-b:e.type:log
-    :reaction-c:log
->hello sunshine
-</comp-a>
 
-<script>
-  customReactions.define("log", e => console.log(e));
-</script>
+    click:console.log_e.target.tag-name
+    attr-b:console.log_e.type
+    :reaction-c:console.log_e
+
+>hello sunshine</comp-a>
 </body>
