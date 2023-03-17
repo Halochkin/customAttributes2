@@ -192,7 +192,7 @@ function processNumArrayMonad(num, reaction) {
       return e;
     },
 
-    throttle: function throttle(value) {
+    throttle: function throttle(_, value) {
       const primitive = value instanceof Object ? JSON.stringify(value) : value;
       if (throttleRegister.get(this) !== primitive)
         return throttleRegister.set(this, primitive), value;
