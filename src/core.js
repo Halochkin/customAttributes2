@@ -135,7 +135,8 @@ function processNumArrayMonad(num, reaction) {
         await new Promise(r => setTimeout(r, num));
       return this.ownerElement ? e : undefined;
     },
-    prevent: e => (e.preventDefault(), e),
+    //todo restrict e.preventDefault() to the "prevent" reaction only
+    prevent: e => e.preventDefault(),
     debugger: function (e) {                                   //todo combine with "." carry?
       debugger;
       return e;

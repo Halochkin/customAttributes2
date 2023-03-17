@@ -447,9 +447,8 @@ observeElementCreation(els => els.forEach(el => window.customAttributes.upgrade(
   EventTarget.prototype.removeEventListener = deprecated.bind("EventTarget.removeEventListener");
 
   class NativeAttr extends CustomAttr {
-    //todo restrict e.preventDefault() to the "prevent" reaction only
     get passive() {
-      return !(this.chain.indexOf("prevent") || this.chain.indexOf("e.prevent-default"));
+      return !(this.chain.indexOf("prevent"));
     }
 
     static* domEvents() {
