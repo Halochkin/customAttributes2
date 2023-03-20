@@ -372,7 +372,7 @@ class ReactionErrorEvent extends ErrorEvent {
       }
     }
 
-    static #runReactions(event, at, doDA, start = 0, allowAsync = doDA && at.defaultAction) {
+    static #runReactions(event, at, doDA, start = 0) {
       for (let i = start, res = event; i < at.reactions.length; i++) {
         const reaction = at.reactions[i];
         if (reaction[0] !== ReactionRegistry.DefaultAction) {
@@ -380,7 +380,7 @@ class ReactionErrorEvent extends ErrorEvent {
             const [r, ...args] = reaction;
             let output = r.call(at, res, ...args.map(a => a instanceof Function ? a.call(at, res) : a).slice(1));
             if (output instanceof Promise) {
-              if (allowAsync)
+              if (doDA && at.defaultAction)
                 throw new SyntaxError("You cannot use reactions that return Promises before default actions.");
               output
                 .then(input => {
