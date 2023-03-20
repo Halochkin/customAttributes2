@@ -137,9 +137,8 @@ function processNumArrayMonad(num, reaction) {
     },
     //todo restrict e.preventDefault() to the "prevent" reaction only
     prevent: e => e.preventDefault(),
-    debugger: function (e) {                                   //todo combine with "." carry?
-      debugger;
-      return e;
+    debugger: function (e, i) {
+      return i;
     },
     once: function once(e) {
       return this.ownerElement.removeAttribute(this.name), e;  //todo combine with "."carry?
