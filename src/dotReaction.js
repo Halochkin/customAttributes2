@@ -1,6 +1,4 @@
 function getProp(e, props) {
-  // if(props.length > 1)
-  //   console.info(...props);
   for (let prop of props) {
     e = e[prop]
     if (e === undefined)
@@ -23,26 +21,39 @@ function windowGetter(props) {
   return _ => getProp(window, props);
 }
 
-function makeCaller(root, ...props) {
-  props = props.map(ReactionRegistry.toCamelCase);
-  return function (_, ...args) {
-    let e = /*root === "e" ? e :*/ root === "this" ? this : window;
-    let p, prop;
-    for (prop of props) {
-      p = e;
-      if (!p)
-        return;
-      e = p[prop];
-    }
-    return e instanceof Function ? e.call(p, ...args) :
-      !args.length ? e :                              //getter
-        p[prop] = args.length === 1 ? args[0] : args; //setter
-  };
+function getObj(obj, props) {
+  for (let i = 0; i < props.length; i++) {
+    obj = obj[props[i]];
+    if (!(obj instanceof Object))
+      return undefined;
+  }
+  return obj;
 }
 
-customReactions.defineRule("window", makeCaller);
-customReactions.defineRule("this", makeCaller);
-// customReactions.defineRule("e", makeCaller);
+function makeTheCall(p, prop, args) {
+  const obj = p[prop] ?? customReactions.getDefinition(prop, [prop]);
+  return obj instanceof Function ? obj.call(p, ...args) :
+    !args.length ? obj :                              //getter       //todo should we allow for getter here? or should we turn this into a reaction definition?
+      p[prop] = args.length === 1 ? args[0] : args; //setter
+}
+
+customReactions.defineRule("window", function (_, ...props) {
+  props = props.map(ReactionRegistry.toCamelCase);
+  const prop = props.pop();
+  return function (_, ...args) {
+    const p = props.length ? getObj(window, props) : window;         //find the this
+    return p && makeTheCall(p, prop, args);                          //find the prop
+  };
+});
+
+customReactions.defineRule("this", function (_, ...props) {
+  props = props.map(ReactionRegistry.toCamelCase);
+  const prop = props.pop();
+  return function (_, ...args) {
+    const p = props.length ? getObj(this, props) : this;
+    return p && makeTheCall(p, prop, args);
+  };
+});
 
 customReactions.defineRule("console", function (_, fun) {
   if (fun in console)
@@ -51,7 +62,7 @@ customReactions.defineRule("console", function (_, fun) {
 });
 
 //todo mathAddOns untested
-const mathAddOns = {
+const mathAddOns = {                                          //todo add these methods to the Math namespace, and then just make the getDefinition([window+math]?
   minus: (_, s, ...as) => as.reduce((s, a) => s - a, s),
   times: (_, s, ...as) => as.reduce((s, a) => s * a, s),
   divide: (_, s, ...as) => as.reduce((s, a) => s / a, s),
@@ -75,6 +86,7 @@ customTypes.defineAll({
   },
 });
 customTypes.defineRule("e", (e, ...part) => eGetter(part.map(ReactionRegistry.toCamelCase)));
+// customTypes.defineRule("i", (i, ...part) => iGetter(part.map(ReactionRegistry.toCamelCase))); //todo turn the i. to the input and e. to the trigger event
 customTypes.defineRule("this", (t, ...part) => thisGetter(part.map(ReactionRegistry.toCamelCase)));
 customTypes.defineRule("window", (w, ...part) => windowGetter(part.map(ReactionRegistry.toCamelCase)));
 
@@ -96,7 +108,16 @@ customTypes.defineAll({
 customTypes.defineRule("el", (_, ...ps) => thisGetter(["ownerElement", ...ps.map(ReactionRegistry.toCamelCase)]));
 customTypes.defineRule("p", (_, ...ps) => thisGetter(["ownerElement", "parentElement", ...ps.map(ReactionRegistry.toCamelCase)]));
 
-//CSSOM style getComputedStyle
+//CSSOM style getComputedStyle //todo adding cssom to path
+Object.defineProperty(Element.prototype, "cssom", {
+  get: function () {
+    return new Proxy(this, {
+      get: function (target, prop) {
+        return getComputedStyle(target)[prop];
+      }
+    });
+  }
+});
 customTypes.defineRule("style", function (_, prop) {
   prop = ReactionRegistry.toCamelCase(prop);
   return function () {
