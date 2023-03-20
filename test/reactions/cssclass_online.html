@@ -9,11 +9,10 @@
 <div _online:log_color:class_hasnet_on:log_color _offline:log_color:class_hasnet_off:log_color>Network status</div>
 
 <script type="module">
-
+  //todo replace with cssom
   customReactions.defineAll({
-    "log": function logComputedStyle(e, suffix) {
+    "log": function logComputedStyle(_, suffix) {
       console.log(getComputedStyle(this.ownerElement)[ReactionRegistry.toCamelCase(suffix)]);
-      return e;
     }
   });
   window.dispatchEvent(new Event("online"));

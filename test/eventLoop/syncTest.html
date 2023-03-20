@@ -3,12 +3,8 @@
 
 <h1>hello sunshine</h1>
 <script>
-  customReactions.define("hello", function (e) {
-    return console.log(e.type), e;
-  });
-  customReactions.define("sunshine", function (e) {
-    return console.log("sunshine"), e;
-  });
+  customReactions.define("hello", e => console.log(e.type));
+  customReactions.define("sunshine", _ => console.log("sunshine"));
   const h1 = document.querySelector("h1");
   h1.setAttribute("click:hello:sunshine");
   h1.click();

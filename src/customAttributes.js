@@ -383,19 +383,15 @@ class ReactionErrorEvent extends ErrorEvent {
               if (doDA && at.defaultAction)
                 throw new SyntaxError("You cannot use reactions that return Promises before default actions.");
               output
-                .then(input => {
-                  if (input === undefined && reaction[1][0] === ".")
-                    input = res;
-                  return input !== undefined && this.#runReactions(originalEvent, input, at, false, i + 1);
-                })
+                .then(input =>
+                  !at.ownerElement || !input && reaction[1][0] === "." ? undefined :
+                    this.#runReactions(originalEvent, input, at, false, i + 1))
                 .catch(error => eventLoop.dispatch(new ReactionErrorEvent(error, at, i, true, res), at.ownerElement));
               return;
             }
-            if (reaction[1][0] !== ".") {
-              res = output;
-              if (output === undefined)
-                return;
-            }
+            if (!output && reaction[1][0] === ".")
+              return;
+            res = output;
           } catch (error) {
             eventLoop.dispatch(new ReactionErrorEvent(error, at, i, start > 0, res), at.ownerElement);
             return;
@@ -591,5 +587,5 @@ observeElementCreation(els => els.forEach(el => window.customAttributes.upgrade(
 })(addEventListener, removeEventListener);
 
 //** default error event handling
-customReactions.define("console-error", e => (console.error(e.message, e.error), e));
-document.documentElement.setAttribute("error::console-error");
+customReactions.define("console-error", (_, e) => console.error(e.message, e.error));
+document.documentElement.setAttribute("error::console-error_e");

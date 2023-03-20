@@ -13,16 +13,14 @@
 
 <script>
   customReactions.defineAll({
-    "log": e => (console.log(getComputedStyle(document.querySelector("p")).display), e),
+    "log": _ => console.log(getComputedStyle(document.querySelector("p")).display), //console.log_p.children.1.cssom.display
     "p-attr-toggle": function (e, attr, suffix) {
       suffix = suffix?.toUpperCase();
       let el = this.ownerElement.parentElement;
       while (el && suffix && el.tagName !== suffix)
         el = el.parentElement;
-      if (!el)
-        return;
-      el.hasAttribute(attr) ? el.removeAttribute(attr) : el.setAttribute(attr);
-      return e;
+      if (el)
+        el.hasAttribute(attr) ? el.removeAttribute(attr) : el.setAttribute(attr);
     }
   });
   document.querySelector("h1").click();

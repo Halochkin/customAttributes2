@@ -24,13 +24,13 @@
     }
 
     currentTarget(e) {
-      return e.target === this.ownerElement ? e : undefined;
+      return e.target === this.ownerElement;
     }
 
     static stateMachine() {
       return {
         "": [
-          ["mouseenter:.g.hover_e", "on"]
+          ["mouseenter:g.hover_e", "on"]
         ],
         "on": [
           ["mouseleave:.g.current-target_e", ""]

@@ -5,16 +5,16 @@
 
 <h1
     click:el.say-hi_e
-    auxclick:ctrl:el.say-goodbye_e
-    contextmenu:alt:meta:.el.say-hi_e:.el.say-goodbye_e:.el.say-hi_e
+    auxclick:.ctrl_e:el.say-goodbye_e
+    contextmenu:.alt_e:.meta_e:el.say-hi_e:el.say-goodbye_e:el.say-hi_e
 >hello on-click_shift</h1>
 
 <script type="module">
 
   customReactions.defineAll({
-    "ctrl": e => e.ctrlKey ? e : undefined,
-    "meta": e => e.metaKey ? e : undefined,
-    "alt": e => e.altKey ? e : undefined
+    "ctrl": (_, e) => e.ctrlKey,
+    "meta": (_, e) => e.metaKey,
+    "alt": (_, e) => e.altKey
   });
 
   const h1 = document.querySelector("h1");

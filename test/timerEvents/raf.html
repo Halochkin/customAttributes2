@@ -23,12 +23,10 @@
 
   customReactions.define("txt", function (e) {
     this.ownerElement.innerText += "!";
-    return e;
   });
 
   customReactions.define("log", function (e) {
     console.log(this.ownerElement.innerText);
-    return e;
   });
 </script>
 <!--  //todo countdown state is not reflected in the DOM.-->

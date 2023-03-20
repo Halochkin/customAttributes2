@@ -4,26 +4,26 @@
 <script src="../../src/core.js"></script>
 
 <body
-    click:.console.log_1:await:console.log_2
+    click:console.log_1:await:console.log_2
     click:console.log_3
 
-    click:.console.log_a:await_100:console.log_b
+    click:console.log_a:await_100:console.log_b
     click:console.log_c
 
-    click:.console.log_a1:await_200:console.log_a2_bug
+    click:console.log_a1:await_200:console.log_a2_bug
     click:remove-1:console.log_a3
 
-    click:.console.log_bob:.await_200:console.log_bob2
+    click:console.log_bob:await_200:console.log_bob2
     click:remove-2:console.log_bob3
 >
 </body>
 <script>
   customReactions.define("remove-1", function (e) {
-    this.ownerElement.removeAttribute("click:.console.log_a1:await_200:console.log_a2_bug");
+    this.ownerElement.removeAttribute("click:console.log_a1:await_200:console.log_a2_bug");
     return e;
   });
   customReactions.define("remove-2", function (e) {
-    this.ownerElement.removeAttribute("click:.console.log_bob:.await_200:console.log_bob2");
+    this.ownerElement.removeAttribute("click:console.log_bob:await_200:console.log_bob2");
     return e;
   });
   document.body.click();
