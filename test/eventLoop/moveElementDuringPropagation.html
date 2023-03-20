@@ -1,0 +1,20 @@
+<script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.2/observeElementCreation.js"></script>
+<script src="../../src/customAttributes.js"></script>
+<script src="../../src/dotReaction.js"></script>
+<script src="../../src/core.js"></script>
+
+<body click:console.log_body>
+<div click:console.log_bug></div>
+<div click:console.log_div>
+  <h1
+      click:change-parent
+      click:console.log_h1
+  >hello sunshine</h1>
+</div>
+</body>
+<script>
+  customReactions.define("change-parent", function () {
+    document.body.children[0].append(this.ownerElement);
+  });
+  document.querySelector("h1").click();
+</script>
