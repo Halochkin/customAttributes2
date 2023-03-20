@@ -133,23 +133,23 @@ function processNumArrayMonad(num, reaction) {
         throw new SyntaxError(`await_${num} is illegal, the '${num}' is not a number or 'raf'.`);
       else
         await new Promise(r => setTimeout(r, num));
-      return this.ownerElement ? e : undefined;
+      return e;
     },
     //todo restrict e.preventDefault() to the "prevent" reaction only
-    prevent: e => e.preventDefault(),
-    debugger: function (e) {                                   //todo combine with "." carry?
+    prevent: (i, e) => e.preventDefault(),
+    debugger: function (e, i) {
       debugger;
       return e;
     },
-    once: function once(e) {
-      return this.ownerElement.removeAttribute(this.name), e;  //todo combine with "."carry?
+    once: function once() {
+      this.ownerElement.removeAttribute(this.name);
     },
-    dispatch: function dispatch(e, target = this.ownerElement) {
+    dispatch: function dispatch(_, e, target = this.ownerElement) {
       eventLoop.dispatch(e, target);
       return e;                                                //todo combine with "." carry?
     },
 
-    event: (e, input) =>
+    event: (_, e, input) =>                                      //todo
       e instanceof Event ? new e.constructor(input, e) :
         e instanceof String || typeof e === "string" ? new Event(e) :
           new CustomEvent(input, e)
@@ -172,7 +172,7 @@ function processNumArrayMonad(num, reaction) {
     // equals: (_, s, ...as) => as.reduce((s, a) => s === a, s), //todo wrong implement correctly
     // "double-equals": (_, s, ...as) => as.reduce((s, a) => s == a, s),//todo wrong implement correctly
 
-    then: function (e, ...labels) {
+    then: function (_, e, ...labels) {
       const key = labels.join(" ");
       const weakMap = thenElseRegister[key];
       weakMap ?
@@ -182,15 +182,13 @@ function processNumArrayMonad(num, reaction) {
         thenElseRegister[key] = new WeakMap([[this.ownerElement, new WeakSet([e])]]);
       return e;
     },
-    else: function (e, ...labels) {
-      if (!thenElseRegister[labels.join(" ")]?.get(this.ownerElement)?.has(e))
-        return e;
+    else: function (_, e, ...labels) {
+      return (!thenElseRegister[labels.join(" ")]?.get(this.ownerElement)?.has(e))
     },
 
-    "toggle-attr": function (e, prefix) {
+    "toggle-attr": function (_, prefix) {
       const el = this.ownerElement;
       el.hasAttribute(prefix) ? el.removeAttribute(prefix) : el.setAttribute(prefix);
-      return e;
     },
 
     throttle: function throttle(_, value) {
@@ -238,12 +236,6 @@ function processNumArrayMonad(num, reaction) {
       };
   });
   customReactions.defineRule("", function (_, ...more) {
-    const original = more.join(".");
-    const reactionImpl = customReactions.getDefinition(original, more);
-    if (reactionImpl)
-      return function (e, ...args) {
-        const val = reactionImpl.call(this, e, ...args);
-        return val instanceof Promise ? val.then(() => e) : e;
-      };
+    return customReactions.getDefinition(more.join("."), more);
   });
 })();

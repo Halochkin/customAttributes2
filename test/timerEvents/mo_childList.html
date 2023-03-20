@@ -31,12 +31,10 @@
     const el = document.createElement(tag);
     el.innerText = innerText;
     this.ownerElement.append(el);
-    return e;
   });
   customReactions.define("remove-child-element", function removeChildElement(e, ...pos) {
     for (let p of pos)
       this.ownerElement.removeChild(this.ownerElement.children[parseInt(p)]);
-    return e;
   });
 
   customReactions.define("log", function (_, {addedNodes, removedNodes}) {

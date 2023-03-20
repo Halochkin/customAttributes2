@@ -1,10 +1,5 @@
-customReactions.defineRule("g", function (g, prop, ...more) {
-  if (more.length)
-    throw new SyntaxError("The g. can only have a single property.");
-  prop = ReactionRegistry.toCamelCase(prop);
-  return function (e, ...args) {
-    return this.gesture[prop].call(this.gesture, ...args);
-  }
+customReactions.defineRule("g", function (g, ...more) {
+  return customReactions.getDefinition("this.gesture." + more.join("."), ["this", "gesture", ...more]);
 });
 
 //todo add syntactic rule that the GestureAttr must end with -able??

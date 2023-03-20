@@ -1,11 +1,12 @@
 <script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.2/observeElementCreation.js"></script>
 <script src="../../src/customAttributes.js"></script>
+<script src="../../src/dotReaction.js"></script>
 <script src="../../src/core.js"></script>
 
 <div
-    click:formdata:event_submit:dispatch
-    auxclick:formdata:event_submit:dispatch
-    submit:log>
+    click:formdata:event_i_submit:dispatch_i
+    auxclick:formdata:event_i_submit:dispatch_i
+    submit:log_e>
   <div name="one" value="hello sunshine"></div>
   <div name="two">2</div>
   <ul name="three">
@@ -20,7 +21,7 @@
 
   customReactions.defineAll({
     "formdata": DOM_FormData_Lazy,
-    "log": e => (console.log(...e.detail), e)
+    "log": (_, e) => console.log(...e.detail)
   });
   //todo the formData should be appended as .detail on the incoming object.
 

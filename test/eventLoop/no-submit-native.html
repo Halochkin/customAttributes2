@@ -3,12 +3,12 @@
 <script src="../../src/dotReaction.js"></script>
 <script src="../../src/core.js"></script>
 
-<form submit:log:prevent action="shouldNeverHappen.html" _unload:console.log_bug>
+<form submit:log_e:prevent_e action="shouldNeverHappen.html" _unload:console.log_bug>
   <input type="text" name="hello" value="sunshine">
 </form>
 
 <script type="module">
-  customReactions.define("log", e => (console.log(e.type), e));
+  customReactions.define("log", (_, e) => console.log(e.type));
 
   document.querySelector("form").requestSubmit();
   setTimeout(() => console.log("only sunshine"), 20);

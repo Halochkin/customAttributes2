@@ -1,11 +1,12 @@
 <script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.2/observeElementCreation.js"></script>
 <script src="../../src/customAttributes.js"></script>
+<script src="../../src/core.js"></script>
 
-<h1 click:one:two:one>hello two return undefined</h1>
+<h1 click:one:.two:one>hello two return falsy</h1>
 
 <script type="module">
-  customReactions.define("one", e => (console.log("one"), e));
-  customReactions.define("two", e => console.log("two"));
+  customReactions.define("one", _ => console.log("one"));
+  customReactions.define("two", _ => console.log("two"));
 
   document.querySelector("h1").click();
 </script>

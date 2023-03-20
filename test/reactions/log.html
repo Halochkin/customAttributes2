@@ -12,11 +12,11 @@
 </main>
 
 <script type="module">
-  customReactions.define("sync", function (e) {
-    return console.log("sync", this.ownerElement.tagName), e;
+  customReactions.define("sync", function () {
+    console.log("sync", this.ownerElement.tagName);
   });
-  customReactions.define("log", function (e) {
-    return console.log(this.value), e;
+  customReactions.define("log", function () {
+    console.log(this.value);
   });
 
   document.querySelector("span").click();

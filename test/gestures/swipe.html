@@ -26,12 +26,12 @@
   }
 </style>
 
-<body swipe:swipe-longer-than_100:replace swipe:console.log_e.direction_e.length>
+<body swipe:.swipe-longer-than_100:replace swipe:console.log_i.direction_i.length>
 <div
     swipeable_100
-    swipe:swipe-longer-than_200:.left-right
-    swipe:swipe-longer-than_200:await_800:el.remove
-    :random-color:this.owner-element.style.background-color_e
+    swipe:.swipe-longer-than_200:left-right
+    swipe:.swipe-longer-than_200:await_800:el.remove
+    :random-color:this.owner-element.style.background-color_i
 ></div>
 </body>
 
@@ -44,9 +44,9 @@
     this.ownerElement.insertAdjacentHTML("afterbegin",
       `<div
     swipeable_100
-    swipe:swipe-longer-than_200:.left-right
-    swipe:swipe-longer-than_200:await_800:el.remove
-    :random-color:this.owner-element.style.background-color_e
+    swipe:.swipe-longer-than_200:left-right
+    swipe:.swipe-longer-than_200:await_800:el.remove
+    :random-color:this.owner-element.style.background-color_i
 ></div>`);
   });
   customReactions.define("swipe-longer-than", (e, length) => e.length >= length ? e : undefined);

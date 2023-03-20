@@ -4,7 +4,7 @@
 <script src="../../src/core.js"></script>
 <script src="../../src/GestureAttr.js"></script>
 
-<div longpress:console.log_e.type_e.target.tag-name>
+<div longpress:console.log_i.type_i.target.tag-name>
   <h1 longpressable_200>hello longpress</h1>
 </div>
 
@@ -35,9 +35,9 @@
           [`timeout_${time}`, "active"],
         ],
         active: [
-          ["_mousedown::.g.reset_e", ""],
+          ["_mousedown::g.reset_e", ""],
           ["_mousemove:g.log_mousemove_active"],
-          ["_mouseup::.g.longpress_e", ""]
+          ["_mouseup::g.longpress_e", ""]
         ]
       };
     }

@@ -278,52 +278,51 @@ class ReactionErrorEvent extends ErrorEvent {
 
 (function () {
 
-//Event.uid
+  let currentTarget, composedPath;
   let eventUid = 1;
-  const eventToUid = new WeakMap();
-  Object.defineProperty(Event.prototype, "uid", {
-    get: function () {
-      let uid = eventToUid.get(this);
-      uid === undefined && eventToUid.set(this, uid = eventUid++);
-      return uid;
+  const eventToUid = new WeakMap(); //event.uid
+  Object.defineProperties(Event.prototype, {
+    uid: {
+      get: function () {
+        let uid = eventToUid.get(this);
+        uid === undefined && eventToUid.set(this, uid = eventUid++);
+        return uid;
+      }
+    },
+    currentTarget: {
+      get: function () {
+        return currentTarget;
+      }
+    },
+    target: {
+      get: function () {
+        return this.path[0];
+      }
+    },
+    path: {
+      get: function () {
+        const currentDocument = this.currentTarget?.getRootNode();
+        return composedPath.filter(el => el.getRootNode() === currentDocument);
+      }
     }
   });
 
-  Object.defineProperty(Event.prototype, "target", {
-    get: function () {
-      return globalTarget;
-    }
-  });
-  //todo not sure that we should use path at all actually. If we have dynamic path, then path cannot be safely queried in advance or in the past.
-  Object.defineProperty(Event.prototype, "path", {
-    get: function () {
-      const path = [];
-      for (let el = this.target; el instanceof Element; el = el.parentElement)
-        path.push(el)
-      return path;
-    }
-  });
-
-  let globalTarget;
-
-  function* bubbleAttr(target, event, slotMode) {
+  function makeComposedPath(target, event, slotMode = false, path = []) {
     for (let el = target; el; el = el.parentElement || !slotMode && el.parentNode?.host) {
-      let one, two;                                                       //efficiency
-      for (let at of el.attributes)
-        if (at.type === event.type)
-          if (at.reactions?.length)
-            if (!at.defaultAction || !event.defaultAction && !event.defaultPrevented)
-              one ? one = at : !two ? two = [at] : two.push(at);          //efficiency
-      if (one)                                                            //efficiency
-        globalTarget = target, yield one;    //add [path] here?           //efficiency
-      if (two)                                                            //efficiency
-        for (let at of two)                                               //efficiency
-          if (at.ownerElement)//if at removed by previous at in same loop //efficiency
-            if (!at.defaultAction || !event.defaultAction && !event.defaultPrevented)  //efficiency
-              globalTarget = target, yield at;//and add [path] here?      //efficiency
+      path.push(el);
       if (el.assignedSlot)
-        yield* bubbleAttr(el.assignedSlot, event, true);
+        makeComposedPath(el.assignedSlot, event, true, path);
     }
+    return path;
+  }
+
+  function getReactions(el, event, attr = []) {
+    for (let at of el.attributes)
+      if (at.type === event.type)
+        if (at.reactions?.length)
+          if (!at.defaultAction || !event.defaultAction && !event.defaultPrevented)
+            attr.push(at);
+    return attr;
   }
 
   class EventLoop {
@@ -341,8 +340,9 @@ class ReactionErrorEvent extends ErrorEvent {
         return;
       while (this.#eventLoop.length) {
         const {target, event} = this.#eventLoop[0];
+        currentTarget = null, composedPath = [];
         if (target instanceof Attr)
-          target.reactions?.length && EventLoop.#runReactions(event, target);
+          target.reactions?.length && EventLoop.#runReactions(event, event, target);
         else /*if (!target || target instanceof Element)*/
           EventLoop.bubble(target, event);
         this.#eventLoop.shift();
@@ -356,48 +356,55 @@ class ReactionErrorEvent extends ErrorEvent {
         throw new Error(`Global listeners for events occuring off-dom needs to be filtered..
         Then we need to check that the other elements are connected to the same root. This is a heavy operation..
         `);
-      globalTarget = null;
       for (let at of globalTriggers.loop(event))
-        EventLoop.#runReactions(event, at, true);
+        EventLoop.#runReactions(event, event, at, true);
 
-      for (let at of bubbleAttr(rootTarget, event))
-        EventLoop.#runReactions(event, at, true);
+      for (currentTarget of (composedPath = makeComposedPath(rootTarget, event)))
+        for (let at of getReactions(currentTarget, event))
+          if (!at.defaultAction || !event.defaultAction && !event.defaultPrevented)
+            if (at.ownerElement)
+              EventLoop.#runReactions(event, event, at, true);
 
       if (event.defaultAction && !event.defaultPrevented) {
         const {at, res, target} = event.defaultAction;
-        globalTarget = target;
-        EventLoop.#runReactions(res, at, false, at.defaultAction);
+        currentTarget = target;
+        EventLoop.#runReactions(event, res, at, false, at.defaultAction);
       }
     }
 
-    static #runReactions(event, at, doDA, start = 0, allowAsync = doDA && at.defaultAction) {
-      for (let i = start, res = event; i < at.reactions.length && res !== undefined; i++) {
+    static #runReactions(originalEvent, event, at, doDA, start = 0) {
+      for (let i = start, res = event; i < at.reactions.length; i++) {
         const reaction = at.reactions[i];
-        if (reaction[0] !== ReactionRegistry.DefaultAction)
-          res = this.#runReaction(reaction, at, res, i, start > 0, allowAsync);
-        else if (doDA)
+        if (reaction[0] !== ReactionRegistry.DefaultAction) {
+          try {
+            const [r, ...args] = reaction;
+            let output = r.call(at, res, ...args.map(a => a instanceof Function ? a.call(at, originalEvent, res) : a).slice(1));
+            if (output instanceof Promise) {
+              if (doDA && at.defaultAction)
+                throw new SyntaxError("You cannot use reactions that return Promises before default actions.");
+              output
+                .then(input =>
+                  !at.ownerElement || !input && reaction[1][0] === "." ? undefined :
+                    this.#runReactions(originalEvent, input, at, false, i + 1))
+                .catch(error => eventLoop.dispatch(new ReactionErrorEvent(error, at, i, true, res), at.ownerElement));
+              return;
+            }
+            if (!output && reaction[1][0] === ".")
+              return;
+            res = output;
+          } catch (error) {
+            eventLoop.dispatch(new ReactionErrorEvent(error, at, i, start > 0, res), at.ownerElement);
+            return;
+          }
+        } else if (doDA)
           return event.defaultAction = {at, res, target: event.target};
-      }
-    }
-
-    static #runReaction([reaction, ...args], at, input, i, async, allowAsync) {
-      try {
-        const output = reaction.call(at, input, ...args.map(a => a instanceof Function ? a.call(at, input) : a).slice(1));
-        if (!(output instanceof Promise))
-          return output;
-        if (allowAsync)
-          throw new SyntaxError("You cannot use reactions that return Promises before default actions.");
-        output
-          .then(input => input !== undefined && this.#runReactions(input, at, false, i + 1))
-          .catch(error => eventLoop.dispatch(new ReactionErrorEvent(error, at, i, true, input), at.ownerElement));
-      } catch (error) {
-        eventLoop.dispatch(new ReactionErrorEvent(error, at, i, async, input), at.ownerElement);
       }
     }
   }
 
   window.eventLoop = new EventLoop();
-})();
+})
+();
 
 function deprecated() {
   throw `${this}() is deprecated`;
@@ -534,7 +541,10 @@ observeElementCreation(els => els.forEach(el => window.customAttributes.upgrade(
     }
 
     upgrade() {
-      this._args = [this.nativeTarget, this.eventType, this.listener.bind({}), {passive: this.passive, capture: true}];
+      this._args = [this.nativeTarget, this.eventType, this.listener.bind({}), {
+        passive: this.passive,
+        capture: true
+      }];
       NativeWindowEvent.#GC.register(this, this._args);
       addEventListener.call(...this._args);
     }
@@ -577,5 +587,5 @@ observeElementCreation(els => els.forEach(el => window.customAttributes.upgrade(
 })(addEventListener, removeEventListener);
 
 //** default error event handling
-customReactions.define("console-error", e => (console.error(e.message, e.error), e));
-document.documentElement.setAttribute("error::console-error");
+customReactions.define("console-error", (_, e) => console.error(e.message, e.error));
+document.documentElement.setAttribute("error::console-error_e");

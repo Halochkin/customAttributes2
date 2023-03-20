@@ -3,12 +3,10 @@
 <script src="../../src/dotReaction.js"></script>
 <script src="../../src/core.js"></script>
 
-<h1 click:shift:.el.say-hi_e:once="sayHi">hello on-click_shift</h1>
+<h1 click:.shift_e:el.say-hi_e:once="sayHi">hello on-click_shift</h1>
 
 <script type="module">
-  customReactions.defineAll({
-    "shift": e => e.shiftKey ? e : undefined
-  });
+  customReactions.define("shift", (_, e) => e.shiftKey);
 
   const h1 = document.querySelector("h1");
   h1.sayHi = function (e) {

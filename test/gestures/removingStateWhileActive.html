@@ -4,7 +4,7 @@
 <script src="../../src/core.js"></script>
 <script src="../../src/GestureAttr.js"></script>
 
-<div longpress:console.log_e.type_e.target.tag-name>
+<div longpress:console.log_i.type_i.target.tag-name>
   <h1 longpressable_200>hello longpress</h1>
 </div>
 
@@ -27,9 +27,9 @@
           [`timeout_${time}`, "active"],
         ],
         active: [
-          ["_mousedown::event_longpress-reset", ""],
+          ["_mousedown::event_e_longpress-reset", ""],
           ["_mousemove:log_mousemove_active"],
-          ["_mouseup::event_longpress", ""]//todo how to get duration here?
+          ["_mouseup::event_e_longpress", ""]//todo how to get duration here?
         ]
       };
     }

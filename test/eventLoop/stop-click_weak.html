@@ -1,17 +1,19 @@
 <script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.2/observeElementCreation.js"></script>
 <script src="../../src/customAttributes.js"></script>
+<script src="../../src/dotReaction.js"></script>
+<script src="../../src/core.js"></script>
 
 <div click:log_unstoppable>
-  <div click:stop:log_stop2>
-    <div click:stop_b:log_stopb2>
-      <div click:stop_a:log_stopa2>
-        <div id="stopa" click:stop_a:log_stopa>
+  <div click:.stop_e:log_stop2>
+    <div click:.stop_e_b:log_stopb2>
+      <div click:.stop_e_a:log_stopa2>
+        <div id="stopa" click:.stop_e_a:log_stopa>
           stop_a
         </div>
         <div id="nonstop" click:log_nonstop>
           no stop
         </div>
-        <div id="stop" click:stop:log_stop>
+        <div id="stop" click:.stop_e:log_stop>
           universal stop
         </div>
       </div>
@@ -24,7 +26,7 @@
   //keys block later stops with same key, stop with no key are blocked by all keyed stops, but doesn't block keyed stops.
   function makeStopWeak() {
     const eventKeys = new WeakMap();
-    return function (e, key) {
+    return function (_, e, key) {
       let keys = eventKeys.get(e);
       if (!key && keys)              //global stop
         return;
@@ -41,9 +43,7 @@
   }
 
   customReactions.define("stop", makeStopWeak());
-  customReactions.define("log", function (e, value) {
-    return console.log(value), e;
-  });
+  customReactions.define("log", (_, value) => console.log(value));
   document.getElementById("stopa").click();
   console.log("");
   document.getElementById("nonstop").click();

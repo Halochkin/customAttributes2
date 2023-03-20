@@ -1,5 +1,6 @@
 <script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.2/observeElementCreation.js"></script>
 <script src="../../src/customAttributes.js"></script>
+<script src="../../src/dotReaction.js"></script>
 <script src="../../src/core.js"></script>
 
 <script>
@@ -8,10 +9,7 @@
 
 <h1 click:ok:throw_oops>hello</h1>
 <script>
-  customReactions.define("ok", function (e) {
-    console.log("ok");
-    return e;
-  });
+  customReactions.define("ok", _ => console.log("ok"));
   customReactions.define("throw", function (e, msg) {
     throw msg;
   });

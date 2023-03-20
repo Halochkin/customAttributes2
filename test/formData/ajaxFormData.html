@@ -10,10 +10,7 @@
   customReactions.define("load", function (e, ...args) {
     return FormData_GET.call(this, e, "load", ...args)
   });
-  customReactions.define("log", function (e) {
-    console.log(e.type, e.detail.args);
-    return e;
-  });
+  customReactions.define("log", e => console.log(e.type, e.detail.args));
 
   const formData = new FormData();
   formData.append("a", "A");
