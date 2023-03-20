@@ -238,12 +238,6 @@ function processNumArrayMonad(num, reaction) {
       };
   });
   customReactions.defineRule("", function (_, ...more) {
-    const original = more.join(".");
-    const reactionImpl = customReactions.getDefinition(original, more);
-    if (reactionImpl)
-      return function (e, ...args) {
-        const val = reactionImpl.call(this, e, ...args);
-        return val instanceof Promise ? val.then(() => e) : e;
-      };
+    return customReactions.getDefinition(more.join("."), more);
   });
 })();

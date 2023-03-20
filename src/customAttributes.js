@@ -373,27 +373,35 @@ class ReactionErrorEvent extends ErrorEvent {
     }
 
     static #runReactions(event, at, doDA, start = 0, allowAsync = doDA && at.defaultAction) {
-      for (let i = start, res = event; i < at.reactions.length && res !== undefined; i++) {
+      for (let i = start, res = event; i < at.reactions.length; i++) {
         const reaction = at.reactions[i];
-        if (reaction[0] !== ReactionRegistry.DefaultAction)
-          res = this.#runReaction(reaction, at, res, i, start > 0, allowAsync);
-        else if (doDA)
+        if (reaction[0] !== ReactionRegistry.DefaultAction) {
+          try {
+            const [r, ...args] = reaction;
+            let output = r.call(at, res, ...args.map(a => a instanceof Function ? a.call(at, res) : a).slice(1));
+            if (output instanceof Promise) {
+              if (allowAsync)
+                throw new SyntaxError("You cannot use reactions that return Promises before default actions.");
+              output
+                .then(input => {
+                  if (input === undefined && reaction[1][0] === ".")
+                    input = res;
+                  return input !== undefined && this.#runReactions(input, at, false, i + 1);
+                })
+                .catch(error => eventLoop.dispatch(new ReactionErrorEvent(error, at, i, true, res), at.ownerElement));
+              return;
+            }
+            if (reaction[1][0] !== ".") {
+              res = output;
+              if (output === undefined)
+                return;
+            }
+          } catch (error) {
+            eventLoop.dispatch(new ReactionErrorEvent(error, at, i, start > 0, res), at.ownerElement);
+            return;
+          }
+        } else if (doDA)
           return event.defaultAction = {at, res, target: event.target};
-      }
-    }
-
-    static #runReaction([reaction, ...args], at, input, i, async, allowAsync) {
-      try {
-        const output = reaction.call(at, input, ...args.map(a => a instanceof Function ? a.call(at, input) : a).slice(1));
-        if (!(output instanceof Promise))
-          return output;
-        if (allowAsync)
-          throw new SyntaxError("You cannot use reactions that return Promises before default actions.");
-        output
-          .then(input => input !== undefined && this.#runReactions(input, at, false, i + 1))
-          .catch(error => eventLoop.dispatch(new ReactionErrorEvent(error, at, i, true, input), at.ownerElement));
-      } catch (error) {
-        eventLoop.dispatch(new ReactionErrorEvent(error, at, i, async, input), at.ownerElement);
       }
     }
   }
