@@ -342,7 +342,7 @@ class ReactionErrorEvent extends ErrorEvent {
         const {target, event} = this.#eventLoop[0];
         currentTarget = null, composedPath = [];
         if (target instanceof Attr)
-          target.reactions?.length && EventLoop.#runReactions(event, target);
+          target.reactions?.length && EventLoop.#runReactions(event, event, target);
         else /*if (!target || target instanceof Element)*/
           EventLoop.bubble(target, event);
         this.#eventLoop.shift();
@@ -357,28 +357,28 @@ class ReactionErrorEvent extends ErrorEvent {
         Then we need to check that the other elements are connected to the same root. This is a heavy operation..
         `);
       for (let at of globalTriggers.loop(event))
-        EventLoop.#runReactions(event, at, true);
+        EventLoop.#runReactions(event, event, at, true);
 
       for (currentTarget of (composedPath = makeComposedPath(rootTarget, event)))
         for (let at of getReactions(currentTarget, event))
           if (!at.defaultAction || !event.defaultAction && !event.defaultPrevented)
             if (at.ownerElement)
-              EventLoop.#runReactions(event, at, true);
+              EventLoop.#runReactions(event, event, at, true);
 
       if (event.defaultAction && !event.defaultPrevented) {
         const {at, res, target} = event.defaultAction;
         currentTarget = target;
-        EventLoop.#runReactions(res, at, false, at.defaultAction);
+        EventLoop.#runReactions(event, res, at, false, at.defaultAction);
       }
     }
 
-    static #runReactions(event, at, doDA, start = 0) {
+    static #runReactions(originalEvent, event, at, doDA, start = 0) {
       for (let i = start, res = event; i < at.reactions.length; i++) {
         const reaction = at.reactions[i];
         if (reaction[0] !== ReactionRegistry.DefaultAction) {
           try {
             const [r, ...args] = reaction;
-            let output = r.call(at, res, ...args.map(a => a instanceof Function ? a.call(at, res) : a).slice(1));
+            let output = r.call(at, res, ...args.map(a => a instanceof Function ? a.call(at, res, originalEvent) : a).slice(1));
             if (output instanceof Promise) {
               if (doDA && at.defaultAction)
                 throw new SyntaxError("You cannot use reactions that return Promises before default actions.");
@@ -386,7 +386,7 @@ class ReactionErrorEvent extends ErrorEvent {
                 .then(input => {
                   if (input === undefined && reaction[1][0] === ".")
                     input = res;
-                  return input !== undefined && this.#runReactions(input, at, false, i + 1);
+                  return input !== undefined && this.#runReactions(originalEvent, input, at, false, i + 1);
                 })
                 .catch(error => eventLoop.dispatch(new ReactionErrorEvent(error, at, i, true, res), at.ownerElement));
               return;

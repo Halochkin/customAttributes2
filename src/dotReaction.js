@@ -11,6 +11,10 @@ function eGetter(props) {
   return e => getProp(e, props);
 }
 
+function iGetter(props) {
+  return (e, i) => getProp(i, props);
+}
+
 function thisGetter(props) {
   return function () {
     return getProp(this, props);
@@ -81,12 +85,13 @@ customTypes.defineAll({
   window: window,
   document: document,
   e: e => e,
+  i: (e, i) => i,
   this: function () {
     return this;
   },
 });
 customTypes.defineRule("e", (e, ...part) => eGetter(part.map(ReactionRegistry.toCamelCase)));
-// customTypes.defineRule("i", (i, ...part) => iGetter(part.map(ReactionRegistry.toCamelCase))); //todo turn the i. to the input and e. to the trigger event
+customTypes.defineRule("i", (i, ...part) => iGetter(part.map(ReactionRegistry.toCamelCase)));
 customTypes.defineRule("this", (t, ...part) => thisGetter(part.map(ReactionRegistry.toCamelCase)));
 customTypes.defineRule("window", (w, ...part) => windowGetter(part.map(ReactionRegistry.toCamelCase)));
 
@@ -108,7 +113,7 @@ customTypes.defineAll({
 customTypes.defineRule("el", (_, ...ps) => thisGetter(["ownerElement", ...ps.map(ReactionRegistry.toCamelCase)]));
 customTypes.defineRule("p", (_, ...ps) => thisGetter(["ownerElement", "parentElement", ...ps.map(ReactionRegistry.toCamelCase)]));
 
-//CSSOM style getComputedStyle //todo adding cssom to path
+//.cssom property for handling getComputedStyle
 Object.defineProperty(Element.prototype, "cssom", {
   get: function () {
     return new Proxy(this, {
@@ -116,12 +121,6 @@ Object.defineProperty(Element.prototype, "cssom", {
         return getComputedStyle(target)[prop];
       }
     });
-  }
-});
-customTypes.defineRule("style", function (_, prop) {
-  prop = ReactionRegistry.toCamelCase(prop);
-  return function () {
-    return getComputedStyle(this.ownerElement)[prop];
   }
 });
 
