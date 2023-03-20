@@ -278,52 +278,51 @@ class ReactionErrorEvent extends ErrorEvent {
 
 (function () {
 
-//Event.uid
+  let currentTarget, composedPath;
   let eventUid = 1;
-  const eventToUid = new WeakMap();
-  Object.defineProperty(Event.prototype, "uid", {
-    get: function () {
-      let uid = eventToUid.get(this);
-      uid === undefined && eventToUid.set(this, uid = eventUid++);
-      return uid;
+  const eventToUid = new WeakMap(); //event.uid
+  Object.defineProperties(Event.prototype, {
+    uid: {
+      get: function () {
+        let uid = eventToUid.get(this);
+        uid === undefined && eventToUid.set(this, uid = eventUid++);
+        return uid;
+      }
+    },
+    currentTarget: {
+      get: function () {
+        return currentTarget;
+      }
+    },
+    target: {
+      get: function () {
+        return this.path[0];
+      }
+    },
+    path: {
+      get: function () {
+        const currentDocument = this.currentTarget?.getRootNode();
+        return composedPath.filter(el => el.getRootNode() === currentDocument);
+      }
     }
   });
 
-  Object.defineProperty(Event.prototype, "target", {
-    get: function () {
-      return globalTarget;
-    }
-  });
-  //todo not sure that we should use path at all actually. If we have dynamic path, then path cannot be safely queried in advance or in the past.
-  Object.defineProperty(Event.prototype, "path", {
-    get: function () {
-      const path = [];
-      for (let el = this.target; el instanceof Element; el = el.parentElement)
-        path.push(el)
-      return path;
-    }
-  });
-
-  let globalTarget;
-
-  function* bubbleAttr(target, event, slotMode) {
+  function makeComposedPath(target, event, slotMode = false, path = []) {
     for (let el = target; el; el = el.parentElement || !slotMode && el.parentNode?.host) {
-      let one, two;                                                       //efficiency
-      for (let at of el.attributes)
-        if (at.type === event.type)
-          if (at.reactions?.length)
-            if (!at.defaultAction || !event.defaultAction && !event.defaultPrevented)
-              one ? one = at : !two ? two = [at] : two.push(at);          //efficiency
-      if (one)                                                            //efficiency
-        globalTarget = target, yield one;    //add [path] here?           //efficiency
-      if (two)                                                            //efficiency
-        for (let at of two)                                               //efficiency
-          if (at.ownerElement)//if at removed by previous at in same loop //efficiency
-            if (!at.defaultAction || !event.defaultAction && !event.defaultPrevented)  //efficiency
-              globalTarget = target, yield at;//and add [path] here?      //efficiency
+      path.push(el);
       if (el.assignedSlot)
-        yield* bubbleAttr(el.assignedSlot, event, true);
+        makeComposedPath(el.assignedSlot, event, true, path);
     }
+    return path;
+  }
+
+  function getReactions(el, event, attr = []) {
+    for (let at of el.attributes)
+      if (at.type === event.type)
+        if (at.reactions?.length)
+          if (!at.defaultAction || !event.defaultAction && !event.defaultPrevented)
+            attr.push(at);
+    return attr;
   }
 
   class EventLoop {
@@ -341,6 +340,7 @@ class ReactionErrorEvent extends ErrorEvent {
         return;
       while (this.#eventLoop.length) {
         const {target, event} = this.#eventLoop[0];
+        currentTarget = null, composedPath = [];
         if (target instanceof Attr)
           target.reactions?.length && EventLoop.#runReactions(event, target);
         else /*if (!target || target instanceof Element)*/
@@ -356,16 +356,18 @@ class ReactionErrorEvent extends ErrorEvent {
         throw new Error(`Global listeners for events occuring off-dom needs to be filtered..
         Then we need to check that the other elements are connected to the same root. This is a heavy operation..
         `);
-      globalTarget = null;
       for (let at of globalTriggers.loop(event))
         EventLoop.#runReactions(event, at, true);
 
-      for (let at of bubbleAttr(rootTarget, event))
-        EventLoop.#runReactions(event, at, true);
+      for (currentTarget of (composedPath = makeComposedPath(rootTarget, event)))
+        for (let at of getReactions(currentTarget, event))
+          if (!at.defaultAction || !event.defaultAction && !event.defaultPrevented)
+            if (at.ownerElement)
+              EventLoop.#runReactions(event, at, true);
 
       if (event.defaultAction && !event.defaultPrevented) {
         const {at, res, target} = event.defaultAction;
-        globalTarget = target;
+        currentTarget = target;
         EventLoop.#runReactions(res, at, false, at.defaultAction);
       }
     }
@@ -397,7 +399,8 @@ class ReactionErrorEvent extends ErrorEvent {
   }
 
   window.eventLoop = new EventLoop();
-})();
+})
+();
 
 function deprecated() {
   throw `${this}() is deprecated`;
@@ -534,7 +537,10 @@ observeElementCreation(els => els.forEach(el => window.customAttributes.upgrade(
     }
 
     upgrade() {
-      this._args = [this.nativeTarget, this.eventType, this.listener.bind({}), {passive: this.passive, capture: true}];
+      this._args = [this.nativeTarget, this.eventType, this.listener.bind({}), {
+        passive: this.passive,
+        capture: true
+      }];
       NativeWindowEvent.#GC.register(this, this._args);
       addEventListener.call(...this._args);
     }
