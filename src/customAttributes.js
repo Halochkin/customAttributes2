@@ -377,8 +377,8 @@ class ReactionErrorEvent extends ErrorEvent {
         const reaction = at.reactions[i];
         if (reaction[0] !== ReactionRegistry.DefaultAction) {
           try {
-            const [r, ...args] = reaction;
-            const args2 = args.map(a => a instanceof Function ? a.call(at, originalEvent, res) : a).slice(1);
+            const [r, _, ...args] = reaction;
+            const args2 = args.map(a => a instanceof Function ? a.call(at, originalEvent, res) : a);
             let output = r.call(at, ...args2);
             if (output instanceof Promise) {
               if (doDA && at.defaultAction)
