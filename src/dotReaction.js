@@ -36,9 +36,7 @@ function getObj(obj, props) {
 
 function makeTheCall(p, prop, args) {
   const method = p[prop] ?? customReactions.getDefinition(prop, [prop]);
-  return method instanceof Function ? method.call(p, ...args) :
-    !args.length ? method :                              //getter       //todo should we allow for getter here? or should we turn this into a reaction definition?
-      p[prop] = args.length === 1 ? args[0] : args; //setter
+  return method.call(p, ...args);
 }
 
 customReactions.defineRule("window", function (_, ...props) {
