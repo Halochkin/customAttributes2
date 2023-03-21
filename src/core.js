@@ -121,7 +121,7 @@ function processNumArrayMonad(num, reaction) {
   //{}=>WeakMap=>WeakSet
   const thenElseRegister = {};
   customReactions.defineAll({
-    new: function _new(e, constructor, ...args) {
+    new: function _new(_, constructor, ...args) {
       return new window[ReactionRegistry.toCamelCase(constructor)](...args);
     },
     await: async function Await(e, num) {
@@ -226,7 +226,7 @@ function processNumArrayMonad(num, reaction) {
     const int = num === "" ? num : processNumArrayMonad(num, reaction);
     const reactionImpl = customReactions.getDefinition(original, rest);
     if (reactionImpl)
-      return function (e, ...args) {
+      return function (_, e, ...args) {
         if (!(e instanceof Array))
           throw new TypeError(`Reaction '${reaction}: is not getting an Array input. typeof e = ${typeof e}`);
         const val = reactionImpl.call(this, e, ...args);

@@ -3,7 +3,7 @@
 <script src="../../src/dotReaction.js"></script>
 <script src="../../src/core.js"></script>
 
-<h1 submit:this.value:open_self="https://httpbin.org/anything?hello=sunshine" _unload:this.value:log="triggered navigation">hello sunshine</h1>
+<h1 submit:open_this.value_self="https://httpbin.org/anything?hello=sunshine" _unload:log_this.value="triggered navigation">hello sunshine</h1>
 
 <script type="module">
   import {open} from "../src/FormData/FormData_GET.js";
@@ -11,10 +11,10 @@
   customReactions.define("value", function () {
     return this.value;
   });
-  customReactions.define("open", function (e, ...args) {
+  customReactions.define("open", function (_, e, ...args) {
     return open.call(this, e, "open", ...args);
   });
-  customReactions.define("log", e => (console.log(e), e));
+  customReactions.define("log", (_,e) => console.log(e));
 
   const formData = new FormData();
   formData.append("a", "A");

@@ -1,18 +1,23 @@
 <script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.2/observeElementCreation.js"></script>
 <script src="../../src/customAttributes.js"></script>
+<script src="../../src/dotReaction.js"></script>
 
-<body _popstate:log>
-<h1 click:get_popstate="#hello">hello sunshine</h1>
-<h2 click:encodeuri:popstate="#sunshine">hello sunshine</h2>
+<body _popstate:log_e>
+<h1 click:get_i_popstate="#hello">hello sunshine</h1>
+<h2 click:encodeuri_i:popstate_i="#sunshine">hello sunshine</h2>
 
 <script type="module">
   import {FormData_GET, formDataToUri, popstate} from "../src/FormData/FormData_GET.js";
 
-  customReactions.define("get", function (e, ...args) {
+  customReactions.define("get", function (_, e, ...args) {
     return FormData_GET.call(this, e, "get", ...args)
   });
-  customReactions.define("encodeuri", formDataToUri);
-  customReactions.define("popstate", popstate);
+  customReactions.define("encodeuri", function (_, ...args) {
+    return formDataToUri.call(this, ...args);
+  });
+  customReactions.define("popstate", function (_, ...args) {
+    return popstate.call(this, ...args);
+  });
   customReactions.define("log", _ => console.log(location.href.substring(location.href.length - 9)));
 
   console.log(location.href.substring(location.href.length - 9));

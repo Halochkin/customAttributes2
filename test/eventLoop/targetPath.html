@@ -1,28 +1,29 @@
 <script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.2/observeElementCreation.js"></script>
 <script src="../../src/customAttributes.js"></script>
+<script src="../../src/dotReaction.js"></script>
 <script>
   customElements.define("web-comp", class WebComp extends HTMLElement {
     constructor() {
       super();
       this.attachShadow({mode: "open"});
       this.shadowRoot.innerHTML = `
-<div click:log _click:log>
-  <slot click:log></slot>
+<div click:log_e _click:log_e>
+  <slot click:log_e></slot>
 </div>
     `;
     }
   })
 </script>
 
-<body click:log>
-<web-comp click:log>
-  <h1 click:log>
-    <span click:log click::log _click:log>hello sunshine</span>
+<body click:log_e>
+<web-comp click:log_e>
+  <h1 click:log_e>
+    <span click:log_e click::log_e _click:log_e>hello sunshine</span>
   </h1>
 </web-comp>
 
 <script type="module">
-  customReactions.define("log", function (e) {
+  customReactions.define("log", function (_, e) {
     console.log(this.ownerElement.nodeName, this.ownerElement.getRootNode().nodeName, e.target?.nodeName);
     console.log(...e.path.map(el => el.tagName));
   });

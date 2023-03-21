@@ -5,14 +5,14 @@
 <script src="../../src/core.js"></script>
 
 <div
-    click:.h1clicks:then_e_a:console.log_then
+    click:.h1clicks_e:then_e_a:console.log_then
     click:.else_e_a:console.log_else
 >
   <h1>hello</h1>
   <span>sunshine</span>
 </div>
 <script>
-  customReactions.define("h1clicks", e => e.target.tagName == "H1");
+  customReactions.define("h1clicks", (_, e) => e.target.tagName == "H1");
 
   const h1 = document.querySelector("h1");
   h1.click();

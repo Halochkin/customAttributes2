@@ -1,16 +1,17 @@
 <script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.2/observeElementCreation.js"></script>
 <script src="../../src/customAttributes.js"></script>
+<script src="../../src/dotReaction.js"></script>
 <script src="../../src/core.js"></script>
 
-<h1 submit:load="https://httpbin.org/anything?hello=sunshine" load:log>hello sunshine</h1>
+<h1 submit:load_e="https://httpbin.org/anything?hello=sunshine" load:log_e>hello sunshine</h1>
 
 <script type="module">
   import {FormData_GET} from "../src/FormData/FormData_GET.js";
 
-  customReactions.define("load", function (e, ...args) {
+  customReactions.define("load", function (_,e, ...args) {
     return FormData_GET.call(this, e, "load", ...args)
   });
-  customReactions.define("log", e => console.log(e.type, e.detail.args));
+  customReactions.define("log", (_,e) => console.log(e.type, e.detail.args));
 
   const formData = new FormData();
   formData.append("a", "A");

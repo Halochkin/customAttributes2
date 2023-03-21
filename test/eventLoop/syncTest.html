@@ -1,11 +1,12 @@
 <script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.2/observeElementCreation.js"></script>
 <script src="../../src/customAttributes.js"></script>
+<script src="../../src/dotReaction.js"></script>
 
 <h1>hello sunshine</h1>
 <script>
-  customReactions.define("hello", e => console.log(e.type));
+  customReactions.define("hello", (_, e) => console.log(e.type));
   customReactions.define("sunshine", _ => console.log("sunshine"));
   const h1 = document.querySelector("h1");
-  h1.setAttribute("click:hello:sunshine");
+  h1.setAttribute("click:hello_e:sunshine");
   h1.click();
 </script>

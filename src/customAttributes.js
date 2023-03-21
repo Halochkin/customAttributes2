@@ -378,7 +378,7 @@ class ReactionErrorEvent extends ErrorEvent {
         if (reaction[0] !== ReactionRegistry.DefaultAction) {
           try {
             const [r, ...args] = reaction;
-            let output = r.call(at, res, ...args.map(a => a instanceof Function ? a.call(at, originalEvent, res) : a).slice(1));
+            let output = r.call(at, "satana", ...args.map(a => a instanceof Function ? a.call(at, originalEvent, res) : a).slice(1));
             if (output instanceof Promise) {
               if (doDA && at.defaultAction)
                 throw new SyntaxError("You cannot use reactions that return Promises before default actions.");

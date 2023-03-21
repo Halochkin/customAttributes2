@@ -1,17 +1,22 @@
 <script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.2/observeElementCreation.js"></script>
 <script src="../../src/customAttributes.js"></script>
+<script src="../../src/dotReaction.js"></script>
 
-<h1 click:encodeuri:open_self="https://bbc.com/">hello sunshine</h1>
-<h2 click:getshortcut_self="https://bbc.com/">hello sunshine</h2>
+<h1 click:encodeuri_i:open_i_self="https://bbc.com/">hello sunshine</h1>
+<h2 click:getshortcut_i_self="https://bbc.com/">hello sunshine</h2>
 
 <script type="module">
   import {FormData_GET, formDataToUri, open} from "../src/FormData/FormData_GET.js";
 
-  customReactions.define("getshortcut", function (e, ...args) {
+  customReactions.define("getshortcut", function (_, e, ...args) {
     return FormData_GET.call(this, e, "getshortcut", ...args);
   });
-  customReactions.define("encodeuri", formDataToUri);
-  customReactions.define("open", open);
+  customReactions.define("encodeuri", function (_, ...arg) {
+    return formDataToUri.call(this, ...arg);
+  });
+  customReactions.define("open", function (_, ...args) {
+    return open.call(this, ...args);
+  });
 
   //att!! intercepting native window.open(...) method for testing purposes
   window.open = (...args) => console.log(...args);
