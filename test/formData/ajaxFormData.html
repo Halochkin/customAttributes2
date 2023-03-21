@@ -8,10 +8,10 @@
 <script type="module">
   import {FormData_GET} from "../src/FormData/FormData_GET.js";
 
-  customReactions.define("load", function (_,e, ...args) {
+  customReactions.define("load", function (e, ...args) {
     return FormData_GET.call(this, e, "load", ...args)
   });
-  customReactions.define("log", (_,e) => console.log(e.type, e.detail.args));
+  customReactions.define("log", (e) => console.log(e.type, e.detail.args));
 
   const formData = new FormData();
   formData.append("a", "A");

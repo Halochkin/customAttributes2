@@ -6,7 +6,7 @@
 <h1 click:.shift_e:el.say-hi_e:once="sayHi">hello on-click_shift</h1>
 
 <script type="module">
-  customReactions.define("shift", (_, e) => e.shiftKey);
+  customReactions.define("shift", ( e) => e.shiftKey);
 
   const h1 = document.querySelector("h1");
   h1.sayHi = function (e) {

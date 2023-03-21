@@ -378,7 +378,8 @@ class ReactionErrorEvent extends ErrorEvent {
         if (reaction[0] !== ReactionRegistry.DefaultAction) {
           try {
             const [r, ...args] = reaction;
-            let output = r.call(at, "satana", ...args.map(a => a instanceof Function ? a.call(at, originalEvent, res) : a).slice(1));
+            const args2 = args.map(a => a instanceof Function ? a.call(at, originalEvent, res) : a).slice(1);
+            let output = r.call(at, ...args2);
             if (output instanceof Promise) {
               if (doDA && at.defaultAction)
                 throw new SyntaxError("You cannot use reactions that return Promises before default actions.");
@@ -587,5 +588,5 @@ observeElementCreation(els => els.forEach(el => window.customAttributes.upgrade(
 })(addEventListener, removeEventListener);
 
 //** default error event handling
-customReactions.define("console-error", (_, e) => console.error(e.message, e.error));
+customReactions.define("console-error", e => console.error(e.message, e.error));
 document.documentElement.setAttribute("error::console-error_e");

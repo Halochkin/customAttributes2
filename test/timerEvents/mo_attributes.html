@@ -23,11 +23,11 @@
       this._mo.disconnect();
     }
   });
-  customReactions.define("attr", function (_, name, value) {
+  customReactions.define("attr", function ( name, value) {
     this.ownerElement.setAttribute(name, value);
   });
 
-  customReactions.define("log", function (_, e) {
+  customReactions.define("log", function ( e) {
     for (let [name, oldValue] of Object.entries(e.detail))
       console.log(e.type, name, oldValue, this.ownerElement.getAttribute(name));
   });

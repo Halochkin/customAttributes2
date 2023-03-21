@@ -24,7 +24,7 @@
 
     }
   })
-  customReactions.define("log", (_, e) => console.log(e.type, e.detail >= 250));
+  customReactions.define("log", ( e) => console.log(e.type, e.detail >= 250));
   customReactions.define("once", function () {
     this.ownerElement.removeAttribute(this.name);
   });

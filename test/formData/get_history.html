@@ -9,13 +9,13 @@
 <script type="module">
   import {FormData_GET, formDataToUri, popstate} from "../src/FormData/FormData_GET.js";
 
-  customReactions.define("get", function (_, e, ...args) {
+  customReactions.define("get", function ( e, ...args) {
     return FormData_GET.call(this, e, "get", ...args)
   });
-  customReactions.define("encodeuri", function (_, ...args) {
+  customReactions.define("encodeuri", function ( ...args) {
     return formDataToUri.call(this, ...args);
   });
-  customReactions.define("popstate", function (_, ...args) {
+  customReactions.define("popstate", function ( ...args) {
     return popstate.call(this, ...args);
   });
   customReactions.define("log", _ => console.log(location.href.substring(location.href.length - 9)));

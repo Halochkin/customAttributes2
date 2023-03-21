@@ -121,10 +121,10 @@ function processNumArrayMonad(num, reaction) {
   //{}=>WeakMap=>WeakSet
   const thenElseRegister = {};
   customReactions.defineAll({
-    new: function _new(_, constructor, ...args) {
+    new: function _new(constructor, ...args) {
       return new window[ReactionRegistry.toCamelCase(constructor)](...args);
     },
-    await: async function Await(e, num) {
+    await: async function Await(num) {
       if (!num)
         await Promise.resolve();
       else if (num === "raf")
@@ -133,29 +133,28 @@ function processNumArrayMonad(num, reaction) {
         throw new SyntaxError(`await_${num} is illegal, the '${num}' is not a number or 'raf'.`);
       else
         await new Promise(r => setTimeout(r, num));
-      return e;
     },
     //todo restrict e.preventDefault() to the "prevent" reaction only
-    prevent: (i, e) => e.preventDefault(),
-    debugger: function (e, i) {
+    prevent: e => e.preventDefault(),
+    debugger: function (i) {
       debugger;
-      return e;
+      return i;
     },
     once: function once() {
       this.ownerElement.removeAttribute(this.name);
     },
-    dispatch: function dispatch(_, e, target = this.ownerElement) {
+    dispatch: function dispatch(e, target = this.ownerElement) {
       eventLoop.dispatch(e, target);
       return e;                                                //todo combine with "." carry?
     },
 
-    event: (_, e, input) =>                                      //todo
+    event: (e, input) =>                                      //todo
       e instanceof Event ? new e.constructor(input, e) :
         e instanceof String || typeof e === "string" ? new Event(e) :
           new CustomEvent(input, e)
     ,
 
-    class: function (e, css, onOff) {
+    class: function (css, onOff) {
       const classes = this.ownerElement.classList;
       if (onOff === undefined)
         classes.contains(css) ? classes.remove(css) : classes.add(css);
@@ -163,16 +162,15 @@ function processNumArrayMonad(num, reaction) {
         classes.add(css);
       else if (onOff === "off")
         classes.remove(css);
-      return e;
     },
 
-    plus: (_, s, ...as) => as.reduce((s, a) => s + a, s),
-    and: (_, ...as) => as.reduce((s, a) => s && a, true),
-    or: (_, ...as) => as.reduce((s, a) => s || a, false),
-    // equals: (_, s, ...as) => as.reduce((s, a) => s === a, s), //todo wrong implement correctly
-    // "double-equals": (_, s, ...as) => as.reduce((s, a) => s == a, s),//todo wrong implement correctly
+    plus: (s, ...as) => as.reduce((s, a) => s + a, s),
+    and: (...as) => as.reduce((s, a) => s && a, true),
+    or: (...as) => as.reduce((s, a) => s || a, false),
+    // equals: ( s, ...as) => as.reduce((s, a) => s === a, s), //todo wrong implement correctly
+    // "double-equals": ( s, ...as) => as.reduce((s, a) => s == a, s),//todo wrong implement correctly
 
-    then: function (_, e, ...labels) {
+    then: function (e, ...labels) {
       const key = labels.join(" ");
       const weakMap = thenElseRegister[key];
       weakMap ?
@@ -182,22 +180,22 @@ function processNumArrayMonad(num, reaction) {
         thenElseRegister[key] = new WeakMap([[this.ownerElement, new WeakSet([e])]]);
       return e;
     },
-    else: function (_, e, ...labels) {
+    else: function (e, ...labels) {
       return (!thenElseRegister[labels.join(" ")]?.get(this.ownerElement)?.has(e))
     },
 
-    "toggle-attr": function (_, prefix) {
+    "toggle-attr": function (prefix) {
       const el = this.ownerElement;
       el.hasAttribute(prefix) ? el.removeAttribute(prefix) : el.setAttribute(prefix);
     },
 
-    throttle: function throttle(_, value) {
+    throttle: function throttle(value) {
       const primitive = value instanceof Object ? JSON.stringify(value) : value;
       if (throttleRegister.get(this) !== primitive)
         return throttleRegister.set(this, primitive), value;
     },
 
-    define: function define(_, tag, Def) {
+    define: function define(tag, Def) {
       if (Def.prototype instanceof CustomAttr)
         customAttributes.define(tag, Def);
       else if (Def.prototype instanceof HTMLElement)
@@ -209,32 +207,34 @@ function processNumArrayMonad(num, reaction) {
     }
   });
 
-  customReactions.defineRule("m", function (m, prop, ...original) {
-    const input = original.join(".");
-    const reactionImpl = customReactions.getDefinition(input, original);
-    if (reactionImpl)
-      return function (e, ...args) {
-        if (!(e instanceof Object))
-          throw new TypeError(`Reaction '${[m, prop, input].join(".")}: is not getting an Object input. typeof e = ${typeof e}`);
-        e[prop] = reactionImpl.call(this, e, ...args);
-        return e;
-      }
-  });
-  customReactions.defineRule("a", function (a, num, ...rest) {
-    const original = rest.join(".");
-    const reaction = "a." + num + "." + original;
-    const int = num === "" ? num : processNumArrayMonad(num, reaction);
-    const reactionImpl = customReactions.getDefinition(original, rest);
-    if (reactionImpl)
-      return function (_, e, ...args) {
-        if (!(e instanceof Array))
-          throw new TypeError(`Reaction '${reaction}: is not getting an Array input. typeof e = ${typeof e}`);
-        const val = reactionImpl.call(this, e, ...args);
-        num === "" ? e.push(val) :
-          e.splice(int < 0 ? e.length + int : int, 0, val);
-        return e;
-      };
-  });
+  //todo remake the monad wrappers for object and arrays.
+  // customReactions.defineRule("m", function (m, prop, ...original) {
+  //   const input = original.join(".");
+  //   const reactionImpl = customReactions.getDefinition(input, original);
+  //   if (reactionImpl)
+  //     return function (e, ...args) {
+  //       if (!(e instanceof Object))
+  //         throw new TypeError(`Reaction '${[m, prop, input].join(".")}: is not getting an Object input. typeof e = ${typeof e}`);
+  //       e[prop] = reactionImpl.call(this, e, ...args);
+  //       return e;
+  //     }
+  // });
+  // customReactions.defineRule("a", function (a, num, ...rest) {
+  //   const original = rest.join(".");
+  //   const reaction = "a." + num + "." + original;
+  //   const int = num === "" ? num : processNumArrayMonad(num, reaction);
+  //   const reactionImpl = customReactions.getDefinition(original, rest);
+  //   if (reactionImpl)
+  //     return function (e, ...args) {
+  //     debugger
+  //       if (!(e instanceof Array))
+  //         throw new TypeError(`Reaction '${reaction}: is not getting an Array input. typeof e = ${typeof e}`);
+  //       const val = reactionImpl.call(this, e, ...args);
+  //       num === "" ? e.push(val) :
+  //         e.splice(int < 0 ? e.length + int : int, 0, val);
+  //       return e;
+  //     };
+  // });
   customReactions.defineRule("", function (_, ...more) {
     return customReactions.getDefinition(more.join("."), more);
   });

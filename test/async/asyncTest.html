@@ -7,9 +7,9 @@
 
     let last = performance.now();
 
-    async function reaction(e, prefix) {
+    async function reaction(str) {
       await new Promise(r => setTimeout(r, 100));
-      console.log(prefix, performance.now() - last > 100);
+      console.log(str, performance.now() - last > 100);
       last = performance.now();
     }
 

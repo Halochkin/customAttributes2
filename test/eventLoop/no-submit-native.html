@@ -8,7 +8,7 @@
 </form>
 
 <script type="module">
-  customReactions.define("log", (_, e) => console.log(e.type));
+  customReactions.define("log", ( e) => console.log(e.type));
 
   document.querySelector("form").requestSubmit();
   setTimeout(() => console.log("only sunshine"), 20);

@@ -10,7 +10,7 @@
 <h1 click:ok:throw_oops>hello</h1>
 <script>
   customReactions.define("ok", _ => console.log("ok"));
-  customReactions.define("throw", function (e, msg) {
+  customReactions.define("throw", msg => {
     throw msg;
   });
   document.querySelector("h1").click();

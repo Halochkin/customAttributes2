@@ -44,7 +44,7 @@ function makeTheCall(p, prop, args) {
 customReactions.defineRule("window", function (_, ...props) {
   props = props.map(ReactionRegistry.toCamelCase);
   const prop = props.pop();
-  return function (_, ...args) {
+  return function ( ...args) {
     const p = props.length ? getObj(window, props) : window;         //find the this
     return p && makeTheCall(p, prop, args);                          //find the prop
   };
@@ -53,7 +53,7 @@ customReactions.defineRule("window", function (_, ...props) {
 customReactions.defineRule("this", function (_, ...props) {
   props = props.map(ReactionRegistry.toCamelCase);
   const prop = props.pop();
-  return function (_, ...args) {
+  return function ( ...args) {
     const p = props.length ? getObj(this, props) : this;
     return p && makeTheCall(p, prop, args);
   };
@@ -61,24 +61,24 @@ customReactions.defineRule("this", function (_, ...props) {
 
 customReactions.defineRule("console", function (_, fun) {
   if (fun in console)
-    return (e, ...args) => console[fun](...args);
+    return (...args) => console[fun](...args);
   throw new SyntaxError(`console.${fun} is unknown.`);
 });
 
 //todo mathAddOns untested
 const mathAddOns = {                                          //todo add these methods to the Math namespace, and then just make the getDefinition([window+math]?
-  minus: (_, s, ...as) => as.reduce((s, a) => s - a, s),
-  times: (_, s, ...as) => as.reduce((s, a) => s * a, s),
-  divide: (_, s, ...as) => as.reduce((s, a) => s / a, s),
-  percent: (_, s, ...as) => as.reduce((s, a) => s % a, s),
-  factor: (_, s, ...as) => as.reduce((s, a) => s ** a, s),
-  gt: (_, s, ...as) => as.reduce((s, a) => s > a, s),
-  gte: (_, s, ...as) => as.reduce((s, a) => s >= a, s),
-  lt: (_, s, ...as) => as.reduce((s, a) => s < a, s),
-  lte: (_, s, ...as) => as.reduce((s, a) => s <= a, s),
+  minus: ( s, ...as) => as.reduce((s, a) => s - a, s),
+  times: ( s, ...as) => as.reduce((s, a) => s * a, s),
+  divide: ( s, ...as) => as.reduce((s, a) => s / a, s),
+  percent: ( s, ...as) => as.reduce((s, a) => s % a, s),
+  factor: ( s, ...as) => as.reduce((s, a) => s ** a, s),
+  gt: ( s, ...as) => as.reduce((s, a) => s > a, s),
+  gte: ( s, ...as) => as.reduce((s, a) => s >= a, s),
+  lt: ( s, ...as) => as.reduce((s, a) => s < a, s),
+  lte: ( s, ...as) => as.reduce((s, a) => s <= a, s),
 };
 customReactions.defineRule("math", function (_, fun) {
-  return mathAddOns[fun] ?? fun in Math ? (e, ...args) => Math[fun](...args) : undefined;
+  return mathAddOns[fun] ?? fun in Math ? (...args) => Math[fun](...args) : undefined; //todo
 });
 
 customTypes.defineAll({

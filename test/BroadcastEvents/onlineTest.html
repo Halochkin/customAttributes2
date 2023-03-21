@@ -4,6 +4,6 @@
 
 <h1 _online:log_e>hello online:log_e</h1>
 <script>
-  customReactions.define("log", function(_, e){ console.log(e.type, this.name)});
+  customReactions.define("log", function( e){ console.log(e.type, this.name)});
   window.dispatchEvent(new Event("online"));
 </script>

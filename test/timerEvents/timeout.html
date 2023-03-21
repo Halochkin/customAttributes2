@@ -4,7 +4,7 @@
 <script src="../../src/core.js"></script>
 
 <script>
-  customReactions.define("remove-attr", function (e, ...nums) {
+  customReactions.define("remove-attr", function (...nums) {
     for (let i = this.ownerElement.attributes.length - 1; i >= 0; i--)
       if (nums.indexOf(i) >= 0)
         this.ownerElement.removeAttribute(this.ownerElement.attributes[i].name);

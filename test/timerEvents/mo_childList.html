@@ -27,17 +27,17 @@
       this._mo.disconnect();
     }
   });
-  customReactions.define("append", function append(e, tag, innerText) {
+  customReactions.define("append", function append(tag, innerText) {
     const el = document.createElement(tag);
     el.innerText = innerText;
     this.ownerElement.append(el);
   });
-  customReactions.define("remove-child-element", function removeChildElement(e, ...pos) {
+  customReactions.define("remove-child-element", function removeChildElement(...pos) {
     for (let p of pos)
       this.ownerElement.removeChild(this.ownerElement.children[parseInt(p)]);
   });
 
-  customReactions.define("log", function (_, {addedNodes, removedNodes}) {
+  customReactions.define("log", function ({addedNodes, removedNodes}) {
     console.log("added", ...addedNodes.map(el => el.tagName));
     console.log("removed", ...removedNodes.map(el => el.nodeName));
   });

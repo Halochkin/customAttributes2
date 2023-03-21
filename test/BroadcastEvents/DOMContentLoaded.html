@@ -5,5 +5,5 @@
 <h1 _domcontentloaded:log_e>hello domcontentloaded:log_e</h1>
 
 <script>
-  customReactions.define("log", (_,e) => console.log(e.type, document.readyState));
+  customReactions.define("log", (e) => console.log(e.type, document.readyState));
 </script>

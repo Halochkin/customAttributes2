@@ -4,7 +4,7 @@
 
 <h1>hello sunshine</h1>
 <script>
-  customReactions.define("hello", (_, e) => console.log(e.type));
+  customReactions.define("hello", ( e) => console.log(e.type));
   customReactions.define("sunshine", _ => console.log("sunshine"));
   const h1 = document.querySelector("h1");
   h1.setAttribute("click:hello_e:sunshine");

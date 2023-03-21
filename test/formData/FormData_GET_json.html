@@ -18,19 +18,19 @@
   import {DOM_FormData} from "../src/FormData/DOM_FormData.js";
 
   customReactions.defineAll({
-    "formdata": function (_, ...args) {
+    "formdata": function ( ...args) {
       return DOM_FormData.call(this, ...args);
     },
-    "get": function (_, e, ...args) {
+    "get": function ( e, ...args) {
       return FormData_GET.call(this, e, "get", ...args);
     },
-    "encodeuri": function (_, ...args) {
+    "encodeuri": function ( ...args) {
       return formDataToUri.call(this, ...args);
     },
-    "json": function (_, e, ...args) {
+    "json": function ( e, ...args) {
       return fetchAndEvent.call(this, e, "json", ...args);
     },
-    "log": (_, e) => console.log(e.detail)
+    "log": ( e) => console.log(e.detail)
   });
 
   document.querySelector("form").click();

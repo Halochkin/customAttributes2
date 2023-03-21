@@ -45,13 +45,11 @@
     }
   });
 
-  customReactions.define("logwidth", function (e) {
+  customReactions.define("logwidth", function () {
     console.log(getComputedStyle(this.ownerElement).width);
-    return e;
   });
-  customReactions.define("style", function style(e, prop, value = e) {
+  customReactions.define("style", function style(prop, value) {
     this.ownerElement.style.setProperty(prop, value);
-    return e;
   });
 
   customElements.define("web-comp", class WebComp extends HTMLElement {

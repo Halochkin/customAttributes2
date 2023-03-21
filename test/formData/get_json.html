@@ -7,13 +7,13 @@
 <script type="module">
   import {JSON_GET} from "../src/FormData/FormData_GET.js";
 
-  customReactions.define("get", function json_get(_, e, ...args) {
+  customReactions.define("get", function json_get( e, ...args) {
     return JSON_GET.call(this, e, "get", ...args);
   });
 
   const log = {};
 
-  customReactions.define("log", function (_, e) {
+  customReactions.define("log", function ( e) {
     let k = this.value;
     let url = e.detail.url;
     let method = e.detail.method;

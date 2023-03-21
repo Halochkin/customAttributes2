@@ -23,7 +23,7 @@
 </web-comp>
 
 <script type="module">
-  customReactions.define("log", function (_, e) {
+  customReactions.define("log", function ( e) {
     console.log(this.ownerElement.nodeName, this.ownerElement.getRootNode().nodeName, e.target?.nodeName);
     console.log(...e.path.map(el => el.tagName));
   });

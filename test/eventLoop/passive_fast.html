@@ -10,7 +10,7 @@ todo the first event should ignore the native preventDefault(), while the second
 todo: I don't know how to test this behavior programmatically.
 
 <script>
-  customReactions.define("log", function (_,e) {
+  customReactions.define("log", function (e) {
     return console.log(e.type, this.ownerElement.id), e;
   });
   // document.body.requestFullscreen();

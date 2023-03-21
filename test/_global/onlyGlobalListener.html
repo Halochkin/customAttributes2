@@ -7,7 +7,7 @@
 <div _auxclick:log_e></div>
 
 <script>
-  customReactions.define("log", (_, e) => console.log(e.type));
+  customReactions.define("log", ( e) => console.log(e.type));
   document.body.click();
   document.body.dispatchEvent(new Event("auxclick"));
 </script>
