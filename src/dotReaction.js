@@ -35,9 +35,9 @@ function getObj(obj, props) {
 }
 
 function makeTheCall(p, prop, args) {
-  const obj = p[prop] ?? customReactions.getDefinition(prop, [prop]);
-  return obj instanceof Function ? obj.call(p, ...args) :
-    !args.length ? obj :                              //getter       //todo should we allow for getter here? or should we turn this into a reaction definition?
+  const method = p[prop] ?? customReactions.getDefinition(prop, [prop]);
+  return method instanceof Function ? method.call(p, ...args) :
+    !args.length ? method :                              //getter       //todo should we allow for getter here? or should we turn this into a reaction definition?
       p[prop] = args.length === 1 ? args[0] : args; //setter
 }
 
@@ -60,9 +60,7 @@ customReactions.defineRule("this", function (_, ...props) {
 });
 
 customReactions.defineRule("console", function (_, fun) {
-  if (fun in console)
-    return (...args) => console[fun](...args);
-  throw new SyntaxError(`console.${fun} is unknown.`);
+  return console[fun];
 });
 
 //todo mathAddOns untested
@@ -78,7 +76,7 @@ const mathAddOns = {                                          //todo add these m
   lte: (s, ...as) => as.reduce((s, a) => s <= a, s),
 };
 customReactions.defineRule("math", function (_, fun) {
-  return mathAddOns[fun] ?? fun in Math ? (...args) => Math[fun](...args) : undefined; //todo
+  return mathAddOns[fun] || Math[fun];
 });
 
 customTypes.defineAll({
