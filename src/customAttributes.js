@@ -139,6 +139,7 @@ class DefinitionRegistry {
   #cache = {};
 
   define(prefix, Definition) {
+    // prefix = ReactionRegistry.toCamelCase(prefix);
     if (this.#register[prefix])
       throw `"${prefix}" is already defined.`;
     this.#register[prefix] = Definition;
@@ -150,6 +151,9 @@ class DefinitionRegistry {
   }
 
   defineRule(prefix, Function) {
+    // prefix = ReactionRegistry.toCamelCase(prefix);
+    if (this.#rules[prefix])
+      throw `"${prefix}" is already defined.`;
     this.#rules[prefix] = Function;
   }
 
