@@ -40,7 +40,6 @@ function makeTheCall(p, prop, args) {
 }
 
 customReactions.defineRule("window", function (_, ...props) {
-  props = props.map(ReactionRegistry.toCamelCase);
   const prop = props.pop();
   return function (...args) {
     const p = props.length ? getObj(window, props) : window;         //find the this
@@ -49,7 +48,6 @@ customReactions.defineRule("window", function (_, ...props) {
 });
 
 customReactions.defineRule("this", function (_, ...props) {
-  props = props.map(ReactionRegistry.toCamelCase);
   const prop = props.pop();
   return function (...args) {
     const p = props.length ? getObj(this, props) : this;
@@ -86,10 +84,10 @@ customTypes.defineAll({
     return this;
   },
 });
-customTypes.defineRule("e", (e, ...part) => eGetter(part.map(ReactionRegistry.toCamelCase)));
-customTypes.defineRule("i", (i, ...part) => iGetter(part.map(ReactionRegistry.toCamelCase)));
-customTypes.defineRule("this", (t, ...part) => thisGetter(part.map(ReactionRegistry.toCamelCase)));
-customTypes.defineRule("window", (w, ...part) => windowGetter(part.map(ReactionRegistry.toCamelCase)));
+customTypes.defineRule("e", (e, ...part) => eGetter(part));
+customTypes.defineRule("i", (i, ...part) => iGetter(part));
+customTypes.defineRule("this", (t, ...part) => thisGetter(part));
+customTypes.defineRule("window", (w, ...part) => windowGetter(part));
 
 //el and p
 customReactions.defineRule("el", function (el, ...more) {
@@ -106,8 +104,8 @@ customTypes.defineAll({
     return this.ownerElement.parentElement;
   }
 });
-customTypes.defineRule("el", (_, ...ps) => thisGetter(["ownerElement", ...ps.map(ReactionRegistry.toCamelCase)]));
-customTypes.defineRule("p", (_, ...ps) => thisGetter(["ownerElement", "parentElement", ...ps.map(ReactionRegistry.toCamelCase)]));
+customTypes.defineRule("el", (_, ...ps) => thisGetter(["ownerElement", ...ps]));
+customTypes.defineRule("p", (_, ...ps) => thisGetter(["ownerElement", "parentElement", ...ps]));
 
 //.cssom property for handling getComputedStyle
 Object.defineProperty(Element.prototype, "cssom", {

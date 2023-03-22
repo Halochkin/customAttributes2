@@ -21,7 +21,11 @@ class CustomAttr extends Attr {
   }
 
   get chainBitsDots() {
-    const value = this.chain.map(s => s.split(/(?<=.)_/).map(s => s.split(".")));
+    const value = this.chain.map(s => s.split(/(?<=.)_/).map((s, i) => {
+      const dots = s.split(".");
+      return dots.length === 1 && i > 0 ? dots :  //we do not camelCase single word arguments..
+        dots.map(ReactionRegistry.toCamelCase);
+    }));
     Object.defineProperty(this, "chainBitsDots", {value, writable: false, configurable: true});
     return value;
   }
@@ -139,7 +143,7 @@ class DefinitionRegistry {
   #cache = {};
 
   define(prefix, Definition) {
-    // prefix = ReactionRegistry.toCamelCase(prefix);
+    prefix = ReactionRegistry.toCamelCase(prefix);
     if (this.#register[prefix])
       throw `"${prefix}" is already defined.`;
     this.#register[prefix] = Definition;
@@ -151,7 +155,7 @@ class DefinitionRegistry {
   }
 
   defineRule(prefix, Function) {
-    // prefix = ReactionRegistry.toCamelCase(prefix);
+    prefix = ReactionRegistry.toCamelCase(prefix);
     if (this.#rules[prefix])
       throw `"${prefix}" is already defined.`;
     this.#rules[prefix] = Function;
