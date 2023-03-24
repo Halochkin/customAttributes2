@@ -21,6 +21,8 @@
     c&:a&
     c:a!
     c!:a!
+    c:*#
+    :c\#
 >
 <pre>
   1. https://raw.githack.com/orstavik/customAttributes2/main/test/errors/badChars.html
@@ -28,19 +30,31 @@
 </pre>
 <h1>Attribute names</h1>
 <ol id="template">
-  <lh>from template:</lh>
+  <li>from template:</li>
 </ol>
 <ol id="removeAttribute">
-  <lh>removeAttribute():</lh>
-</ol>
-<ol id="setAttribute">
-  <lh>setAttribute()</lh>
-</ol>
-<ol id="nonSetAttribute">
-  <lh>setAttribute() fails</lh>
+  <li>removeAttribute():</li>
 </ol>
 <ol id="nonRemoveAttribute">
-  <lh>removeAttribute() fails</lh>
+  <li>removeAttribute() fails</li>
+</ol>
+<ol id="setAttribute">
+  <li>setAttribute()</li>
+</ol>
+<ol id="nonSetAttribute">
+  <li>setAttribute() fails</li>
+</ol>
+<ol id="characterEscaping">
+  <li>Escape first character</li>
+</ol>
+<ol id="nonCharacterEscaping">
+  <li>Escape first character fails</li>
+</ol>
+<ol id="encodeURIComponent">
+  <li>encodeURIComponent() first character</li>
+</ol>
+<ol id="nonEncodeURIComponent">
+  <li>encodeURIComponent() first character fails</li>
 </ol>
 </body>
 <script type="module">
@@ -49,7 +63,11 @@
   const removeFail = document.getElementById("nonRemoveAttribute");
   const setAttr = document.getElementById("setAttribute");
   const setAttrFail = document.getElementById("nonSetAttribute");
-
+  const charEscape = document.getElementById("characterEscaping");
+  const charEscapeFails = document.getElementById("nonCharacterEscaping");
+  const encodeUri = document.getElementById("encodeURIComponent");
+  const encodeUriFails = document.getElementById("nonEncodeURIComponent");
+ 
   for (let {name} of [...document.body.attributes]) {
     const li = `<li>${name}</li>`;
     template.insertAdjacentHTML("beforeend", li);
@@ -66,6 +84,25 @@
       setAttrFail.insertAdjacentHTML("beforeend", li);
     }
   }
+ 
+  const chars = ['№', '!', '@', '#', '$', '%', '?', '^', '&', '*', '(', ')', '>', '<', '|', '\\', '/', '+', '~', ':', '_', '.', ' '];
+
+  for (const char of chars) {
+    const li = `<li>${char}</li>`;
+    try {
+      document.body.setAttribute(String.raw`${char}`, "");
+      charEscape.insertAdjacentHTML("beforeend", li);
+    } catch (err) {
+      charEscapeFails.insertAdjacentHTML("beforeend", li);
+    }
+    try {
+      document.body.setAttribute(encodeURIComponent(char), "");
+      encodeUri.insertAdjacentHTML("beforeend", li);
+    } catch (err) {
+      encodeUriFails.insertAdjacentHTML("beforeend", li);
+    }
+  }
+ 
   for (let ol of document.querySelectorAll("ol"))
     console.log(ol.id, ol.children.length -1);
 </script>
