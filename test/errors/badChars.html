@@ -90,13 +90,13 @@
   for (const char of chars) {
     const li = `<li>${char}</li>`;
     try {
-      document.body.setAttribute(String.raw`${char}`, "");
+      document.body.setAttribute("hello" + String.raw`${char}`, "");
       charEscape.insertAdjacentHTML("beforeend", li);
     } catch (err) {
       charEscapeFails.insertAdjacentHTML("beforeend", li);
     }
     try {
-      document.body.setAttribute(encodeURIComponent(char), "");
+      document.body.setAttribute("hello" + encodeURIComponent(char), "");
       encodeUri.insertAdjacentHTML("beforeend", li);
     } catch (err) {
       encodeUriFails.insertAdjacentHTML("beforeend", li);
