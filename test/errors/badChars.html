@@ -45,16 +45,16 @@
   <li>setAttribute() fails</li>
 </ol>
 <ol id="characterEscaping">
-  <li>Escape first character</li>
+  <li>Escape character</li>
 </ol>
 <ol id="nonCharacterEscaping">
-  <li>Escape first character fails</li>
+  <li>Escape character fails</li>
 </ol>
 <ol id="encodeURIComponent">
-  <li>encodeURIComponent() first character</li>
+  <li>encodeURIComponent() character</li>
 </ol>
 <ol id="nonEncodeURIComponent">
-  <li>encodeURIComponent() first character fails</li>
+  <li>encodeURIComponent() character fails</li>
 </ol>
 </body>
 <script type="module">
@@ -90,13 +90,13 @@
   for (const char of chars) {
     const li = `<li>${char}</li>`;
     try {
-      document.body.setAttribute(String.raw`${char}`, "");
+      document.body.setAttribute("hello" + String.raw`${char}`, "");
       charEscape.insertAdjacentHTML("beforeend", li);
     } catch (err) {
       charEscapeFails.insertAdjacentHTML("beforeend", li);
     }
     try {
-      document.body.setAttribute(encodeURIComponent(char), "");
+      document.body.setAttribute("hello" + encodeURIComponent(char), "");
       encodeUri.insertAdjacentHTML("beforeend", li);
     } catch (err) {
       encodeUriFails.insertAdjacentHTML("beforeend", li);
