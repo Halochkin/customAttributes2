@@ -30,31 +30,31 @@
 </pre>
 <h1>Attribute names</h1>
 <ol id="template">
-  <li>from template:</li>
+  <lh>from template:</lh>
 </ol>
 <ol id="removeAttribute">
-  <li>removeAttribute():</li>
+  <lh>removeAttribute():</lh>
 </ol>
 <ol id="nonRemoveAttribute">
-  <li>removeAttribute() fails</li>
+  <lh>removeAttribute() fails</lh>
 </ol>
 <ol id="setAttribute">
-  <li>setAttribute()</li>
+  <lh>setAttribute()</lh>
 </ol>
 <ol id="nonSetAttribute">
-  <li>setAttribute() fails</li>
+  <lh>setAttribute() fails</lh>
 </ol>
 <ol id="characterEscaping">
-  <li>Escape first character</li>
+  <lh>Escape character</lh>
 </ol>
 <ol id="nonCharacterEscaping">
-  <li>Escape first character fails</li>
+  <lh>Escape character fails</lh>
 </ol>
 <ol id="encodeURIComponent">
-  <li>encodeURIComponent() first character</li>
+  <lh>encodeURIComponent() character</lh>
 </ol>
 <ol id="nonEncodeURIComponent">
-  <li>encodeURIComponent() first character fails</li>
+  <lh>encodeURIComponent() character fails</lh>
 </ol>
 </body>
 <script type="module">
@@ -90,13 +90,13 @@
   for (const char of chars) {
     const li = `<li>${char}</li>`;
     try {
-      document.body.setAttribute(String.raw`${char}`, "");
+      document.body.setAttribute("hello" + String.raw`${char}`, "");
       charEscape.insertAdjacentHTML("beforeend", li);
     } catch (err) {
       charEscapeFails.insertAdjacentHTML("beforeend", li);
     }
     try {
-      document.body.setAttribute(encodeURIComponent(char), "");
+      document.body.setAttribute("hello" + encodeURIComponent(char), "");
       encodeUri.insertAdjacentHTML("beforeend", li);
     } catch (err) {
       encodeUriFails.insertAdjacentHTML("beforeend", li);
