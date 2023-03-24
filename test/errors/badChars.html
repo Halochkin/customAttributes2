@@ -1,26 +1,38 @@
-<script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.2/observeElementCreation.js"></script>
-<script src="../../src/customAttributes.js"></script>
-<script src="../../src/dotReaction.js"></script>
-<script src="../../src/core.js"></script>
-
+<style>body { white-space: pre;}</style>
 <body
-    click:and_$:console.log_this.value="$"
-    click_$:and_$:console.log_this.value="$$"
-    click:and_,:console.log_this.value=","
-    click_,:and_,:console.log_this.value=",,"
-    click:and_(:console.log_this.value="("
-    click_(:and_(:console.log_this.value="(("
-    click:and_):console.log_this.value=")"
-    click_):and_):console.log_this.value="))"
-    click:and_&:console.log_this.value="&"
-    click_&:and_&:console.log_this.value="&&"
-    click:and_!:console.log_this.value="!"
-    click_!:and_!:console.log_this.value="!!"
-    1&href="something"
->
-<pre>New Chrome browsers seems to be willing to generate any attribute name as long as it doesn't contain `<` `>` and `=`.</pre>
+    :a:b
+    :a::b
+    a::b
+    a::b:c
+    a::b::c
 
+    c:a$
+    c$:a$
+    c:a,
+    c,:a,
+    c:a(
+    c(:a(
+    c:a)
+    c):a)
+    c:a&
+    c&:a&
+    c:a!
+    c!:a!
+>
 </body>
 <script>
-  document.body.click();
+  document.body.insertAdjacentText("beforeend", "\n" + [...document.body.attributes].map(a => a.name).join("  "));
+
+  for (let at of document.body.attributes) {
+    document.body.insertAdjacentText("beforeend", "\n" + at.name);
+    try {
+      document.body.removeAttribute(at.name);
+      document.body.insertAdjacentText("beforeend", "-");
+      document.body.setAttribute(at.name, "");
+      document.body.insertAdjacentText("beforeend", "+");
+    } catch (err) {
+    }
+  }
+  document.body.setAttribute("a:b:c", "");
+  document.body.insertAdjacentText("beforeend", "\n" + [...document.body.attributes].map(a => a.name).join("  "));
 </script>
