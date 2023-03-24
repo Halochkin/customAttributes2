@@ -15,7 +15,7 @@
   gc.register(document.querySelector("div"), "GC div");
 
   let i = 1;
-  customReactions.define("log", (e, name) => console.log(name, i++));
+  customReactions.define("log", name => console.log(name, i++));
 
   (function () {
     document.body.click();                   //one 1, two 2,

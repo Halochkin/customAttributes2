@@ -35,50 +35,44 @@ function getObj(obj, props) {
 }
 
 function makeTheCall(p, prop, args) {
-  const obj = p[prop] ?? customReactions.getDefinition(prop, [prop]);
-  return obj instanceof Function ? obj.call(p, ...args) :
-    !args.length ? obj :                              //getter       //todo should we allow for getter here? or should we turn this into a reaction definition?
-      p[prop] = args.length === 1 ? args[0] : args; //setter
+  const method = p[prop] ?? customReactions.getDefinition(prop, [prop]);
+  return method.call(p, ...args);
 }
 
 customReactions.defineRule("window", function (_, ...props) {
-  props = props.map(ReactionRegistry.toCamelCase);
   const prop = props.pop();
-  return function (_, ...args) {
+  return function (...args) {
     const p = props.length ? getObj(window, props) : window;         //find the this
     return p && makeTheCall(p, prop, args);                          //find the prop
   };
 });
 
 customReactions.defineRule("this", function (_, ...props) {
-  props = props.map(ReactionRegistry.toCamelCase);
   const prop = props.pop();
-  return function (_, ...args) {
+  return function (...args) {
     const p = props.length ? getObj(this, props) : this;
     return p && makeTheCall(p, prop, args);
   };
 });
 
 customReactions.defineRule("console", function (_, fun) {
-  if (fun in console)
-    return (e, ...args) => console[fun](...args);
-  throw new SyntaxError(`console.${fun} is unknown.`);
+  return console[fun];
 });
 
 //todo mathAddOns untested
 const mathAddOns = {                                          //todo add these methods to the Math namespace, and then just make the getDefinition([window+math]?
-  minus: (_, s, ...as) => as.reduce((s, a) => s - a, s),
-  times: (_, s, ...as) => as.reduce((s, a) => s * a, s),
-  divide: (_, s, ...as) => as.reduce((s, a) => s / a, s),
-  percent: (_, s, ...as) => as.reduce((s, a) => s % a, s),
-  factor: (_, s, ...as) => as.reduce((s, a) => s ** a, s),
-  gt: (_, s, ...as) => as.reduce((s, a) => s > a, s),
-  gte: (_, s, ...as) => as.reduce((s, a) => s >= a, s),
-  lt: (_, s, ...as) => as.reduce((s, a) => s < a, s),
-  lte: (_, s, ...as) => as.reduce((s, a) => s <= a, s),
+  minus: (s, ...as) => as.reduce((s, a) => s - a, s),
+  times: (s, ...as) => as.reduce((s, a) => s * a, s),
+  divide: (s, ...as) => as.reduce((s, a) => s / a, s),
+  percent: (s, ...as) => as.reduce((s, a) => s % a, s),
+  factor: (s, ...as) => as.reduce((s, a) => s ** a, s),
+  gt: (s, ...as) => as.reduce((s, a) => s > a, s),
+  gte: (s, ...as) => as.reduce((s, a) => s >= a, s),
+  lt: (s, ...as) => as.reduce((s, a) => s < a, s),
+  lte: (s, ...as) => as.reduce((s, a) => s <= a, s),
 };
 customReactions.defineRule("math", function (_, fun) {
-  return mathAddOns[fun] ?? fun in Math ? (e, ...args) => Math[fun](...args) : undefined;
+  return mathAddOns[fun] || Math[fun];
 });
 
 customTypes.defineAll({
@@ -90,10 +84,10 @@ customTypes.defineAll({
     return this;
   },
 });
-customTypes.defineRule("e", (e, ...part) => eGetter(part.map(ReactionRegistry.toCamelCase)));
-customTypes.defineRule("i", (i, ...part) => iGetter(part.map(ReactionRegistry.toCamelCase)));
-customTypes.defineRule("this", (t, ...part) => thisGetter(part.map(ReactionRegistry.toCamelCase)));
-customTypes.defineRule("window", (w, ...part) => windowGetter(part.map(ReactionRegistry.toCamelCase)));
+customTypes.defineRule("e", (e, ...part) => eGetter(part));
+customTypes.defineRule("i", (i, ...part) => iGetter(part));
+customTypes.defineRule("this", (t, ...part) => thisGetter(part));
+customTypes.defineRule("window", (w, ...part) => windowGetter(part));
 
 //el and p
 customReactions.defineRule("el", function (el, ...more) {
@@ -110,8 +104,8 @@ customTypes.defineAll({
     return this.ownerElement.parentElement;
   }
 });
-customTypes.defineRule("el", (_, ...ps) => thisGetter(["ownerElement", ...ps.map(ReactionRegistry.toCamelCase)]));
-customTypes.defineRule("p", (_, ...ps) => thisGetter(["ownerElement", "parentElement", ...ps.map(ReactionRegistry.toCamelCase)]));
+customTypes.defineRule("el", (_, ...ps) => thisGetter(["ownerElement", ...ps]));
+customTypes.defineRule("p", (_, ...ps) => thisGetter(["ownerElement", "parentElement", ...ps]));
 
 //.cssom property for handling getComputedStyle
 Object.defineProperty(Element.prototype, "cssom", {

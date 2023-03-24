@@ -1,19 +1,20 @@
 <script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.2/observeElementCreation.js"></script>
 <script src="../../src/customAttributes.js"></script>
+<script src="../../src/dotReaction.js"></script>
 
 
-<h1 longpress_200:log>hello longpress</h1>
+<h1 longpress_200:log_e>hello longpress</h1>
 <script>
   customAttributes.define("longpress", class LongPress extends CustomAttr {
     upgrade() {
       const minDuration = parseInt(this.suffix[0]);
-      customReactions.define("longpress1", function (e) {
+      customReactions.define("longpress1", function () {
         this.ownerElement.setAttribute("mouseup:longpress2:once", performance.now());
       });
-      customReactions.define("longpress2", function (e) {
+      customReactions.define("longpress2", function () {
         this.ownerElement.setAttribute("mousedown:longpress1:once");
         const duration = performance.now() - parseFloat(this.value);
-        if(duration > minDuration)
+        if (duration > minDuration)
           eventLoop.dispatch(new CustomEvent("longpress", {detail: duration}), this.ownerElement);
       })
       this.ownerElement.setAttribute("mousedown:longpress1:once");
@@ -22,12 +23,9 @@
     destructor() {
 
     }
-  });
-
-  customReactions.define("log", function (e) {
-    console.log(e.type, e.detail >= 250);
-  });
-  customReactions.define("once", function (e) {
+  })
+  customReactions.define("log", ( e) => console.log(e.type, e.detail >= 250));
+  customReactions.define("once", function () {
     this.ownerElement.removeAttribute(this.name);
   });
   const h1 = document.querySelector("h1");

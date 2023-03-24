@@ -1,9 +1,10 @@
 <script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.2/observeElementCreation.js"></script>
 <script src="../../src/customAttributes.js"></script>
+<script src="../../src/dotReaction.js"></script>
 <script src="../../src/core.js"></script>
 
-<h1 a b attributes:log :await_42:attr_a_one:attr_b_two>hello</h1>
-<div a="bob" b="bob" attributes_a_b:log :await_42:attr_a_one:attr_b_two>sunshine</div>
+<h1 a b attributes:log_e :await_42:attr_a_one:attr_b_two>hello</h1>
+<div a="bob" b="bob" attributes_a_b:log_e :await_42:attr_a_one:attr_b_two>sunshine</div>
 
 <script>
   customAttributes.define("attributes", class Attributes extends CustomAttr {
@@ -22,11 +23,11 @@
       this._mo.disconnect();
     }
   });
-  customReactions.define("attr", function (e, name, value) {
+  customReactions.define("attr", function ( name, value) {
     this.ownerElement.setAttribute(name, value);
   });
 
-  customReactions.define("log", function (e) {
+  customReactions.define("log", function ( e) {
     for (let [name, oldValue] of Object.entries(e.detail))
       console.log(e.type, name, oldValue, this.ownerElement.getAttribute(name));
   });

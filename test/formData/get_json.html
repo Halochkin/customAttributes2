@@ -1,18 +1,19 @@
 <script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.2/observeElementCreation.js"></script>
 <script src="../../src/customAttributes.js"></script>
+<script src="../../src/dotReaction.js"></script>
 
-<h1 submit:get_json="https://httpbin.org/anything?hello=sunshine" get:log="1"></h1>
+<h1 submit:get_i_json="https://httpbin.org/anything?hello=sunshine" get:log_e="1"></h1>
 
 <script type="module">
   import {JSON_GET} from "../src/FormData/FormData_GET.js";
 
-  customReactions.define("get", function json_get(e, ...args) {
+  customReactions.define("get", function json_get( e, ...args) {
     return JSON_GET.call(this, e, "get", ...args);
   });
 
   const log = {};
 
-  customReactions.define("log", function (e) {
+  customReactions.define("log", function ( e) {
     let k = this.value;
     let url = e.detail.url;
     let method = e.detail.method;

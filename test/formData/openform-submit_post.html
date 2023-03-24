@@ -1,22 +1,28 @@
 <script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.2/observeElementCreation.js"></script>
 <script src="../../src/customAttributes.js"></script>
+<script src="../../src/dotReaction.js"></script>
 
-<h1 submit:href:open_self="https://httpbin.org/anything?hello=sunshine" _unload:log>hello sunshine</h1>
+<h1 submit:href_e:open_i_self="https://httpbin.org/anything?hello=sunshine" _unload:log_i>hello sunshine</h1>
 
 <script type="module">
   import {openPost} from "../src/FormData/FormData_GET.js";
 
-  customReactions.define("open", function open(e, ...args) {
+  customReactions.define("open", function open( e, ...args) {
+    // debugger
     return openPost.call(this, e, "open", ...args);
   });
 
-  customReactions.define("href", function (e) {
+  customReactions.define("href", function ( e) {
+    // debugger
     return {
       href: this.value,
       withEntries: e.detail
     };
   });
-  customReactions.define("log", e => (console.log("triggered navigation"), e));
+  customReactions.define("log", _ => {
+    // debugger
+    console.log("triggered navigation");
+  });
 
   const formData = new FormData();
   formData.append("a", "A");

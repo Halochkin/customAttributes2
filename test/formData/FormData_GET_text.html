@@ -1,12 +1,13 @@
 <script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.2/observeElementCreation.js"></script>
 <script src="../../src/customAttributes.js"></script>
+<script src="../../src/dotReaction.js"></script>
 
 <form
     action="http://foo.com" method="post"
-    click:get_text="https://httpbin.org/anything?hello=sunshine"
-    click:formdata:encodeuri:text_load="https://httpbin.org/anything?hello=sunshine"
-    get:log
-    load:log>
+    click:get_e_text="https://httpbin.org/anything?hello=sunshine"
+    click:formdata_i:encodeuri_i:text_i_load="https://httpbin.org/anything?hello=sunshine"
+    get:log_e
+    load:log_e>
   <div><input name="hello" type="text" value="asds"></div>
   <input name="sunshine" type="text" value="312312">
   <input type="submit">
@@ -17,13 +18,17 @@
   import {FormData_GET, extractFormData, formDataToUri, fetchAndEvent} from "../src/FormData/FormData_GET.js";
 
   customReactions.defineAll({
-    "get": function (e, ...args) {
+    "get": function ( e, ...args) {
       return FormData_GET.call(this, e, "get", ...args);
     },
-    "log": e => (console.log(e.detail.substring(0, 100)), e),
-    "formdata": extractFormData,
-    "encodeuri": formDataToUri,
-    "text": function (e, ...args) {
+    "log": ( e) => console.log(e.detail.substring(0, 100)),
+    "formdata": function ( ...args) {
+      return extractFormData.call(this, ...args);
+    },
+    "encodeuri": function ( ...args) {
+      return formDataToUri.call(this, ...args);
+    },
+    "text": function ( e, ...args) {
       return fetchAndEvent.call(this, e, "text", ...args);
     },
 

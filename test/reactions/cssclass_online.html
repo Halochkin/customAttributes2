@@ -11,7 +11,7 @@
 <script type="module">
   //todo replace with cssom
   customReactions.defineAll({
-    "log": function logComputedStyle(_, suffix) {
+    "log": function logComputedStyle(suffix) {
       console.log(getComputedStyle(this.ownerElement)[ReactionRegistry.toCamelCase(suffix)]);
     }
   });

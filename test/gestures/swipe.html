@@ -26,12 +26,12 @@
   }
 </style>
 
-<body swipe:.swipe-longer-than_100:replace swipe:console.log_i.direction_i.length>
+<body swipe:.swipe-longer-than_e_100:replace swipe:console.log_i.direction_i.length>
 <div
     swipeable_100
-    swipe:.swipe-longer-than_200:left-right
-    swipe:.swipe-longer-than_200:await_800:el.remove
-    :random-color:this.owner-element.style.background-color_i
+    swipe:.swipe-longer-than_e_200:left-right_e
+    swipe:.swipe-longer-than_e_200:await_800:el.remove
+    :random-color:style_background-color_i
 ></div>
 </body>
 
@@ -39,14 +39,17 @@
   customReactions.define("random-color", function randomColor() {
     return `#${Math.floor(Math.random() * 16777215).toString(16)}`;
   });
+  customReactions.define("style", function (prop, val){
+    this.ownerElement.style[ReactionRegistry.toCamelCase(prop)] = val;
+  });
 
   customReactions.define("replace", function replaceElement() {
     this.ownerElement.insertAdjacentHTML("afterbegin",
       `<div
     swipeable_100
-    swipe:.swipe-longer-than_200:left-right
-    swipe:.swipe-longer-than_200:await_800:el.remove
-    :random-color:this.owner-element.style.background-color_i
+    swipe:.swipe-longer-than_e_200:left-right_e
+    swipe:.swipe-longer-than_e_200:await_800:el.remove
+    :random-color:style_background-color_i
 ></div>`);
   });
   customReactions.define("swipe-longer-than", (e, length) => e.length >= length ? e : undefined);

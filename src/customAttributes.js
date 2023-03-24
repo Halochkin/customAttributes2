@@ -21,7 +21,11 @@ class CustomAttr extends Attr {
   }
 
   get chainBitsDots() {
-    const value = this.chain.map(s => s.split(/(?<=.)_/).map(s => s.split(".")));
+    const value = this.chain.map(s => s.split(/(?<=.)_/).map((s, i) => {
+      const dots = s.split(".");
+      return dots.length === 1 && i > 0 ? dots :  //we do not camelCase single word arguments..
+        dots.map(ReactionRegistry.toCamelCase);
+    }));
     Object.defineProperty(this, "chainBitsDots", {value, writable: false, configurable: true});
     return value;
   }
@@ -139,6 +143,7 @@ class DefinitionRegistry {
   #cache = {};
 
   define(prefix, Definition) {
+    prefix = ReactionRegistry.toCamelCase(prefix);
     if (this.#register[prefix])
       throw `"${prefix}" is already defined.`;
     this.#register[prefix] = Definition;
@@ -150,6 +155,9 @@ class DefinitionRegistry {
   }
 
   defineRule(prefix, Function) {
+    prefix = ReactionRegistry.toCamelCase(prefix);
+    if (this.#rules[prefix])
+      throw `"${prefix}" is already defined.`;
     this.#rules[prefix] = Function;
   }
 
@@ -377,8 +385,9 @@ class ReactionErrorEvent extends ErrorEvent {
         const reaction = at.reactions[i];
         if (reaction[0] !== ReactionRegistry.DefaultAction) {
           try {
-            const [r, ...args] = reaction;
-            let output = r.call(at, res, ...args.map(a => a instanceof Function ? a.call(at, originalEvent, res) : a).slice(1));
+            const [r, _, ...args] = reaction;
+            const args2 = args.map(a => a instanceof Function ? a.call(at, originalEvent, res) : a);
+            let output = r.call(at, ...args2);
             if (output instanceof Promise) {
               if (doDA && at.defaultAction)
                 throw new SyntaxError("You cannot use reactions that return Promises before default actions.");
@@ -587,5 +596,5 @@ observeElementCreation(els => els.forEach(el => window.customAttributes.upgrade(
 })(addEventListener, removeEventListener);
 
 //** default error event handling
-customReactions.define("console-error", (_, e) => console.error(e.message, e.error));
+customReactions.define("console-error", e => console.error(e.message, e.error));
 document.documentElement.setAttribute("error::console-error_e");

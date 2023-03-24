@@ -9,7 +9,7 @@
 <h1 click:asyncthrow_asyncoops>sunshine</h1>
 
 <script>
-  customReactions.define("asyncthrow", async function (e, msg) {
+  customReactions.define("asyncthrow", async function (msg) {
     await new Promise(r => setTimeout(r, 50));
     throw msg;
   });

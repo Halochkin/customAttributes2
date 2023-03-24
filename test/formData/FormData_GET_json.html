@@ -1,12 +1,13 @@
 <script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.2/observeElementCreation.js"></script>
 <script src="../../src/customAttributes.js"></script>
+<script src="../../src/dotReaction.js"></script>
 
 <form
     action="http://foo.com" method="post"
-    click:formdata::get="https://jsonplaceholder.typicode.com/todos/1"
-    auxclick:formdata::encodeuri:json_load="https://jsonplaceholder.typicode.com/todos/1"
-    get:log
-    load:log>
+    click:formdata_i::get_i="https://jsonplaceholder.typicode.com/todos/1"
+    auxclick:formdata_i::encodeuri:json_i_load="https://jsonplaceholder.typicode.com/todos/1"
+    get:log_e
+    load:log_e>
   <div><input name="hello" type="text" value="asds"></div>
   <input name="sunshine" type="text" value="312312">
   <input type="submit">
@@ -17,15 +18,19 @@
   import {DOM_FormData} from "../src/FormData/DOM_FormData.js";
 
   customReactions.defineAll({
-    "formdata": DOM_FormData,
-    "get": function (e,  ...args) {
+    "formdata": function ( ...args) {
+      return DOM_FormData.call(this, ...args);
+    },
+    "get": function ( e, ...args) {
       return FormData_GET.call(this, e, "get", ...args);
     },
-    "encodeuri": formDataToUri,
-    "json": function (e, ...args) {
+    "encodeuri": function ( ...args) {
+      return formDataToUri.call(this, ...args);
+    },
+    "json": function ( e, ...args) {
       return fetchAndEvent.call(this, e, "json", ...args);
     },
-    "log": e => (console.log(e.detail), e)
+    "log": ( e) => console.log(e.detail)
   });
 
   document.querySelector("form").click();

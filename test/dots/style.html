@@ -23,7 +23,7 @@
 >Hello width and height</div>
 
 <script>
-  customReactions.define("style", function(e, prop, value){
+  customReactions.define("style", function(prop, value){
     this.ownerElement.style[prop] = value;
   });
   document.querySelector("div").click();

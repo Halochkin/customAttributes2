@@ -1,51 +1,71 @@
-<script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.2/observeElementCreation.js"></script>
-<script src="../../src/customAttributes.js"></script>
-<script src="../../src/dotReaction.js"></script>
-<script src="../../src/core.js"></script>
-
+<style>
+  * { white-space: pre;}
+  ol {float: left; border: 1px solid red;}
+</style>
 <body
-        click:and_$:console.log_this.value="$"
-        click_$:and_$:console.log_this.value="$$"
-        click:and_,:console.log_this.value=","
-        click_,:and_,:console.log_this.value=",,"
-        click:and_(:console.log_this.value="("
-        click_(:and_(:console.log_this.value="(("
-        click:and_):console.log_this.value=")"
-        click_):and_):console.log_this.value="))"
-        click:and_&:console.log_this.value="&"
-        click_&:and_&:console.log_this.value="&&"
-        click:and_!:console.log_this.value="!"
-        click_!:and_!:console.log_this.value="!!"
-        1&href="something"
+    :a:b
+    :a::b
+    a::b
+    a::b:c
+    a::b::c
+
+    c:a$
+    c$:a$
+    c:a,
+    c,:a,
+    c:a(
+    c(:a(
+    c:a)
+    c):a)
+    c:a&
+    c&:a&
+    c:a!
+    c!:a!
 >
-<pre>New Chrome browsers seems to be willing to generate any attribute name as long as it doesn't contain `<` `>` and `=`.</pre>
-
+<pre>
+  1. https://raw.githack.com/orstavik/customAttributes2/main/test/errors/badChars.html
+  2. test this link in browserstack.io or testingbot.com to see it in different browser types.
+</pre>
+<h1>Attribute names</h1>
+<ol id="template">
+  <lh>from template:</lh>
+</ol>
+<ol id="removeAttribute">
+  <lh>removeAttribute():</lh>
+</ol>
+<ol id="setAttribute">
+  <lh>setAttribute()</lh>
+</ol>
+<ol id="nonSetAttribute">
+  <lh>setAttribute() fails</lh>
+</ol>
+<ol id="nonRemoveAttribute">
+  <lh>removeAttribute() fails</lh>
+</ol>
 </body>
-<script>
+<script type="module">
+  const template = document.getElementById("template");
+  const remove = document.getElementById("removeAttribute");
+  const removeFail = document.getElementById("nonRemoveAttribute");
+  const setAttr = document.getElementById("setAttribute");
+  const setAttrFail = document.getElementById("nonSetAttribute");
 
-  const attr = [
-    ['click:and_$:console.log_this.value', "$"],
-    ['click_$:and_$:console.log_this.value', "$$"],
-    ['click:and_,:console.log_this.value', ","],
-    ['click_,:and_,:console.log_this.value', ",,"],
-    ['click:and_(:console.log_this.value', "("],
-    ['click_(:and_(:console.log_this.value', "(("],
-    ['click:and_):console.log_this.value', ")"],
-    ['click_):and_):console.log_this.value', "))"],
-    ['click:and_&:console.log_this.value', "&"],
-    ['click_&:and_&:console.log_this.value', "&&"],
-    ['click:and_!:console.log_this.value', "!"],
-    ['click_!:and_!:console.log_this.value', "!!"],
-    ['1&href', "something"]
-  ]
-
-
-  for (let [a, v] of attr)
+  for (let {name} of [...document.body.attributes]) {
+    const li = `<li>${name}</li>`;
+    template.insertAdjacentHTML("beforeend", li);
     try {
-      document.body.setAttribute(a, v);
-    } catch (e) {
-      console.log("ERROR: ", a, v);
+      document.body.removeAttribute(name);
+      remove.insertAdjacentHTML("beforeend", li);
+    } catch (err) {
+      removeFail.insertAdjacentHTML("beforeend", li);
     }
-  document.body.click();
-
+    try {
+      document.body.setAttribute(name, "");
+      setAttr.insertAdjacentHTML("beforeend", li);
+    } catch (err) {
+      setAttrFail.insertAdjacentHTML("beforeend", li);
+    }
+  }
+  for (let ol of document.querySelectorAll("ol"))
+    console.log(ol.id, ol.children.length -1);
 </script>

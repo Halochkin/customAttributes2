@@ -1,15 +1,15 @@
 <script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.2/observeElementCreation.js"></script>
 <script src="../../src/customAttributes.js"></script>
 <script src="../../src/dotReaction.js"></script>
+<script src="../../src/core.js"></script>
 
-<div id="one" style="height: 100vh" wheel:prevent_e wheel:log _wheel:log>hello wheel:prevent _wheel:log(should log and scroll)</div>
-<div id="two" style="height: 100vh" wheel:prevent_e wheel:log _wheel:log>hello wheel:prevent _wheel:log (should log, but not scroll)</div>
+<div id="one" style="height: 100vh" wheel:prevent_e wheel:log_e _wheel:log_e>hello wheel:prevent _wheel:log(should log and scroll)</div>
+<div id="two" style="height: 100vh" wheel:prevent_e wheel:log_e _wheel:log_e>hello wheel:prevent _wheel:log (should log, but not scroll)</div>
 
 todo the first event should ignore the native preventDefault(), while the second should accept it.
 todo: I don't know how to test this behavior programmatically.
 
 <script>
-  customReactions.define("prevent", e => (e.preventDefault(), e));
   customReactions.define("log", function (e) {
     return console.log(e.type, this.ownerElement.id), e;
   });

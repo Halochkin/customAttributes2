@@ -17,7 +17,7 @@ hello dot arguments
   window.bob = function () {
     return "bob function"
   }
-  customReactions.define("log", (e, ...args) => {
+  customReactions.define("log", (...args) => {
     for (let a of args)
       console.log(a, typeof a);
   });

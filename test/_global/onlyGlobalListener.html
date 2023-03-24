@@ -1,12 +1,13 @@
 <script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.2/observeElementCreation.js"></script>
 <script src="../../src/customAttributes.js"></script>
+<script src="../../src/dotReaction.js"></script>
 <script src="../../src/core.js"></script>
 
-<div _click:log></div>
-<div _auxclick:log></div>
+<div _click:log_e></div>
+<div _auxclick:log_e></div>
 
 <script>
-  customReactions.define("log", e => console.log(e.type));
+  customReactions.define("log", ( e) => console.log(e.type));
   document.body.click();
   document.body.dispatchEvent(new Event("auxclick"));
 </script>
