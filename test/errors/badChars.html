@@ -1,4 +1,4 @@
-<style>body { white-space: pre;}</style>
+<style>* { white-space: pre;}</style>
 <body
     :a:b
     :a::b
@@ -19,20 +19,48 @@
     c:a!
     c!:a!
 >
+<pre>
+  1. https://raw.githack.com/orstavik/customAttributes2/main/test/errors/badChars.html
+  2. test this link in browserstack.io or testingbot.com to see it in different browser types.
+</pre>
+<h1>Attribute names</h1>
+<ol id="template">
+  <lh>from template:</lh>
+</ol>
+<ol id="removeAttribute">
+  <lh>removeAttribute():</lh>
+</ol>
+<ol id="nonRemoveAttribute">
+  <lh>removeAttribute() fails</lh>
+</ol>
+<ol id="setAttribute">
+  <lh>setAttribute()</lh>
+</ol>
+<ol id="nonSetAttribute">
+  <lh>setAttribute() fails</lh>
+</ol>
 </body>
-<script>
-  document.body.insertAdjacentText("beforeend", "\n" + [...document.body.attributes].map(a => a.name).join("  "));
+<script type="module">
+  const template = document.getElementById("template");
+  const remove = document.getElementById("removeAttribute");
+  const removeFail = document.getElementById("nonRemoveAttribute");
+  const setAttr = document.getElementById("setAttribute");
+  const setAttrFail = document.getElementById("nonSetAttribute");
 
-  for (let at of document.body.attributes) {
-    document.body.insertAdjacentText("beforeend", "\n" + at.name);
+  for (let {name} of [...document.body.attributes]) {
+    const li = `<li>${name}</li>`;
+    template.insertAdjacentHTML("beforeend", li);
     try {
-      document.body.removeAttribute(at.name);
-      document.body.insertAdjacentText("beforeend", "-");
-      document.body.setAttribute(at.name, "");
-      document.body.insertAdjacentText("beforeend", "+");
+      document.body.removeAttribute(name);
+      remove.insertAdjacentHTML("beforeend", li);
     } catch (err) {
+      removeFail.insertAdjacentHTML("beforeend", li);
+    }
+    try {
+      document.body.setAttribute(name, "");
+      setAttr.insertAdjacentHTML("beforeend", li);
+    } catch (err) {
+      setAttrFail.insertAdjacentHTML("beforeend", li);
     }
   }
-  document.body.setAttribute("a:b:c", "");
-  document.body.insertAdjacentText("beforeend", "\n" + [...document.body.attributes].map(a => a.name).join("  "));
 </script>
