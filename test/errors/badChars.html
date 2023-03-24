@@ -42,16 +42,16 @@
   <li>setAttribute() fails</li>
 </ol>
 <ol id="characterEscaping">
-  <li>Escape character</li>
+  <li>Escape first character</li>
 </ol>
 <ol id="nonCharacterEscaping">
-  <li>Escape character fails</li>
+  <li>Escape first character fails</li>
 </ol>
 <ol id="encodeURIComponent">
-  <li>encodeURIComponent()</li>
+  <li>encodeURIComponent() first character</li>
 </ol>
 <ol id="nonEncodeURIComponent">
-  <li>encodeURIComponent() fails</li>
+  <li>encodeURIComponent() first character fails</li>
 </ol>
 
 </body>
@@ -83,7 +83,7 @@
     }
   }
 
-  const chars = ['№', '!', '@', '#', '$', '%', '?', '^', '&', '*', '(', ')', '>', '<', '|', '\\', '/', '+', '~'];
+  const chars = ['№', '!', '@', '#', '$', '%', '?', '^', '&', '*', '(', ')', '>', '<', '|', '\\', '/', '+', '~', ':', '_', '.', ' '];
 
   for (const char of chars) {
     const li = `<li>${char}</li>`;
