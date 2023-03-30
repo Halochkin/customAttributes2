@@ -1,0 +1,52 @@
+<script src="./src/touch-emulator.js"></script>
+<script> TouchEmulator(); </script>
+
+
+<script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.2/observeElementCreation.js"></script>
+<script src="../../src/customAttributes.js"></script>
+<script src="../../src/dotReaction.js"></script>
+<script src="../../src/core.js"></script>
+<script src="../../src/GestureAttr.js"></script>
+
+
+<head>
+    <style>
+        div {
+            border: 2px solid gray;
+            width: 500px;
+            height: 500px;
+        }
+    </style>
+</head>
+
+<body twotouchesstart:style_background-color_blue twotouchesend:style_background-color_yellow>
+<div twotouches></div>
+</body>
+
+<script>
+  customReactions.define("style", function (prop, val) {
+    debugger
+    this.ownerElement.style[ReactionRegistry.toCamelCase(prop)] = val;
+  });
+
+  customAttributes.define("twotouches", class TwoTouches extends GestureAttr {
+
+    filter(e) {
+      if(e.touches.length === 2)
+        return e;
+    }
+
+    static stateMachine(prefix, val) {
+      return {
+        "": [
+          ["touchstart", "start"]
+        ],
+        start : [
+          ["touchstart::g.filter_e::event_e_twotouchesstart", ""],
+          ["touchend::event_e_twotouchesend", ""]
+        ]
+      };
+    }
+  });
+
+</script>

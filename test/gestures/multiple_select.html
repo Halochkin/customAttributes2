@@ -1,0 +1,49 @@
+<script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.2/observeElementCreation.js"></script>
+<script src="../../src/customAttributes.js"></script>
+<script src="../../src/dotReaction.js"></script>
+
+<head>
+    <style>
+        div {
+            border: 2px solid gray;
+            padding: 20px;
+            width: 460px;
+        }
+
+        span {
+            height: 150px;
+            width: 150px;
+            display: inline-block;
+            box-shadow: rgba(0, 0, 0, 0.16) 0px 1px 4px;
+        }
+
+        span.selected {
+            box-shadow: deepskyblue 0px 1px 6px 1px;
+        }
+    </style>
+</head>
+<body>
+<!--<div click:e.target.classList.toggle_selected>-->
+<div click:toggle_e_selected:log>
+    <span></span>
+    <span></span>
+    <span></span>
+    <span></span>
+    <span></span>
+    <span></span>
+    <span></span>
+    <span></span>
+    <span></span>
+</div>
+</body>
+
+<script>
+  customReactions.define("toggle", function (e, classname) {
+    e.target.classList.toggle(classname);
+    return e;
+  });
+
+  customReactions.define("log", function () {
+    console.log(document.querySelectorAll("span.selected"));
+  });
+</script>
