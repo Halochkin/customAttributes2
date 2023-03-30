@@ -1,25 +1,28 @@
-<style>* { white-space: pre;}</style>
+<style>
+  * { white-space: pre;}
+  ol {float: left; border: 1px solid red;}
+</style>
 <body
-        :a:b
-        :a::b
-        a::b
-        a::b:c
-        a::b::c
+    :a:b
+    :a::b
+    a::b
+    a::b:c
+    a::b::c
 
-        c:a$
-        c$:a$
-        c:a,
-        c,:a,
-        c:a(
-        c(:a(
-        c:a)
-        c):a)
-        c:a&
-        c&:a&
-        c:a!
-        c!:a!
-        c:*#
-        :c\#
+    c:a$
+    c$:a$
+    c:a,
+    c,:a,
+    c:a(
+    c(:a(
+    c:a)
+    c):a)
+    c:a&
+    c&:a&
+    c:a!
+    c!:a!
+    c:*#
+    :c\#
 >
 <pre>
   1. https://raw.githack.com/orstavik/customAttributes2/main/test/errors/badChars.html
@@ -27,33 +30,32 @@
 </pre>
 <h1>Attribute names</h1>
 <ol id="template">
-  <li>from template:</li>
+  <lh>from template:</lh>
 </ol>
 <ol id="removeAttribute">
-  <li>removeAttribute():</li>
+  <lh>removeAttribute():</lh>
 </ol>
 <ol id="nonRemoveAttribute">
-  <li>removeAttribute() fails</li>
+  <lh>removeAttribute() fails</lh>
 </ol>
 <ol id="setAttribute">
-  <li>setAttribute()</li>
+  <lh>setAttribute()</lh>
 </ol>
 <ol id="nonSetAttribute">
-  <li>setAttribute() fails</li>
+  <lh>setAttribute() fails</lh>
 </ol>
 <ol id="characterEscaping">
-  <li>Escape first character</li>
+  <lh>Escape character</lh>
 </ol>
 <ol id="nonCharacterEscaping">
-  <li>Escape first character fails</li>
+  <lh>Escape character fails</lh>
 </ol>
 <ol id="encodeURIComponent">
-  <li>encodeURIComponent() first character</li>
+  <lh>encodeURIComponent() character</lh>
 </ol>
 <ol id="nonEncodeURIComponent">
-  <li>encodeURIComponent() first character fails</li>
+  <lh>encodeURIComponent() character fails</lh>
 </ol>
-
 </body>
 <script type="module">
   const template = document.getElementById("template");
@@ -65,7 +67,7 @@
   const charEscapeFails = document.getElementById("nonCharacterEscaping");
   const encodeUri = document.getElementById("encodeURIComponent");
   const encodeUriFails = document.getElementById("nonEncodeURIComponent");
-
+ 
   for (let {name} of [...document.body.attributes]) {
     const li = `<li>${name}</li>`;
     template.insertAdjacentHTML("beforeend", li);
@@ -82,7 +84,7 @@
       setAttrFail.insertAdjacentHTML("beforeend", li);
     }
   }
-
+ 
   const chars = ['№', '!', '@', '#', '$', '%', '?', '^', '&', '*', '(', ')', '>', '<', '|', '\\', '/', '+', '~', ':', '_', '.', ' '];
 
   for (const char of chars) {
@@ -100,5 +102,7 @@
       encodeUriFails.insertAdjacentHTML("beforeend", li);
     }
   }
-
+ 
+  for (let ol of document.querySelectorAll("ol"))
+    console.log(ol.id, ol.children.length -1);
 </script>
