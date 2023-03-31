@@ -1,6 +1,5 @@
-<script src="./src/touch-emulator.js"></script>
-<script> TouchEmulator(); </script>
-
+<!--<script src="./src/touch-emulator.js"></script>-->
+<!--<script> TouchEmulator(); </script>-->
 
 <script src="https://cdn.jsdelivr.net/gh/orstavik/ElementObserver@1.1.2/observeElementCreation.js"></script>
 <script src="../../src/customAttributes.js"></script>
@@ -19,21 +18,26 @@
     </style>
 </head>
 
-<body twotouchesstart:style_background-color_blue twotouchesend:style_background-color_yellow>
-<div twotouches></div>
+<body>
+<div twotouches twotouchesstart:style_background-color_blue twotouchesend:style_background-color_yellow></div>
 </body>
 
 <script>
   customReactions.define("style", function (prop, val) {
-    debugger
     this.ownerElement.style[ReactionRegistry.toCamelCase(prop)] = val;
   });
 
   customAttributes.define("twotouches", class TwoTouches extends GestureAttr {
 
     filter(e) {
-      if(e.touches.length === 2)
+      if (e.touches.length > 1)
         return e;
+    }
+
+    dispatch(e, type) {
+      console.log(type)
+      eventLoop.dispatch(new e.constructor(type, e), this.ownerElement);
+      return e;
     }
 
     static stateMachine(prefix, val) {
@@ -41,12 +45,16 @@
         "": [
           ["touchstart", "start"]
         ],
-        start : [
-          ["touchstart::g.filter_e::event_e_twotouchesstart", ""],
-          ["touchend::event_e_twotouchesend", ""]
+        start: [
+          ["_touchstart:filter_e::g.dispatch_e_twotouchesstart", ""],
+          ["_touchend:filter_e::g.dispatch_e_twotouchesend", ""]
         ]
       };
     }
   });
 
+  const div = document.querySelector("div");
+  div.dispatchEvent(new TouchEvent("touchstart"));
+  setTimeout(_ => div.dispatchEvent(new TouchEvent("touchstart")), 0);
+  setTimeout(_ => div.removeAttribute("touchend"), 300);
 </script>
